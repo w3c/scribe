@@ -33,6 +33,11 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
+# 00. BUG: URLs written like <http://...> are formatted as IRC statements.
+# See the text pasted inside [[ ... ]] at
+# http://www.w3.org/2004/11/04-ws-desc-minutes.htm#item06
+# The relevant code below may be around line 3581.
+#
 # 0. Reduce the number of warnings, because they obscure the important ones.
 # Maybe use options to control which warnings are issued.
 #
@@ -92,6 +97,18 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # 10. Delete extra stopList from GetNames.  (There is already a global one.)
 #
 
+######################################################################
+# DESIGN PHILOSOPHY
+# 0. Easy to use.  It should usually do the right thing, out of the box, 
+# without any instructions.  And it should provide guidance (helpful
+# error messages) when it fails.
+# 1. No installation required.  Please don't add anything that depends
+# on a perl module or other software that the user must have (other
+# than a standard perl distribution itself).
+# 2. Not limited to W3C use.  The program should be usable even for
+# non-W3C meetings, by people who are not using RRSAgent, zakim or even IRC.
+# (But it's fine to provide enhanced capability when W3C tools are used.)
+#
 ######################################################################
 #
 # WARNING: The code is a horrible mess.  (Sorry!)  Please hold your nose if 
@@ -2871,10 +2888,13 @@ sub GetDate
 my ($all, $namePattern, $logURL) = @_;
 my @days = qw(Sun Mon Tue Wed Thu Fri Sat); 
 @days == 7 || die;
+# English-only month names :(
 my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
-my @lcMonths = map {tr/A-Z/a-z/; s/\A(...).*\Z/$1/; $_} @months; # Lower case, length 3
+my @lcMonths = @months;  # Lower case, length 3
+@lcMonths = map {tr/A-Z/a-z/; s/\A(...).*\Z/$1/; $_} @lcMonths;
 @months == 12 || die;
-my %monthNumbers = map {($months[$_], $_+1)} (0 .. 11);
+@lcMonths == 12 || die;
+my %monthNumbers = map {($lcMonths[$_], $_+1)} (0 .. 11);
 # warn "GetDate monthNumbers: ",join(" ",%monthNumbers),"\n";
 my @date = ();
 # Look for Date: 12 Sep 2002
@@ -2884,7 +2904,6 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	# I should have used a library function for this, but I wrote
 	# this without net access, so I couldn't get one.
 	my $d = &Trim($4);
-	warn "Found Date: $d\n";
 	my @words = split(/[^0-9a-zA-Z]+/, $d);
 	die "ERROR: Date not understood: $d\n" if @words != 3;
 	my $correctFormat = "Date command/format should be like \"Date: 31 Jan 2004\"";
@@ -2899,6 +2918,8 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	($year > 2000 && $year < 2100) || die "ERROR: Bad year \"$year\" (should be >2000 && <2100): $d\n$correctFormat\n";
 	my $day0 = sprintf("%0d", $mday);
 	my $mon0 = sprintf("%0d", $mon);
+	my $alphaMonth = $months[$mon-1];
+	warn "Found Date: $day0 $alphaMonth $year\n";
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	}
 # Figure out date from IRC log name:
