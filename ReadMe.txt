@@ -1,3 +1,4 @@
-See scribe.perl.  Instructions for use are included as an opening comment.
-I've started a documentation page, scribedoc.htm, but it isn't finished.
+Instructions for use are in scribedoc.htm (unfinished though).
+If that isn't enough, see the source code, scribe.perl,
+or feel free to ask David Booth <dbooth@w3.org>.
 

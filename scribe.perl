@@ -1243,7 +1243,7 @@ foreach my $line (@allLines)
 		@present = sort keys %seen;
 		}
 	else	{
-		warn "\nWARNING: Replacing previous list of people present.\nUse '$keyword+: ... ' if you meant to add people without replacing the list with: " . join(',', @p) . "\n\n" if @present;
+		warn "\nWARNING: Replacing previous list of people present.\nUse '$keyword\+ ... ' if you meant to add people without replacing the list,\nsuch as: <dbooth> $keyword\+ " . join(', ', @p) . "\n\n" if @present;
 		@present = @p;
 		}
 	}
@@ -1259,7 +1259,7 @@ if (@present == 0)
 	}
 else	{
 	warn "$keyword\: @present\n"; 
-	warn "\nWARNING: Fewer than $minPeople people found for $keyword list!\n\n" if @present < 3;
+	warn "\nWARNING: Fewer than $minPeople people found for $keyword list!\n\n" if @present < $minPeople;
 	}
 return ($all, @present);
 }
