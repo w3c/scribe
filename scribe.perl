@@ -262,6 +262,7 @@ my $breakActions = 1;		# Break long action lines?
 my $implicitContinuations = 0;	# Option: -implicitContinuations
 my $scribeName = "UNKNOWN"; 	# Example: -scribe dbooth
 my $useZakimTopics = 0; 	# Treat zakim agenda take-up as Topic change?
+my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 
 my @args = ();
 my $template = &DefaultTemplate();
@@ -319,6 +320,8 @@ while (@ARGV)
 		{ $useZakimTopics = 1; }
 	elsif ($a eq "-implicitContinuations") 
 		{ $implicitContinuations = 1; }
+	elsif ($a eq "-inputFormat") 
+		{ $inputFormat = shift @ARGV; }
 	elsif ($a eq "-scribe" || $a eq "-scribeName") 
 		{ $scribeName = shift @ARGV; }
 	elsif ($a =~ m/\A\-/)
@@ -340,12 +343,7 @@ $all =~ s/\r//g;
 
 # Normalize input format.  This accepts several formats of input
 # and puts it into a common format.
-# To do so, we need to guess the input format.
-# Try each known format, and see which one matches best.
-my $bestScore = 0;
-my $bestAll = "";
-my $bestName = "";
-# These are the normalizer functions we'll be calling.
+# The @inputFormats is the list of known normalizer functions.
 # Each one is defined below.
 # Just add another to the list if you want to recognize another format.
 # Each function takes $all (the input text) as input and returns
@@ -353,14 +351,27 @@ my $bestName = "";
 #	$score is a value [0,1] indicating how well it matched (fraction
 #		of lines conforming to this format).
 #	$newAll is the normalized input.
-foreach my $f (qw(
-		NormalizerMircTxt
-		NormalizerRRSAgentText 
-		NormalizerRRSAgentHtml 
-		NormalizerRRSAgentHTMLText
-		NormalizerYahoo
-		NormalizerPlainText
-		))
+my @inputFormats = qw(
+		RRSAgent_Text_Format 
+		RRSAgent_HTML_Format 
+		RRSAgent_Visible_HTML_Text_Paste_Format
+		Mirc_Text_Format
+		Hugo_Log_Text_Format
+		Yahoo_IM_Format
+		Plain_Text_Format
+		);
+my %inputFormats = map {($_,$_)} @inputFormats;
+if ($inputFormat && !exists($inputFormats{$inputFormat}))
+	{
+	warn "\nWARNING: Unknown input format specified: $inputFormat\n";
+	warn "Reverting to guessing the format.\n\n";
+	$inputFormat = "";
+	}
+# Try each known format, and see which one matches best.
+my $bestScore = 0;
+my $bestAll = "";
+my $bestName = "";
+foreach my $f (@inputFormats)
 	{
 	my ($score, $newAll) = &$f($all);
 	# warn "$f: $score\n";
@@ -372,11 +383,23 @@ foreach my $f (qw(
 		}
 	}
 my $bestScoreString = sprintf("%4.2f", $bestScore);
-warn "Input format (score $bestScoreString): $bestName\n\n";
-die "ERROR: Could not guess input format.\n" if $bestScore == 0;
-warn "\nWARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\n\n"
-	if $bestScore < 0.7;
-$all = $bestAll;
+if ($inputFormat)
+	{
+	# Format was specified using -inputFormat option
+	my ($score, $newAll) = &$inputFormat($all);
+	my $scoreString = sprintf("%4.2f", $score);
+	$all = $newAll;
+	warn "\nWARNING: Input looks more like $bestName format (score $bestScoreString),
+but \"-inputFormat $inputFormat\" (score $scoreString) was specified.\n\n"
+		if $score < $bestScore;
+	}
+else	{
+	warn "Guessing input format: $bestName (score $bestScoreString)\n\n";
+	die "ERROR: Could not guess input format.\n" if $bestScore == 0;
+	warn "\nWARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\n\n"
+		if $bestScore < 0.7;
+	$all = $bestAll;
+	}
 
 # Perform s/old/new/ substitutions.
 while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
@@ -460,9 +483,9 @@ if ($normalizeOnly)
 $scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)s*\n/\n/i;
 if ($scribeName eq "UNKNOWN")
 	{
-	if ($bestName eq "NormalizerPlainText")
+	if ($bestName eq "Plain_Text_Format")
 		{
-		# Cannot guess the scribe when NormalizerPlainText format is used.
+		# Cannot guess the scribe when Plain_Text_Format format is used.
 		warn "\nWARNING: Scribe name not specified!!!\n";
 		}
 	else	{
@@ -735,12 +758,17 @@ foreach my $action ((keys %rawActions))
 	$actions{$a} = $status;
 	}
 
-# Get a list of people who have action items:
+# Get a list of people who have current action items:
 my %actionPeople = ();
 foreach my $key ((keys %actions))
 	{
 	my $a = &LC($key);
 	# warn "action:$a:\n";
+	# Skip completed action items.  Check the status.
+	my $lcs = &LC($actions{$key});
+	my %completedStatuses = map {($_,$_)} 
+		qw(done finished dropped completed retired deleted);
+	next if exists($completedStatuses{$lcs});
 	# Remove leading date:
 	#	ACTION: 2003-10-09: Bijan to look into message extensibility Issues
 	#	ACTION: 10/09/03: Bijan to look into message extensibility Issues
@@ -780,7 +808,7 @@ foreach my $key ((keys %actions))
 		warn "NO PERSON FOUND FOR ACTION: $a\n";
 		}
 	}
-warn "People with action items: ",join(" ", keys %actionPeople), "\n";
+warn "People with action items: ",join(" ", sort keys %actionPeople), "\n";
 
 # Format the resulting action items.
 # Iterate through the @actionStatuses in order to group them by status.
@@ -1225,7 +1253,7 @@ $all = "\n" . join("\n", @allLines) . "\n";
 if (@present == 0)	
 	{
 	warn "\nWARNING: No \"$keyword\: ... \" found!\n";
-	warn "Possibly Present: @possiblyPresent\n"; 
+	warn "Possibly Present: @possiblyPresent\n" if $keyword eq "Present"; 
 	warn "You can indicate people for the $keyword list like this:
 <dbooth> $keyword\: dbooth jonathan mary
 <dbooth> $keyword\+ amy\n\n";
@@ -1353,7 +1381,7 @@ sub IgnoreGarbage
 my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $nLines = scalar(@lines);
-warn "Lines found: $nLines\n";
+# warn "Lines found: $nLines\n";
 my @scribeLines = ();
 foreach my $line (@lines)
 	{
@@ -1390,7 +1418,7 @@ foreach my $line (@lines)
 	push(@scribeLines, $line);
 	}
 my $nScribeLines = scalar(@scribeLines);
-warn "Minuted lines found: $nScribeLines\n";
+# warn "Minuted lines found: $nScribeLines\n";
 $all = "\n" . join("\n", @scribeLines) . "\n";
 
 # Verify that we axed all join/leave lines:
@@ -1440,10 +1468,10 @@ return(@result);
 
 
 ##################################################################
-########################## NormalizerMircTxt #########################
+########################## Mirc_Text_Format #########################
 ##################################################################
 # Format from saving MIRC buffer.
-sub NormalizerMircTxt
+sub Mirc_Text_Format
 {
 die if @_ != 1;
 my ($all) = @_;
@@ -1466,16 +1494,71 @@ foreach my $line (@lines)
 	elsif ($line =~ m/\A\<$namePattern\>\s/) { $n++; }
 	# warn "LINE: $line\n";
 	}
-# warn "NormalizerMircTxt n matches: $n\n";
+# warn "Mirc_Text_Format n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
 }
 
 ##################################################################
-########################## NormalizerRRSAgentText #########################
+########################## Hugo_Log_Text_Format #########################
+##################################################################
+# Example: http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0003/ExampleFormat-NormalizerHugoLogText.txt
+sub Hugo_Log_Text_Format
+{
+die if @_ != 1;
+my ($all) = @_;
+# Join continued lines:
+$all =~ s/\n\ \ //g;
+# Count the number of recognized lines
+my @lines = split(/\n/, $all);
+my $nLines = scalar(@lines);
+my $n = 0; # Number of lines of recognized format.
+my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
+# 2003-12-18T15:26:57-0500 
+my $datePattern = '(\d\d\d\d\-(\ |\d)\d\-(\ |\d)\d)';	# 3 parens
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';	# 4 parens
+my $hourOffsetPattern = '((( |\-|\+)\d\d\d\d)?)';	# 3 parens
+my $timestampPattern = $datePattern . "T" . $timePattern . $hourOffsetPattern;
+# warn "timestampPattern: $timestampPattern namePattern: $namePattern\n";
+my @linesOut = ();
+while (@lines)
+	{
+	my $line = shift @lines;
+	# 20:41:27 <ericn> Review of minutes 
+	if (0) {}
+	# Keep normal lines:
+	# 2003-12-18T15:27:36-0500 <hugo> Hello.
+	elsif ($line =~ s/\A$timestampPattern\s+(\<$namePattern\>)/$11/)
+		{ $n++; push(@linesOut, $line); }
+	# Also keep comment lines.  They'll be removed later.
+	# 2003-12-18T16:56:06-0500  * RRSAgent records action 4
+	elsif ($line =~ s/\A$timestampPattern\s+(\*)/$11/)
+		{ $n++; push(@linesOut, $line); }
+	# Recognize, but discard:
+	# 2003-12-18T15:26:57-0500 !mcclure.w3.org hugo invited Zakim into channel #ws-arch.
+	elsif ($line =~ m/\A$timestampPattern\s+\!/)
+		{ $n++; } 
+	# Recognize, but discard:
+	# 2003-12-18T15:27:30-0500 -!- dbooth [dbooth@18.29.0.30] has joined #ws-arch
+	elsif ($line =~ m/\A$timestampPattern\s+\-\!\-/)
+		{ $n++; } 
+	else	{
+		# warn "UNRECOGNIZED LINE: $line\n";
+		push(@linesOut, $line); # Keep unrecognized line
+		}
+	# warn "LINE: $line\n";
+	}
+$all = "\n" . join("\n", @linesOut) . "\n";
+# warn "Hugo_Log_Text_Format n matches: $n\n";
+my $score = $n / $nLines;
+return($score, $all);
+}
+
+##################################################################
+########################## RRSAgent_Text_Format #########################
 ##################################################################
 # Example: http://www.w3.org/2003/03/03-ws-desc-irc.txt
-sub NormalizerRRSAgentText
+sub RRSAgent_Text_Format
 {
 die if @_ != 1;
 my ($all) = @_;
@@ -1493,16 +1576,16 @@ foreach my $line (@lines)
 	# warn "LINE: $line\n";
 	}
 $all = "\n" . join("\n", @lines) . "\n";
-# warn "NormalizerRRSAgentText n matches: $n\n";
+# warn "RRSAgent_Text_Format n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
 }
 
 ##################################################################
-########################## NormalizerRRSAgentHtml #########################
+########################## RRSAgent_HTML_Format #########################
 ##################################################################
 # Example: http://www.w3.org/2003/03/03-ws-desc-irc.html
-sub NormalizerRRSAgentHtml
+sub RRSAgent_HTML_Format
 {
 die if @_ != 1;
 my ($all) = @_;
@@ -1517,7 +1600,7 @@ foreach my $line (@lines)
 	# warn "LINE: $line\n";
 	}
 $all = "\n" . join("\n", @lines) . "\n";
-# warn "NormalizerRRSAgentHtml n matches: $n\n";
+# warn "RRSAgent_HTML_Format n matches: $n\n";
 my $score = $n / @lines;
 # Unescape &entity;
 $all =~ s/\&amp\;/\&/g;
@@ -1528,13 +1611,14 @@ return($score, $all);
 }
 
 ##################################################################
-########################## NormalizerRRSAgentHTMLText #########################
+########################## RRSAgent_Visible_HTML_Text_Paste_Format #########################
 ##################################################################
 # This is for the format that is visible in the browser when RRSAgent's HTML
 # is displayed.  I.e., when you view the (HTML) document in a browser, and 
 # then copy and paste the text from the browser window, it discards
 # the HTML code and copies only the displayed text.
-sub NormalizerRRSAgentHTMLText
+# Example: http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0002/ExampleFormat-RRSAgent_Visible_HTML_Text_Paste_Format.txt
+sub RRSAgent_Visible_HTML_Text_Paste_Format
 {
 die if @_ != 1;
 my ($all) = @_;
@@ -1563,16 +1647,16 @@ while($all =~ s/\A((.*\n)(.*\n))//)	# Grab next two lines
 	}
 $done .= $all;
 $all = $done;
-# warn "NormalizerRRSAgentHTMLText n matches: $n\n";
+# warn "RRSAgent_Visible_HTML_Text_Paste_Format n matches: $n\n";
 my @lines = split(/\n/, $all);
 my $score = $n / @lines;
 return($score, $all);
 }
 
 ##################################################################
-########################## NormalizerYahoo #########################
+########################## Yahoo_IM_Format #########################
 ##################################################################
-sub NormalizerYahoo
+sub Yahoo_IM_Format
 {
 die if @_ != 1;
 my ($all) = @_;
@@ -1585,19 +1669,19 @@ foreach my $line (@lines)
 	# warn "LINE: $line\n";
 	}
 $all = "\n" . join("\n", @lines) . "\n";
-# warn "NormalizerYahoo n matches: $n\n";
+# warn "Yahoo_IM_Format n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
 }
 
 ##################################################################
-########################## NormalizerPlainText #########################
+########################## Plain_Text_Format #########################
 ##################################################################
 # This is just a plain text file of notes made by the scribe.
 # This format does NOT use timestamps, nor does it use <speakerName>
 # at the beginning of each line.  It does still use the "dbooth: ..."
 # convention to indicate what someone said.
-sub NormalizerPlainText
+sub Plain_Text_Format
 {
 die if @_ != 1;
 my ($all) = @_;
@@ -1606,15 +1690,21 @@ my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $n = 0;
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
 for (my $i=0; $i<@lines; $i++)
 	{
 	# Lines should NOT have timestamps:
 	# 	20:41:27 <ericn> Review of minutes 
-	next if $lines[$i] =~ m/\A$timePattern\s+/;
-	# Lines should NOT start with <speakerName>:
+	next if $lines[$i] =~ m/$timePattern\s+/;
+	# Lines should NOT contain <speakerName>:
 	# 	<ericn> Review of minutes 
-	next if $lines[$i] =~ m/\A(\<$namePattern\>\s)/;
+	next if $lines[$i] =~ m/(\<$namePattern\>\s)/;
+	# Line should NOT have [name] unless it pertains to an action item.
+	# Check the current line and previous line for the word ACTION,
+	# because the action status [PENDING] could follow the ACTION line.
+	next if $lines[$i] =~ m/(\[$namePattern\]\s)/
+		&&  $lines[$i] !~ m/\bACTION\b/i
+		&&  ($i == 0 || ($lines[$i] !~ m/\bACTION\b/i));
 	# warn "LINE: $lines[$i]\n";
 	$n++;
 	}
@@ -1625,8 +1715,11 @@ for (my $i=0; $i<@lines; $i++)
 	$lines[$i] = "<Scribe> " . $lines[$i];
 	}
 $all = "\n" . join("\n", @lines) . "\n";
-# warn "NormalizerPlainText n matches: $n\n";
+# warn "Plain_Text_Format n matches: $n\n";
 my $score = $n / @lines;
+# Artificially downgrade the score, so that more specific formats
+# like Yahoo_IM_Format will win if possible:
+$score = $score * 0.95;
 return($score, $all);
 }
 
