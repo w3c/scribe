@@ -232,14 +232,26 @@ Option 1 is best if you forgot to indicate who is scribe ("Scribe:
 <h2>Running Scribe.perl</h2>
 Scribe.perl reads standard input and writes to standard output:<br>
 <pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> log.txt &gt; minutes.html<br></code></pre>
-<h3>Options</h3>
+Suggested usage:<br>
+&nbsp;&nbsp;&nbsp; 1. Make a backup of your IRC log.<br>
+&nbsp;&nbsp;&nbsp; 2. Modify the IRC log to make corrections or conform
+to the scribe conventions that this program expects.<br>
+&nbsp;&nbsp;&nbsp; 3. Run this program as described above.<br>
+&nbsp;&nbsp;&nbsp; 4. View the output in a browser.<br>
+&nbsp;&nbsp;&nbsp; 5. Go back to step 2 to make modifications, and
+repeat.<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; Once the output looks good enough, then
+. . .<br>
+&nbsp;&nbsp;&nbsp; 6. Manually edit the resulting HTML for any
+remaining details.<br>
+<pre><code></code><code></code></pre>
+<h2><a name="options"></a>Options</h2>
 <span style="font-style: italic;">I'm not sure what HTML format to use,
 for listing the options below.&nbsp; Any suggestions?&nbsp; I'm using
 the&nbsp; mozilla HTML editor.&nbsp; Thus far I've been trying out a
 definition list, but I haven't been able to figure out how to create
 definition lists in the Mozilla editor without resorting to manually
 inserting the &lt;dt&gt; tags.&nbsp; Any ideas?&nbsp; -- dbooth@w3.org</span><br>
-<br>
 <br>
 <dl>
   <dt>-implicitContinuations</dt>
@@ -264,7 +276,13 @@ agendum". Specifically, treat Zakim statements like:
 as equivalent to the command:
     <pre><code>&lt;scribe&gt; Topic: UTF16 PR issue </code></pre>
   </dd>
-  <dt><br>
+  <dt>-inputFormat <span style="font-style: italic;">NameOfFormat</span></dt>
+  <dd>Force input to be treated as <span style="font-style: italic;">NameOfFormat</span>,
+which must be one of the formats listed in <a href="#input_formats">Input
+Formats</a>.&nbsp;
+This option is not normally needed, as the input format will normally
+be guessed.</dd>
+  <dt> <br>
   </dt>
   <dt>-public</dt>
   <dd>(DEFAULT) Use the built-in W3C template that is styled for public
@@ -315,7 +333,7 @@ is used.</dd>
   <br>
 </dl>
 <br>
-<h2>One-Time Commands</h2>
+<h2><a name="one_time_commands"></a>One-Time Commands</h2>
 These commands should be done once.&nbsp; If the data for any of these
 changes during the meeting (for example, if the scribe changes), the
 easiest solution is to break the log into two files and generate two
@@ -341,7 +359,7 @@ Regrets:<br>
 Date:<br>
 Log: <br>
 <br>
-<h2>Correcting Mistakes</h2>
+<h2><a name="correcting_mistakes"></a>Correcting Mistakes</h2>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
  style="font-style: italic;">new</span><span style="font-weight: bold;">/</span><br>
@@ -367,33 +385,43 @@ Replace globally from this point backward.<br>
 Replace globally, both forward and backward.<br>
 <br>
 <br>
-<h2>Input Formats Accepted</h2>
+<h2><a name="input_formats"></a>Input Formats Accepted</h2>
 Several log formats are accepted.&nbsp; Scribe.perl guesses which
-format you have used by seeing which format best matches the input.<br>
+format you have used by seeing which format best matches the
+input.&nbsp; If necessary, you can specify the input format explicitly
+using the -inputFormat option and specifying the name of the format
+below, such as "-inputFormat RRSAgent_Text_Format".&nbsp; (The names of
+the formats below are actually the perl function names used in the
+code.)<br>
 <br>
-<h3>RRSAgent Text Format -- <span style="color: rgb(51, 204, 0);">RECOMMENDED</span><br>
+<h3>RRSAgent_Text_Format -- <span style="color: rgb(51, 204, 0);">RECOMMENDED</span><br>
 </h3>
 The plain text format (*.txt) produced by RRSAgent.&nbsp; Hint: add
 ".txt"
 to the RRSAgent log URL to get the text version:
 http://www.w3.org/2002/11/07-ws-arch-irc.txt<br>
 <pre><code>20:41:27 &lt;dbooth&gt; Mike: Feature X would benefit users.<br></code><code>20:41:37 &lt;dbooth&gt; </code><code>... and implementation would be easy.<br></code><code></code><code>20:41:47 &lt;ericn&gt; I agree.<br></code></pre>
-<h3>RRSAgent HTML Format</h3>
+<h3>RRSAgent_HTML_Format</h3>
 The HTML format (*.html) produced by RRSAgent.&nbsp; This is the raw
 HTML code.<br>
 <pre><code>&lt;dt id="T20-41-27"&gt;20:41:27 [</code><code>dbooth</code><code>]&lt;/dt&gt;&lt;dd&gt;</code><code>Mike: Feature X would benefit users.</code><code> &lt;/dd&gt;<br>&lt;</code><code>dt id="T20-41-37"&gt;20:41:37 [dbooth]&lt;/dt&gt;&lt;dd&gt;</code><code>... and implementation would be easy.</code><code> &lt;/dd&gt;<br></code><code>&lt;dt id="T20-41-37"&gt;20:41:47 [</code><code>ericn</code><code>]&lt;/dt&gt;&lt;dd&gt;</code><code>I agree</code><code>. &lt;/dd&gt;<br></code></pre>
-<h3>RRSAgent Displayed-Text-From-Html Format</h3>
+<h3>RRSAgent_Visible_HTML_Text_Paste_Format<br>
+</h3>
 This is for the format that is visible in the browser when RRSAgent's
 HTML is displayed.&nbsp; I.e., when you display the *.html log in a
 browser,
 and then copy and paste the text from the browser window, only the
 displayed text is copied -- not the raw HTML tags.<br>
 <pre><code>20:41:27 [</code><code>dbooth</code><code>]<br>     </code><code>Mike: Feature X would benefit users.</code><code><br>20:41:37 [dbooth]<br>     </code><code>... and implementation would be easy</code><code>.<br></code><code>20:41:47 [</code><code>ericn</code><code>]<br>     I agree.</code><code><br></code></pre>
-<h3>RRSAgent RDF Format -- NOT IMPLEMENTED</h3>
-<h3>mIRC Format</h3>
+<h3>(RRSAgent_RDF_Format -- NOT IMPLEMENTED)</h3>
+<br>
+<h3>Mirc_Text_Format</h3>
 The format produced by mIRC when you do Buffer--&gt;Save As.<br>
 <pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;ericn&gt; I agree.<br></code></pre>
-<h3>Yahoo IM Format</h3>
+<h3>Hugo_Log_Text_Format</h3>
+The format produced by Hugo's logger.<br>
+<pre><code></code>2003-12-18T15:27:21-0500 &lt;dbooth&gt; <code>M</code><code>ike: Feature X would benefit users</code><code>.</code><br>2003-12-18T15:27:36-0500 &lt;dbooth&gt; <code>... and implementation would be easy</code><code></code><code></code>.<br>2003-12-18T15:27:36-0500 &lt;ericn&gt; I agree.<br><code></code></pre>
+<h3>Yahoo_IM_Format</h3>
 The format produced when you save a Yahoo IM session.<br>
 <pre><code>dbooth: </code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br>dbooth: </code><code>... and implementation would be easy</code><code></code><code>.<br>ericn: I agree.<br></code></pre>
 <h3>Plain Text Format<br>
@@ -405,18 +433,6 @@ text editor.<br>
 <pre><code></code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br></code><code>... and implementation would be easy</code><code></code><code>.<br>Eric agrees.</code></pre>
 <br>
 <h2>Usage Hints</h2>
-Suggested usage:<br>
-&nbsp;&nbsp;&nbsp; 1. Make a backup of your IRC log.<br>
-&nbsp;&nbsp;&nbsp; 2. Modify the IRC log to make corrections or conform
-to the scribe conventions that this program expects.<br>
-&nbsp;&nbsp;&nbsp; 3. Run this program as described above.<br>
-&nbsp;&nbsp;&nbsp; 4. View the output in a browser.<br>
-&nbsp;&nbsp;&nbsp; 5. Go back to step 2 to make modifications, and
-repeat.<br>
-&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; Once the output looks good enough, then
-. . .<br>
-&nbsp;&nbsp;&nbsp; 6. Manually edit the resulting HTML for any
-remaining details.<br>
 <br>
 <br>
 <br>
