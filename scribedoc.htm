@@ -1,0 +1,371 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type"
+ content="text/html; charset=iso-8859-1">
+  <title>Scribe.perl -- Generate meeting minutes from an IRC log</title>
+  <link rel="STYLESHEET" href="scribe_files/base.css">
+  <meta name="author" content="David Booth">
+</head>
+<body>
+<p><a href="http://www.w3.org/"><img src="scribe_files/w3c_home.png"
+ alt="W3C" border="0" height="48" width="72"></a>&nbsp;<a href="#name"></a></p>
+<h1>Scribe.perl - Generate Meeting Minutes from an IRC Log</h1>
+<span style="font-style: italic;">This documentation is
+unfinished.&nbsp; See the opening comment in <a
+ href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">the
+scribe.perl source code</a> for complete information.&nbsp; Also,
+please feel free to make improvements to this document and the source
+code and check them into CVS.&nbsp; Thanks!&nbsp; -- dbooth</span><br>
+<h2>General Description</h2>
+<a href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">Scribe.perl</a>
+is a crude perl script for generating meeting minutes from an IRC, IM
+or other log that has been written to follow some simple conventions. <br>
+<h2>Quick Start</h2>
+<table cellpadding="2" cellspacing="2" border="0"
+ style="text-align: left; width: 100%;">
+  <tbody>
+    <tr style="font-weight: bold;">
+      <td style="vertical-align: top;" rowspan="1" colspan="2">Invite <a
+ href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a> and <a
+ href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a>
+(skip this if you're not using W3C's IRC):</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code>/invite rrsagent <span
+ style="font-style: italic;">#ws-arch</span></code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code>#ws-arch</code>
+should be your IRC channel)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code>/invite zakim <span
+ style="font-style: italic;">#ws-arch</span></code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code>#ws-arch</code>
+should be your IRC channel)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code>zakim, this will be <span
+ style="font-style: italic;">ws_arch</span><br>
+      </code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code>ws_arch</code>
+should be your meeting <br>
+name as shown in the <a
+ href="http://www.w3.org/Guide/1998/08/teleconference-calendar">W3C
+teleconference calendar</a>)<br>
+      </td>
+    </tr>
+    <tr style="font-weight: bold;">
+      <td style="vertical-align: top;" rowspan="1" colspan="2">Start
+the meeting:</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">Scribe:</span> <span
+ style="font-style: italic;">dbooth</span></code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code>dbooth</code>
+is scribe today.&nbsp; Name should <br>
+match scribe's IRC nickname.)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">Meeting:</span> <span
+ style="font-style: italic;">WS Arch
+Teleconference</span><br>
+      </code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code></code>Record
+meeting title)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">Chair:</span> <span
+ style="font-style: italic;">Mike</span><br style="font-style: italic;">
+      </code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code></code>Record
+who chaired)<br>
+      </td>
+    </tr>
+    <tr style="font-weight: bold;">
+      <td style="vertical-align: top;" rowspan="1" colspan="2">Record
+meeting notes:</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">Topic:</span> <span
+ style="font-style: italic;">Debate on Feature X</span><br>
+      </code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code></code>Use
+"Topic: . . ." at the <br>
+start of each agenda topic)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-style: italic;">Mike</span><span style="font-weight: bold;">:</span>
+      <span style="font-style: italic;">Feature X is great</span></code><br>
+      </td>
+      <td style="vertical-align: top; font-style: italic;"><span
+ style="font-family: monospace;">(Record what Mike said</span>) </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">... </span><span
+ style="font-style: italic;">and easy to implement.</span></code><br>
+      </td>
+      <td style="vertical-align: top; font-style: italic;"><span
+ style="font-family: monospace;">(Mike's statement continues</span>) </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">ACTION:</span> <span
+ style="font-style: italic;">Frank to order
+lunch</span><br>
+      </code></td>
+      <td style="vertical-align: top; font-style: italic;">(Record new
+action)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">ACTION:</span> <span
+ style="font-style: italic;">Mary to write spec</span> <span
+ style="font-weight: bold;">[DONE]</span><br>
+      </code></td>
+      <td style="vertical-align: top; font-style: italic;">(Record old
+action and status, e.g. <br>
+      <code>DONE, PENDING, DROPPED</code>)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-weight: bold;">Finish
+the meeting:</span><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">zakim, bye</span><br>
+      </code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code></code>Dismiss
+zakim bot, which will generate a list of attendees.&nbsp; Use "Present:
+..." if you aren't using zakim bot.)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">rrsagent, where am i?</span></code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code></code>Determine
+log location.&nbsp; Note URL.)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">rrsagent, bye</span></code></td>
+      <td style="vertical-align: top; font-style: italic;">(<code></code>Dismiss
+rrsagent.)<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-weight: bold;">Generate
+minutes:</span><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-style: italic;">(Save
+      <br>
+      </span><span style="font-style: italic;">http://www.w3.org/2002/04/05-arch-irc.txt)</span><br>
+      </td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">(Hint:
+Strip #fragid and add .txt to URL) </span></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">perl scribe.perl</span> <span
+ style="font-style: italic;">log.txt</span> <span
+ style="font-weight: bold;">&gt;</span> <span
+ style="font-style: italic;">minutes.html</span></code><br>
+      </td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">(Generate
+minutes)</span><br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-style: italic;">(Then
+modify log.txt and regenerate minutes.html if necessary)</span><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+<br>
+<pre><code></code><code></code></pre>
+<h2>Running Scribe.perl</h2>
+Scribe.perl reads standard input and writes to standard output:<br>
+<pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> log.txt &gt; minutes.html<br></code></pre>
+<h3>Options<br>
+</h3>
+<dl>
+  <dt>-public</dt>
+  <dd>(DEFAULT) Use the built-in W3C template that is styled for public
+access. </dd>
+  <dt>-member</dt>
+  <dd>Use the built-in template that is styled for W3C member-only
+access.<br>
+  </dd>
+  <dt>-team</dt>
+  <dd>Use the built-in template that is styled for W3C team-only access.</dd>
+  <dt>-mit</dt>
+  <dd>Use the built-in template that is styled for W3C MIT site
+meetings.</dd>
+  <dt><br>
+  </dt>
+  <dt>-template <span style="font-style: italic;">templateFile.html</span></dt>
+  <dd>Use <span style="font-style: italic;">templateFile.html</span>
+as the template for generating the minutes.</dd>
+  <dt>-sampleTemplate</dt>
+  <dd>Show me a sample template file.&nbsp; (This outputs the default
+template.)<br>
+    <br>
+  </dd>
+  <dt>-trustRRSAgent</dt>
+  <dd>Take the action items from what RRSAgent says, ("&lt;RRSAgent&gt;
+I see 9 open action items...") rather than directly from the text that
+was written in IRC when the action was recorded ("&lt;dbooth&gt;
+ACTION: ...").&nbsp; <br>
+This option has pros and cons.&nbsp; <span style="font-weight: bold;">Pros:</span>
+It enables scribe.perl to add "[recorded in http://...]" to action
+items.&nbsp; Also, changes to action items that were made through
+RRSAgent commands ("ACTION 4 = whatever") are reflected in action items
+that are output.. <span style="font-weight: bold;">Cons:</span>
+Changes to action items that were made with "s/old/new/" commands have
+no effect, because RRSAgent doesn't process them.<br>
+&nbsp;</dd>
+  <dt>-sampleInput</dt>
+  <dd>Show me some sample input, so I can learn how to use this
+program.&nbsp; Input is ignored if this option is used.</dd>
+  <dt>-sampleOutput</dt>
+  <dd>Show me some sample output.&nbsp; Input is ignored if this option
+is used.</dd>
+  <br>
+</dl>
+<br>
+<h2>One-Time Commands</h2>
+These commands should be done once.&nbsp; If the data for any of these
+changes during the meeting (for example, if the scribe changes), the
+easiest solution is to break the log into two files and generate two
+sets of minutes.<br>
+<dl>
+  <dt><strong>Meeting: <span style="font-style: italic;">Baking Club</span></strong></dt>
+Use Baking Club for the title of the meeting minutes.<br>
+</dl>
+<dl>
+  <dt><strong>Chair: <span style="font-style: italic;">Jonathan</span></strong></dt>
+Jonathan was the meeting chair.<br>
+</dl>
+<dl>
+  <dt><strong>Scribe: <span style="font-style: italic;">Mary</span></strong></dt>
+Mary was the scribe.<br>
+  <br>
+</dl>
+<dl>
+  <dt><code>Present: <span style="font-style: italic;">Jonathan, Mary,
+Barbara, Steve</span></code></dt>
+</dl>
+Regrets:<br>
+Date:<br>
+Log: <br>
+<br>
+<h2>Correcting Mistakes</h2>
+<span style="font-weight: bold;">s/</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">/</span><br>
+<span style="font-weight: bold;">s/</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
+ style="font-style: italic;">new</span><br>
+Replace the most recent occurrence of <span style="font-style: italic;">old
+</span>with <span style="font-style: italic;">new</span><br
+ style="font-style: italic;">
+<br>
+<span style="font-weight: bold;">s/</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">/g</span>&nbsp;
+<br>
+Replace globally from this point backward<br>
+<br>
+<span style="font-weight: bold;">s/</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">/G</span>&nbsp;
+<br>
+Replace globally, both forward and backward<br>
+<br>
+<br>
+<h2>Input Formats Accepted</h2>
+Several log formats are accepted.&nbsp; Scribe.perl guesses which
+format you have used by seeing which format best matches the input.<br>
+<br>
+<h3>RRSAgent Text Format -- <span style="color: rgb(51, 204, 0);">RECOMMENDED</span><br>
+</h3>
+The plain text format (*.txt) produced by RRSAgent.&nbsp; Hint: add
+".txt"
+to the RRSAgent log URL to get the text version:
+http://www.w3.org/2002/11/07-ws-arch-irc.txt<br>
+<pre><code>20:41:27 &lt;dbooth&gt; Mike: Feature X would benefit users.<br></code><code>20:41:37 &lt;dbooth&gt; </code><code>... and implementation would be easy.<br></code><code></code><code>20:41:47 &lt;ericn&gt; I agree.<br></code></pre>
+<h3>RRSAgent HTML Format</h3>
+The HTML format (*.html) produced by RRSAgent.&nbsp; This is the raw
+HTML code.<br>
+<pre><code>&lt;dt id="T20-41-27"&gt;20:41:27 [</code><code>dbooth</code><code>]&lt;/dt&gt;&lt;dd&gt;</code><code>Mike: Feature X would benefit users.</code><code> &lt;/dd&gt;<br>&lt;</code><code>dt id="T20-41-37"&gt;20:41:37 [dbooth]&lt;/dt&gt;&lt;dd&gt;</code><code>... and implementation would be easy.</code><code> &lt;/dd&gt;<br></code><code>&lt;dt id="T20-41-37"&gt;20:41:47 [</code><code>ericn</code><code>]&lt;/dt&gt;&lt;dd&gt;</code><code>I agree</code><code>. &lt;/dd&gt;<br></code></pre>
+<h3>RRSAgent Displayed-Text-From-Html Format</h3>
+This is for the format that is visible in the browser when RRSAgent's
+HTML is displayed.&nbsp; I.e., when you display the *.html log in a
+browser,
+and then copy and paste the text from the browser window, only the
+displayed text is copied -- not the raw HTML tags.<br>
+<pre><code>20:41:27 [</code><code>dbooth</code><code>]<br>     </code><code>Mike: Feature X would benefit users.</code><code><br>20:41:37 [dbooth]<br>     </code><code>... and implementation would be easy</code><code>.<br></code><code>20:41:47 [</code><code>ericn</code><code>]<br>     I agree.</code><code><br></code></pre>
+<h3>RRSAgent RDF Format -- NOT IMPLEMENTED</h3>
+<h3>mIRC Format</h3>
+The format produced by mIRC when you do Buffer--&gt;Save As.<br>
+<pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;ericn&gt; I agree.<br></code></pre>
+<h3>Yahoo IM Format</h3>
+The format produced when you save a Yahoo IM session.<br>
+<pre><code>dbooth: </code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br>dbooth: </code><code>... and implementation would be easy</code><code></code><code>.<br>ericn: I agree.<br></code></pre>
+<h3>Plain Text Format<br>
+</h3>
+Line-oriented plain text format.&nbsp; This format is intended for
+occasions
+when the scribe doesn't have access to IRC, and simply takes notes in a
+text editor.<br>
+<pre><code></code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br></code><code>... and implementation would be easy</code><code></code><code>.<br>Eric agrees.</code></pre>
+<br>
+<h2>Usage Hints</h2>
+Suggested usage:<br>
+&nbsp;&nbsp;&nbsp; 1. Make a backup of your IRC log.<br>
+&nbsp;&nbsp;&nbsp; 2. Modify the IRC log to make corrections or conform
+to the scribe conventions that this program expects.<br>
+&nbsp;&nbsp;&nbsp; 3. Run this program as described above.<br>
+&nbsp;&nbsp;&nbsp; 4. View the output in a browser.<br>
+&nbsp;&nbsp;&nbsp; 5. Go back to step 2 to make modifications, and
+repeat.<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; Once the output looks good enough, then
+. . .<br>
+&nbsp;&nbsp;&nbsp; 6. Manually edit the resulting HTML for any
+remaining details.<br>
+<br>
+<br>
+<br>
+<br>
+<hr>
+<address> <a href="http://validator.w3.org/check/referer"></a><a
+ href="mailto:dbooth@w3.org">David Booth</a><a
+ href="mailto:swick@w3.org"></a><br>
+$Date$
+</address>
+</body>
+</html>
