@@ -367,11 +367,11 @@ $all = "\n" . join("\n", @allLines) . "\n";
 my @possiblyPresent = @uniqNames;	# People present at the meeting
 my @present = ();			# People present at the meeting
 my @newAllLines = ();	# Collect remaining lines
-push(@allLines, "<dbooth> Present: David Booth, Frank G, Joe Camel, Carol King"); # test
-push(@allLines, "<dbooth> Present: Amy Frank Joe Carol"); # test
-push(@allLines, "<dbooth> Present+: Justin"); # test
-push(@allLines, "<dbooth> Present+ Silas"); # test
-push(@allLines, "<dbooth> Present-: Amy"); # test
+# push(@allLines, "<dbooth> Present: David Booth, Frank G, Joe Camel, Carol King"); # test
+# push(@allLines, "<dbooth> Present: Amy Frank Joe Carol"); # test
+# push(@allLines, "<dbooth> Present+: Justin"); # test
+# push(@allLines, "<dbooth> Present+ Silas"); # test
+# push(@allLines, "<dbooth> Present-: Amy"); # test
 foreach my $line (@allLines)
 	{
 	$line =~ s/\s+\Z//; # Remove trailing spaces.
