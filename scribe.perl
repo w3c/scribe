@@ -32,6 +32,12 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
+# 0. Add ScribeNick command, to indicate the scribe nickname.  See
+# http://lists.w3.org/Archives/Team/w3t-arch/2004MarApr/att-0117/minutes.html
+# where Scribe was Yves but nick was ScrYves.
+#
+# 0.1 Make <scribe> statement lines look better.
+#
 # 1. Make the generated HTML valid.  At the moment it is INVALID.
 # (Broken by Dom when switching to Karl's new format, and unfortunately
 # the template process is really messy (my fault (dbooth)), so it isn't 
@@ -125,14 +131,16 @@ my $namePattern = '([\\w]([\\w\\d\\-\\.]*))';
 
 # These are the recognized commands.  Each command should be a
 # single word, so use underscores if you have a multi-word command.
-my @ucCommands = qw(Meeting Scribe Topic Chair Present Regrets Agenda 
-	IRC Log IRC_Log Previous_Meeting ACTION);
+my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair 
+	Present Regrets Agenda 
+	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION);
 # Make lower case and generate spelling variations
 @commands = &Uniq(&WordVariations(map {&LC($_)} @ucCommands));
 # Map to preferred spelling:
 my %commands = &WordVariationsMap(@ucCommands);
 # A pattern to match any of them.  (Be sure to use case-insensitive matching.)
 my $commandsPattern = &MakePattern(keys %commands);
+# warn "commandsPattern: $commandsPattern\n";
 
 # These are the recognized action statuses.  Each status should be a
 # single word, so use underscores if you have a multi-word status.
@@ -169,19 +177,20 @@ my %stopList = &WordVariationsMap(@stopList);
 my $stopListPattern = &MakePattern(keys %stopList);
 
 # Globals
-my $all = "";			# Input
+my $all = "";			# Input.  
 my $template = &DefaultTemplate();	# Template for minutes
 my $bestName = "";  		# Name of input format normalizer guessed
 
 # Get options/args
 my $normalizeOnly = 0;		# Output only the normlized input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
-my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
 my $scribeOnly = 0;		# Only select scribe lines
 my $trustRRSAgent = 0;		# Trust RRSAgent?
 my $breakActions = 1;		# Break long action lines?
 my $implicitContinuations = 0;	# Option: -implicitContinuations
-my $scribeName = "UNKNOWN"; 	# Example: -scribe dbooth
+my $scribeName = ""; 		# Example: -scribe dbooth
+				# Or: -scribe "David_Booth"
+my $scribeNick = "";	 	# Example: -scribeNick dbooth
 my $useZakimTopics = 1; 	# Treat zakim agenda take-up as Topic change?
 my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 my $minScribeLines = 40;	# Min lines to be guessed as scribe.
@@ -241,7 +250,7 @@ while($restartForEmbeddedOptions)
 		elsif ($a eq "-trustRRSAgent") 
 			{ $trustRRSAgent = 1; }
 		elsif ($a eq "-teamSynonyms") 
-			{ $useTeamSynonyms = 1; }
+			{ warn "\nWARNING: -teamSynonyms option no longer implemented\n\n"; }
 		elsif ($a eq "-mit") 
 			{ $template = &MITTemplate(); }
 		elsif ($a eq "-team") 
@@ -283,6 +292,8 @@ while($restartForEmbeddedOptions)
 			{ $dashTopics = 0; }
 		elsif ($a eq "-scribe" || $a eq "-scribeName") 
 			{ $scribeName = shift @ARGV; }
+		elsif ($a eq "-scribeNick" || $a eq "-scribeNickname") 
+			{ $scribeNick = shift @ARGV; }
 		elsif ($a eq "-tidy") 
 			{ 
 			open(STDOUT, "| tidy -c") || die "ERROR: Could not run \"tidy -c\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n";
@@ -327,6 +338,7 @@ while($restartForEmbeddedOptions)
 			Irssi_ISO8601_Log_Text_Format
 			Yahoo_IM_Format
 			Plain_Text_Format
+			Normalized_Format
 			);
 	my %inputFormats = map {($_,$_)} @inputFormats;
 	if ($inputFormat && !exists($inputFormats{$inputFormat}))
@@ -353,6 +365,7 @@ while($restartForEmbeddedOptions)
 	my $bestScoreString = sprintf("%4.2f", $bestScore);
 	if ($inputFormat)
 		{
+		# warn "INPUT FORMAT: $inputFormat\n";
 		# Format was specified using -inputFormat option
 		my ($score, $newAll) = &$inputFormat($all);
 		my $scoreString = sprintf("%4.2f", $score);
@@ -420,11 +433,15 @@ while($restartForEmbeddedOptions)
 		{
 		my $newOptions = &Trim($2);
 		$embeddedScribeOptions .= " $newOptions";
-		warn "FOUND new ScribeOptions: $newOptions\n";
+		# warn "FOUND new ScribeOptions: $newOptions\n";
 		$restartForEmbeddedOptions = 1;
 		}
-	warn "FOUND embedded ScribeOptions: $embeddedScribeOptions\n*** RESTARTING ***\n\n"
-		if $restartForEmbeddedOptions;
+	if ($restartForEmbeddedOptions)
+		{
+		warn "FOUND embedded ScribeOptions: $embeddedScribeOptions\n*** RESTARTING DUE TO EMBEDDED OPTIONS ***\n\n";
+		# Prevent input from being re-normalized:
+		push(@SAVE_ARGV, ("-inputFormat", "Normalized_Format"));
+		}
 	}
 
 if ($canonicalizeNames) 
@@ -462,7 +479,7 @@ if ($useZakimTopics)
 my @topicLines = grep 
 	{
 	my ($writer, $type, $value, $rest, undef) = &ParseLine($_);
-	$type eq "COMMAND" && $value eq "Topic" && $rest ne "";
+	$type eq "COMMAND" && &LC($value) eq "topic" && $rest ne "";
 	} split(/\n/, $all);
 # Now see how many we'd get if we used the $dashTopics option:
 my ($allDashTopics, $nDashTopics) = &ConvertDashTopics($all);
@@ -514,55 +531,23 @@ if ($normalizeOnly)
 	exit 0;
 	}
 
-# Determine scribe name if possible:
-$scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)\s*\n/\n/i;
-if ($scribeName eq "UNKNOWN")
-	{
-	if ($bestName eq "Plain_Text_Format")
-		{
-		# Cannot guess the scribe when Plain_Text_Format format is used.
-		warn "\nWARNING: Scribe name not specified!!!\n";
-		}
-	else	{
-		$scribeName = &GuessScribeName($all);
-		warn "\nWARNING: Scribe name not specified.  Guessing Scribe: $scribeName\n";
-		}
-	warn "Use the \"-scribe Hugo\" option or add a line like the following\n";
-	warn "to explicitly indicate that Hugo is scribe (for example):\n";
-	warn "Scribe: Hugo\n\n";
-	}
-$scribeName = &Trim($scribeName);
-warn "Scribe: $scribeName\n";
-
 # Get attendee list, and canonicalize names within the document:
 my @uniqNames = ();
 my $allNameRefsRef;
-($all, $scribeName, $allNameRefsRef, @uniqNames) = &GetNames($all, $scribeName);
+($all, $allNameRefsRef, @uniqNames) = &GetNames($all);
 my @allNames = map { ${$_} } @{$allNameRefsRef};
-my $scribePattern = quotemeta($scribeName);
-# warn "scribePattern: $scribePattern\n";
-# Replace scribe name with "scribe".  I.e., change
-#	<dbooth> Minutes approved
-# to
-#	<scribe> Minutes approved
-$all = "\n$all\n";
-{
-my $t = $all;
-# Warning: Pattern match (annoyingly) returns "" if no match -- not 0.
-my $nScribeLines = ($t =~ s/\n\<scribe\>/\n\<Scribe\>/ig);
-$nScribeLines = 0 if $nScribeLines eq ""; # Make 0 if no match
-# warn "nScribeLines: $nScribeLines\n";
-my $nScribePatterns = ($all =~ s/\n\<$scribePattern\>/\n\<Scribe\>/ig);
-$nScribePatterns = 0 if $nScribePatterns eq ""; # Make 0 if no match
-# warn "nScribePatterns: $nScribePatterns\n";
-if ($nScribeLines < 6 && $nScribePatterns <= 0)
-	{
-	warn "\nWARNING: No lines matching scribe name <$scribeName> found.\n";
-	warn "Scribe name should match the scribe's IRC handle.\n\n";
-	}
-}
-$scribePattern = "Scribe";
-push(@allNames,"Scribe");
+
+# Determine scribe name and scribeNick:
+$scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)\s*\n/\n/i;
+$scribeNick = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe[ _\-]?Nick\s*\:\s*(.+?)\s*\n/\n/i;
+$scribeName = &Trim($scribeName);
+$scribeNick = &Trim($scribeNick);
+($scribeName, $scribeNick, $all) = 
+	&SetScribeNameAndNick($scribeName, $scribeNick, $all);
+warn "Scribe: $scribeName\n";
+warn "ScribeNick: $scribeNick\n";
+
+push(@allNames,"scribe");
 my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
 my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # warn "speakerPattern: $speakerPattern\n";
@@ -582,7 +567,7 @@ my @regrets = ();	# People who sent regrets
 
 # Grab meeting name:
 my $title = "SV_MEETING_TITLE";
-if ($all =~ s/\n\<$namePattern\>\s*(Meeting|Title)\s*\:\s*(.*)\n/\n/i)
+if ($all =~ s/\n\<$namePattern\>\s*(Meeting)\s*\:\s*(.*)\n/\n/i)
 	{ $title = $4; }
 else 	{ 
 	warn "\nWARNING: No meeting title found!
@@ -604,7 +589,7 @@ If you wish, you may specify the agenda like this:
 
 # Grab Previous meeting URL:
 my $previousURL = "SV_PREVIOUS_MEETING_URL";
-if ($all =~ s/\n\<$namePattern\>\s*(Previous|PreviousMeeting|Previous Meeting)\s*\:\s*(.*)\n/\n/i)
+if ($all =~ s/\n\<$namePattern\>\s*(Previous[ _\-]*Meeting)\s*\:\s*(.*)\n/\n/i)
 	{ $previousURL = $4; }
 
 # Grab Chair:
@@ -623,7 +608,7 @@ my $logURL = "SV_MEETING_IRC_URL";
 # <RRSAgent>   recorded in http://www.w3.org/2002/04/05-arch-irc#T15-46-50
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(http\:([^\s\#]+))/i;
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
-$logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.*)\n/\n/i;
+$logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC([\s_]*)Log))\s*\:\s*(.*)\n/\n/i;
 
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
@@ -651,7 +636,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 			}
 		# $debugTypesSeen{$type}++;
 		# warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugTypesSeen{$type} < 3;
-		if ($type eq "STATUS" && $type2 eq "COMMAND" && $value2 eq "ACTION")
+		if ($type eq "STATUS" && $type2 eq "COMMAND" && &LC($value2) eq "action")
 			{
 			$lines[$i] = "<$writer\> ACTION: \[$value\] $rest2";
 			# warn "MOVED: $lines[$i]\n";
@@ -672,7 +657,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
 		# $debugTypesSeen{$type}++;
 		# warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugTypesSeen{$type} < 3;
-		if ($type eq "COMMAND" && $value eq "ACTION"
+		if ($type eq "COMMAND" && &LC($value) eq "action"
 			&& &LC($writer2) eq &LC($writer)
 			&& ($type2 eq "STATUS" || $type2 eq "CONTINUATION"))
 			{
@@ -694,7 +679,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# to lines like this:
 		#	<dbooth> ACTION: whatever [DONE]
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
-		if ($type eq "COMMAND" && $value eq "ACTION" && $i+1<@lines)
+		if ($type eq "COMMAND" && &LC($value) eq "action" && $i+1<@lines)
 			{
 			# warn "FOUND ACTION: $rest\n";
 			# Look ahead at the next line (by anyone).
@@ -712,7 +697,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 				for (my $j=$i+2; $j<@lines; $j++)
 					{
 					my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$j]);
-					last if ($type eq "COMMAND" && $value eq "ACTION");
+					last if ($type eq "COMMAND" && &LC($value) eq "action");
 					if (&LC($writer2) eq &LC($writer))
 						{
 						if ($type2 eq "STATUS" && $rest2 eq "")
@@ -738,7 +723,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1] [recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24]
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
 		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
-		if ($type eq "COMMAND" && $value eq "ACTION"
+		if ($type eq "COMMAND" && &LC($value) eq "action"
 			&& &LC($writer) eq "rrsagent" && 
 			&LC($writer2) eq &LC($writer)
 			&& $rest2 =~ m/\A\W*(recorded in http\:[^\s\[\]]+)(\s*\W*)\Z/i)
@@ -1111,8 +1096,8 @@ while (@linesIn)
 	# Dots continuation line.
 	# This commented out version is intended for when the "..." is
 	# already on the line when we get here:
-	# elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)//i) 
-	elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)\s*/ ... /i) 
+	# elsif ($line =~ s/\A\<scribe\>\s*($prevPattern)//i) 
+	elsif ($line =~ s/\A\<scribe\>\s*($prevPattern)\s*/ ... /i) 
 		{
 		# $line = " ... $text";
 		warn "  SAME SPEAKER: $line\n" if $debug;
@@ -1121,7 +1106,7 @@ while (@linesIn)
 	# because the ":" is stored as part of $prevSpeaker, so it
 	# won't match right the next time "<dbooth> joe : whatever" is
 	# encountered.
-	elsif ($line =~ s/\A\<Scribe\>\s*(($speakerPattern)\:)\s*/$1 /i )
+	elsif ($line =~ s/\A\<scribe\>\s*(($speakerPattern)\:)\s*/$1 /i )
 		{
 		warn "  NEW SPEAKER: $line\n" if $debug;
 		# New speaker
@@ -1136,7 +1121,7 @@ while (@linesIn)
 		{
 		warn "  SCRIBE CONTINUES: $line\n" if $debug;
 		}
-	elsif ($line =~ s/\A(\<Scribe\>)\s*/Scribe\: /i )
+	elsif ($line =~ s/\A(\<scribe\>)\s*/Scribe\: /i )
 		{
 		warn "  SCRIBE SPEAKS: $line\n" if $debug;
 		# Scribe speaks
@@ -1389,6 +1374,98 @@ warn "\nWARNING: There is currently a bug that causes this program to\ngenerate 
 exit 0;
 ################### END OF MAIN ######################
 
+#################################################################
+#################### SetScribeNameAndNick #######################
+#################################################################
+# Decide what $scribeNick to use, and modify $all to change
+# <$scribeNick> lines to <scribe> lines.
+sub SetScribeNameAndNick
+{
+@_ == 3 || die;
+my ($scribeName, $scribeNick, $all) = @_;
+my $guessedScribeNick = &GuessScribeNick($all);
+# Cannot guess the scribe when Plain_Text_Format format is used.
+$guessedScribeNick = "scribe" if ($bestName eq "Plain_Text_Format");
+my $guessedScribePattern = quotemeta($guessedScribeNick);
+# warn "guessedScribePattern: $guessedScribePattern\n";
+my $scribeNamePattern = quotemeta($scribeName);
+# warn "scribeNamePattern: $scribeNamePattern\n";
+my $scribeNickPattern = quotemeta($scribeNick);
+# warn "scribeNickPattern: $scribeNickPattern\n";
+
+# Replace scribe name with "scribe".  I.e., change
+#	<dbooth> Minutes approved
+# to
+#	<scribe> Minutes approved
+$all = "\n$all\n";
+# WARNING: Pattern match (annoyingly) returns "" if no match -- not 0.
+my $nScribeLines = ($all =~ s/\n\<scribe\>/\n\<scribe\>/ig);
+$nScribeLines = 0 if $nScribeLines eq ""; # Make 0 if no match
+# warn "nScribeLines: $nScribeLines\n";
+
+my $tempScribeNameAll = $all;
+my $nScribeNameLines = ($tempScribeNameAll =~ s/\n\<$scribeNamePattern\>/\n\<scribe\>/ig);
+$nScribeNameLines = 0 if $nScribeNameLines eq ""; # Make 0 if no match
+$nScribeNameLines = 0 if $scribeName eq ""; # Make 0 if no $scribeName
+# warn "nScribeNameLines: $nScribeNameLines\n";
+
+my $tempScribeNickAll = $all;
+my $nScribeNickLines = ($tempScribeNickAll =~ s/\n\<$scribeNickPattern\>/\n\<scribe\>/ig);
+$nScribeNickLines = 0 if $nScribeNickLines eq ""; # Make 0 if no match
+$nScribeNickLines = 0 if !$scribeNick; 		# Make 0 if no $scribeNick
+# warn "nScribeNickLines: $nScribeNickLines\n";
+
+my $tempGuessedScribeAll = $all;
+my $nGuessedScribeLines = ($tempGuessedScribeAll =~ s/\n\<$guessedScribePattern\>/\n\<scribe\>/ig);
+$nGuessedScribeLines = 0 if $nGuessedScribeLines eq ""; # Make 0 if no match
+$nGuessedScribeLines = 0 if !$guessedScribeNick;
+# warn "nGuessedScribeLines: $nGuessedScribeLines\n";
+
+if ($scribeNick)
+	{
+	$all = $tempScribeNickAll;
+	if (!$nScribeNickLines)
+		{
+		warn "\nWARNING: No <$scribeNick> lines found.\n";
+		if ($nScribeNameLines > $nGuessedScribeLines)
+			{
+			$scribeNick = $scribeName;
+			$all = $tempScribeNameAll;
+			}
+		else	{
+			$scribeNick = $guessedScribeNick;
+			$all = $tempGuessedScribeAll;
+			}
+		warn "Instead using ScribeNick: $scribeNick\n\n";
+		}
+	$scribeName = $scribeNick if !$scribeName;
+	}
+elsif ($scribeName)
+	{
+	$scribeNick = $scribeName;
+	$all = $tempScribeNameAll;
+	if (!$nScribeNameLines)
+		{
+		warn "\nWARNING: No <$scribeName> lines found.\n";
+		$scribeNick = $guessedScribeNick;
+		warn "Guessing ScribeNick: $scribeNick\n\n";
+		$all = $tempGuessedScribeAll;
+		}
+	}
+else	{
+	warn "\nWARNING: No Scribe or ScribeNick specified.\n";
+	$scribeNick = $guessedScribeNick;
+	warn "Guessing ScribeNick: $scribeNick\n";
+	warn "You can specify the Scribe's IRC name like this:\n";
+	warn "  <$scribeNick> ScribeNick: $scribeNick\n";
+	warn "You can also specify the Scribe's full name like this:\n";
+	warn "  <$scribeNick> ScribeNick: $scribeNick\n\n";
+	$all = $tempGuessedScribeAll;
+	}
+
+return ($scribeName, $scribeNick, $all);
+}
+
 ######################################################################
 ######################## ConvertDashTopics ###########################
 ######################################################################
@@ -1413,12 +1490,15 @@ for(my $i=0; $i<@lines-1; $i++)
 	# so look forward for the next line by the same writer.
 	INNER: for (my $j=$i+1; $j<@lines; $j++)
 		{
-		my ($writer2, $type2, undef, undef, $allButWriter2) = &ParseLine($lines[$j]);
+		my ($writer2, $type2, $value2, undef, $allButWriter2) = &ParseLine($lines[$j]);
 		# Same writer?
 		next if $writer2 ne $writer;
 		# Empty lines don't count.
 		next if $type2 eq "";
 		next if $allButWriter2 eq "";
+		# warn "writer2: $writer2 type2: $type2 value2: $value2 allButWriter2: $allButWriter2 lines[j]: $lines[$j]\n";
+		# Do nothing if the next scribe line is a Topic: command anyway
+		last INNER if ($type2 eq "COMMAND" && &LC($value2) eq "topic");
 		# Turn: 
 		#	<Philippe> UTF16 PR issue
 		# into: 
@@ -1426,9 +1506,11 @@ for(my $i=0; $i<@lines-1; $i++)
 		$lines[$j] = "\<$writer\> Topic: $allButWriter2";
 		$nFound++;
 		# $type2 is one of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
-		if ($type2 eq "COMMAND" || $type2 eq "STATUS" || $type2 eq "CONTINUATION")
+		if ($type2 eq "COMMAND" || $type2 eq "STATUS" 
+			|| ($type2 eq "CONTINUATION" && $value2 !~ m/\A\s*\Z/))
 			{
 			warn "\nWARNING: Unusual topic line found after \"$rest\" topic separator:" . $lines[$j] . "\n\n" if $dashTopics;
+			# warn "value2: $value2\n";
 			}
 		last INNER;
 		}
@@ -1502,6 +1584,30 @@ return(@result);
 }
 
 ###################################################################
+####################### MakePattern2 #######################
+###################################################################
+# Generate a pattern matching any of the given words, e.g.:
+#	dog|cat|pig
+# Compound words may be given, such as "Big Dog", "Big-Dog" or "Big_Dog",
+# in which case they are converted to patterns that match any form:
+#	Big[ _\-]?Dog
+# which will match any of:
+#	"BigDog", "Big_Dog", "Big-Dog" or "Big Dog"
+# No parentheses are used, so you should put parens around the
+# resulting pattern.
+sub MakePattern2
+{
+# ***  This is a new, untested version.  It should make WordVariations obsolete.
+@_ > 0 || die;
+my @words = grep {die if (!defined($_)) || $_ eq ""; $_} @_;
+@words = map {s/[ _\-]/_/g; $_} @words; # Big-Dog --> Big_Dog
+@words = map {quotemeta($_)} @words;
+@words = map {s/_/\[ _\\\-\]\?/g; $_} @words; # Big_Dog --> Big[ _\-]?Dog
+my $pattern =  join("|", @words);
+return $pattern;
+}
+
+###################################################################
 ####################### MakePattern #######################
 ###################################################################
 # Generate a pattern matching any of the given words, e.g.:
@@ -1525,6 +1631,10 @@ return $pattern;
 #	$type		One of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
 #	$value		Either: the command; the speaker; the continuation
 #			pattern; the status; or empty (if $type is PLAIN).
+#			WARNING: $value may be mixed case.  Use &LC($value)
+#			for lower case.  (Not sure if this is the right choice
+#			here.  Does anything need it in mixed case?  Maybe
+#			it should always be returned in lower case.)
 #	$rest		The rest of the line (no $writer or $value), &Trim()'ed
 #	$allButWriter	All but the <writer> part, &Trim()'ed.
 # (I.e., $type is "" if no writer.)
@@ -1561,7 +1671,10 @@ elsif ($line =~ m/\A(\s?(\s?))($commandsPattern)(\s?)\:\s*/i)
 	$value = $3;
 	$rest = $';
 	# Put command in canonical form (no spaces or underscore):
-	# die if !exists($commands{$value});
+	if (!exists($commands{&LC($value)}))
+		{
+		die "ParseLine value: $value line: $line\n" if $line =~ m/topic/i;
+		}
 	$value = $commands{&LC($value)}; # previous_meeting --> Previous_Meeting
 	}
 # Speaker statement?
@@ -1759,7 +1872,7 @@ my $currentSpeaker = "UNKNOWN_SPEAKER";
 for (my $i=0; $i<@allLines; $i++)
 	{
 	# warn "$allLines[$i]\n" if $allLines[$i] =~ m/Liam/;
-	if ($allLines[$i] =~ m/\A\<Scribe\>(\s?\s?)($speakerPattern)\s*\:/i)
+	if ($allLines[$i] =~ m/\A\<scribe\>(\s?\s?)($speakerPattern)\s*\:/i)
 		{
 		# The $speakerPattern in the pattern match above is
 		# constructed from all of the known speaker names, so 
@@ -1780,14 +1893,14 @@ for (my $i=0; $i<@allLines; $i++)
 	# join continuation lines on to the current line.
 	# The following commented out version is for when the code is changed
 	# to not remove (and later replace) the "...":
-	# elsif ($allLines[$i] =~ s/\A\<Scribe\>(\s?)\.\./\<Scribe\> $currentSpeaker: ../i)
-	elsif ($allLines[$i] =~ s/\A\<Scribe\>(\s?)\.\.+(\s?)/\<Scribe\> $currentSpeaker: /i)
+	# elsif ($allLines[$i] =~ s/\A\<scribe\>(\s?)\.\./\<scribe\> $currentSpeaker: ../i)
+	elsif ($allLines[$i] =~ s/\A\<scribe\>(\s?)\.\.+(\s?)/\<scribe\> $currentSpeaker: /i)
 		{
 		# warn "Scribe NORMALIZED: $& --> $allLines[$i]\n";
 		warn "\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line: <Zakim> +someone\n\n" if $currentSpeaker eq "UNKNOWN_SPEAKER";
 		}
 	# Leading-blank continuation line: "<dbooth>  the admin timeline page.".
-	elsif ($allLines[$i] =~ s/\A\<Scribe\>\s\s/\<Scribe\> $currentSpeaker:  /i)
+	elsif ($allLines[$i] =~ s/\A\<scribe\>\s\s/\<scribe\> $currentSpeaker:  /i)
 		{
 		# warn "Scribe NORMALIZED: $& --> $allLines[$i]\n";
 		warn "\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line: <Zakim> +someone\n\n" if $currentSpeaker eq "UNKNOWN_SPEAKER";
@@ -1802,10 +1915,10 @@ return $all;
 
 
 #################################################################
-################# GuessScribeName #################
+################# GuessScribeNick #################
 #################################################################
-# Guess the scribe name based on who wrote the most in the log.
-sub GuessScribeName
+# Guess the scribe IRC nickname based on who wrote the most in the log.
+sub GuessScribeNick
 {
 @_ == 1 || die;
 my ($all) = @_;
@@ -1832,7 +1945,7 @@ foreach my $n (@descending)
 	# warn "	$nameCounts{$n} $n\n";
 	}
 # warn "\n";
-return "UNKNOWN" if !@descending;
+return "" if !@descending; # None
 return $mixedCaseNames{$descending[0]};
 }
 
@@ -1867,33 +1980,22 @@ return $all;
 }
 
 #################################################################
-#################### IsIgnorable ################################
+#################### IsBotLine ###############################
 #################################################################
-# Should the given line be ignored?
-# Note that this will return true for action status lines
-# like: "<plh> *done*
-# Therefore, action processing should be done first.
-sub IsIgnorable
+# Given a single line, returns 1 if it is an IRC, Zakim or RRSAgent command
+# or response.
+sub IsBotLine
 {
 @_ == 1 || die;
 my ($line) = @_;
 die if $line =~ m/\n/; # Should be given only one line (with no \n).
-# Ignore empty lines.
-return 1 if &Trim($line) eq "";
-# Ignore /me lines.  Up to 3 leading spaces before "*".
-return 1 if $line =~ m/\A(\s?)(\s?)(\s?)\*/;
-return 1 if $line =~ m/\A\<$namePattern\>(\s?)(\s?)(\s?)\*/i;
-# Select only <speaker> lines
-return 1 if $line !~ m/\A\<$namePattern\>/i;
-# Ignore empty lines
-return 1 if $line =~ m/\A\<$namePattern\>\s*\Z/i;
-# Ignore join/leave lines:
+# Join/leave lines:
 return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
-return 1 if $line =~ m/\A\s*\<(Scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
-# Ignore topic change lines:
+return 1 if $line =~ m/\A\s*\<(scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
+# Topic change lines:
 # <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
 return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
-# Ignore zakim lines
+# Zakim lines
 return 1 if $line =~ m/\A\<Zakim\>/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
@@ -1903,13 +2005,42 @@ return 1 if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*queue\s*[\+\-\=\?]/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
-# Ignore RRSAgent lines
+# RRSAgent lines
 return 1 if $line =~ m/\A\<RRSAgent\>/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
+# If we get here, it isn't a bot line.
+# warn "KEPT: $line\n";
+return 0;
+}
+#################################################################
+#################### IsIgnorable ################################
+#################################################################
+# Should the given line be ignored?
+sub IsIgnorable
+{
+@_ == 1 || die;
+my ($line) = @_;
+die if $line =~ m/\n/; # Should be given only one line (with no \n).
+# Ignore empty lines.
+return 1 if &Trim($line) eq "";
+### No longer ignore lines starting with "*".  Non-logged lines should
+### be stripped out by the Mirc_Text_Format normalizer function.
+if (0)
+	{
+	# Ignore /me lines.  Up to 3 leading spaces before "*".
+	return 1 if $line =~ m/\A(\s?)(\s?)(\s?)\*/;
+	return 1 if $line =~ m/\A\<$namePattern\>(\s?)(\s?)(\s?)\*/i;
+	}
+# Select only <speaker> lines
+return 1 if $line !~ m/\A\<$namePattern\>/i;
+# Ignore empty lines
+return 1 if $line =~ m/\A\<$namePattern\>\s*\Z/i;
+# Ignore bot lines
+return 1 if &IsBotLine($line);
 # Remove off the record comments:
 return 1 if $line =~ m/\A\<$namePattern\>\s*\[\s*off\s*\]/i;
-# Select only <Scribe> lines?
-return 1 if $scribeOnly && $line !~ m/\A\<Scribe\>/i;
+# Select only <scribe> lines?
+return 1 if $scribeOnly && $line !~ m/\A\<scribe\>/i;
 # If we get here, we're keeping the line.
 # warn "KEPT: $line\n";
 return 0;
@@ -1964,25 +2095,51 @@ die if @_ != 1;
 my ($all) = @_;
 # Join continued lines:
 $all =~ s/\n\ \ //g;
-# Fix split URLs:
-# 	<RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2002Mar/00
-# 	  46.html Simon's two minutes
-# while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
-# while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
 # Count the number of recognized lines
 my @lines = split(/\n/, $all);
+my $nLines = scalar(@lines);
 my $n = 0;
 my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# First line may be empty
+if (@lines && &Trim($lines[0]) eq "")
+	{
+	$n++;
+	shift @lines;
+	}
+# Second line may be:
+#	Start of &t-and-s buffer: Fri Apr 16 21:44:19 2004
+if (@lines && $lines[0] =~ m/\AStart of \S+ buffer/)
+	{
+	$n++;
+	shift @lines;
+	}
+# Last line may be:
+#	End of &t-and-s buffer    Fri Apr 16 21:44:19 2004
+if (@lines && $lines[@lines-1] =~ m/\AEnd of \S+ buffer/)
+	{
+	$n++;
+	pop @lines;
+	}
+# Count remaining lines that look reasonable
+my @loggedLines = ();
 foreach my $line (@lines)
 	{
-	# * unlogged comment
-	if ($line =~ m/\A(\s?)(\s?)(\s?)\*\s/) { $n++; }
+	# * unlogged comment (delete)
+	if ($line =~ m/\A(\s?)(\s?)(\s?)\*/) { $n++; $line = ""; }
 	# <ericn> Discussion on how to progress
 	elsif ($line =~ m/\A\<$namePattern\>\s/i) { $n++; }
+	else	{
+		# warn "MIRC not match: $line\n";
+		}
 	# warn "LINE: $line\n";
+	push(@loggedLines, $line) if $line =~ m/\S/;
 	}
-# warn "Mirc_Text_Format n matches: $n\n";
-my $score = $n / @lines;
+my $score = $n / $nLines;
+# warn "Mirc_Text_Format n: $n nLines: $nLines score: $score\n";
+$all = join("\n", @loggedLines) . "\n";
+# Artificially downgrade the score, so that Normalized_Format will win
+# if the format is already normalized
+$score = $score * 0.99;
 return($score, $all);
 }
 
@@ -2219,11 +2376,11 @@ for (my $i=0; $i<@lines; $i++)
 	# warn "LINE: $lines[$i]\n";
 	$n++;
 	}
-# Now add "<Scribe> " to the beginning of each line, to make it like
+# Now add "<scribe> " to the beginning of each line, to make it like
 # the standard format.
 for (my $i=0; $i<@lines; $i++)
 	{
-	$lines[$i] = "<Scribe> " . $lines[$i];
+	$lines[$i] = "<scribe> " . $lines[$i];
 	}
 $all = "\n" . join("\n", @lines) . "\n";
 # warn "Plain_Text_Format n matches: $n\n";
@@ -2233,6 +2390,31 @@ my $score = $n / @lines;
 $score = $score * 0.95;
 return($score, $all);
 }
+
+##################################################################
+########################## Normalized_Format #########################
+##################################################################
+# Already normalized.  No-op.
+sub Normalized_Format
+{
+die if @_ != 1;
+my ($all) = @_;
+# Count the number of recognized lines
+my @lines = split(/\n/, $all);
+my $n = 0;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
+foreach my $line (@lines)
+	{
+	# <ericn> Review of minutes 
+	$n++ if $line =~ m/\A(\<$namePattern\>\s)/i;
+	# warn "LINE: $line\n";
+	}
+# No change to $all
+my $score = $n / @lines;
+return($score, $all);
+}
+
 
 ##################################################################
 ########################## ProbablyUsesImplicitContinuations #########################
@@ -2479,247 +2661,16 @@ return @date;
 
 
 ##################################################################
-###################### GetPresentOnPhone ######################
-##################################################################
-# Look for people in IRC log.
-sub GetPresentOnPhone
-{
-@_ == 1 || die;
-my($all) = @_;
-
-my %synonyms = ();
-%synonyms = qw(
-	alan-home	Alan
-	amymtg		Amy
-	caribou		Carine
-        Chaals		Charles
-        chaalsGVA	Charles
-        chaalsNCE	Charles
-	Dave		DaveRaggett
-	DaveR		DaveRaggett
-	DaveRagget	DaveRaggett
-	dbooth		dbooth
-	David		dbooth
-	DB		dbooth
-	DavidB		dbooth
-        danbri		DanBri
-	danc_		DanC
-	danc		DanC
-	dand		DanielD
-	EM		EricM
-	Eric		EricM
-	ericP-WA	EricP
-	ericP-air	EricP
-	ger		Gerald
-	HT		Henry
-	HH		Hugo
-	hugo		Hugo
-	ivan		Ivan
-	janSeaTac	Janet
-	karl		Karl
-	reagle-tu	JosephR
-	reagleMIT	JosephR
-	Joseph		JosephR
-	judy		Judy
-	MaxF		MaxF
-	MCF		Marie-Claire
-	MC		Marie-Claire
-	marie		Marie-Claire
-	mari		Marisol
-	MSM		MichaelSM
-	MSMbot		MichaelSM
-	Michael		MichaelSM
-	MJDuesrst	Martin
-	olivier		Olivier
-	plh		Philippe
-	plh-sjc		Philippe
-	Ralph		RalphS
-	rigo		Rigo
-	sandro		Sandro
-	sim		Simon
-	simHOME		Simon
-	Hernandez	Simon
-	SB		Steve
-	SusanL		SusanLesch
-	Ted		Ted
-	Tim		TimBL
-	VQ		VincentQ
-	) if $useTeamSynonyms;
-foreach my $n (values %synonyms)
-	{
-	$synonyms{$n} = $n;	# Make TimBL --> TimBL
-	}
-
-# Easier pattern matching:
-$all = "\n" . $all . "\n";
-
-# Now start collecting names.
-my %names =  ();
-my $t; # Temp
-
-# 	  ...something.html Simon's two minutes
-$t = $all;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
-# warn "namePattern: $namePattern\n";
-while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /i)
-	{
-	my $n = $1;
-	$names{$n} = $n;
-	}
-
-#	<dbooth> MC: I have integrated most of the coments i received 
-$t = $all;
-while($t =~ s/\n\<((\w|\-)+)\>(\ +)((\w|\-)+)\:/\n/i)
-	{
-	my $n = $4;
-	next if exists($names{$n});
-	# warn "Matched #	<dbooth> $n" . ": ...\n";
-	$names{$n} = $n;
-	}
-# warn "names: ",join(" ",keys %names),"\n";
-
-#	<Steven> Hello 
-$t = $all;
-while($t =~ s/\n\<((\w|\-)+)\>/\n/i)
-	{
-	my $n = $1;
-	next if exists($names{$n});
-	# warn "Matched #	<$n>\n";
-	$names{$n} = $n;
-	# warn "Found name: $n\n";
-	}
-
-#	Zakim sees 4 items remaining on the agenda
-$t = $all;
-while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/i)
-	{
-	my $match = &Trim($&);
-	# warn "DELETED: $match\n";
-	}
-
-#	<Zakim> I see no one on the speaker queue
-#	<Zakim> I see Hugo, Yves, Philippe on the speaker queue
-#	<Zakim> I see MIT308, Ivan, Marie-Claire, Steven, Janet, EricM
-#	<Zakim> On the phone I see Joseph, m3mSEA, MIT308, Marja
-#	<Zakim> On IRC I see Nobu, SusanL, RRSAgent, ht, Ian, ericP
-#	<Zakim> ... simonMIT, XachBot
-#	<Zakim> I see MIT308, Ivan, Marie-Claire, Steven, Janet, EricM
-#	<Zakim> MIT308 has Martin, Ted, Ralph, Alan, EricP, Vivien
-#	<Zakim> +Carine, Yves, Hugo; got it
-#
-# Delete "on the speaker queue" from the ends of the lines,
-# to prevent those words being mistaken for names.
-while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/i)
-        {
-        warn "Deleted 'on the speaker queue'\n";
-        }
-# Collect names
-while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/i)
-	{
-	my $list = &Trim($9);
-	my @names = split(/[^\w\-]+/, $list);
-	@names = map {&Trim($_)} @names;
-	@names = grep {$_} @names;
-	# warn "Matched #       <Zakim> I see: @names\n";
-	foreach my $n (@names)
-		{
-		next if exists($names{$n});
-		$names{$n} = $n;
-		}
-	}
-
-# Make the keys all lower case, so that they'll match:
-%synonyms = map {my $oldn = $_; tr/A-Z/a-z/; ($_, $synonyms{$oldn})} keys %synonyms;
-%names = map {my $oldn = $_; tr/A-Z/a-z/; ($_, $names{$oldn})} keys %names;
-# warn "Lower case name keys:\n";
-foreach my $n (sort keys %names)
-	{
-	# warn "	$n	$names{$n}\n";
-	}
-
-# Map synonyms to standardize spellings and expand abbreviations.
-%names = map 	{
-		exists($synonyms{$_}) 
-			? ($_, $synonyms{$_}) 
-			: ($_, $names{$_})
-		} keys %names;
-# At this point different keys may map to the same value.
-# warn "After applying synonyms:\n";
-foreach my $n (keys %names)
-	{
-	# warn "	$n	$names{$n}\n";
-	}
-
-# Eliminate non-names
-foreach my $n (keys %names)
-	{
-	# Filter out names in stopList
-	if (exists($stopList{$n})) { delete $names{$n}; }
-	# Filter out names less than two chars in length:
-	elsif (length($n) < 2) { delete $names{$n}; }
-	# Filter out names not starting with a letter
-	elsif ($names{$n} !~ m/\A[a-zA-Z]/) { delete $names{$n}; }
-	# Filter out "scribe" and "chair"
-	elsif ($n =~ m/\Ascribe\Z/i) { delete $names{$n}; }
-	elsif ($n =~ m/\Achair\Z/i) { delete $names{$n}; }
-	}
-
-# Make a list of unique names for the attendee list:
-my %uniqNames = ();
-foreach my $n (values %names)
-	{
-	$uniqNames{$n} = $n;
-	}
-
-# Make a list of all names seen (all variations) in lower case:
-my %allNames = ();
-foreach my $n (%names, %synonyms)
-	{
-	my $name = $n;
-	$name =~ tr/A-Z/a-z/;
-	$allNames{$name} = $name;
-	}
-@allNames = sort keys %allNames;
-# warn "allNames: @allNames\n";
-my @allNameRefs = map { \$_ } @allNames;
-
-# Canonicalize the names in the IRC:
-my $expandedIRC = $all;
-my $nExpanded = 0;
-foreach my $n (keys %synonyms)
-	{
-	next if !$canonicalizeNames;
-	my $v = $synonyms{$n};
-	next if $v eq $n;
-	my $qn = quotemeta($n);
-	if ($expandedIRC =~ s/([^\w\-])($qn)([^\w\-])/$1$v$3/ig)
-		{
-		$nExpanded++;
-		# warn "============ START ============\n";
-		# warn "	$expandedIRC\n";
-		# warn "============ STOP ============\n";
-		}
-	}
-# warn "nExpanded: $nExpanded\n";
-
-my $lcScribe = $scribe;
-$lcScribe =~ tr/A-Z/a-z/;
-$scribe = $synonyms{$lcScribe} if exists($synonyms{$lcScribe});
-my @sortedUniqNames = sort values %uniqNames;
-return($expandedIRC, $scribe, \@allNameRefs, @sortedUniqNames);
-}
-
-##################################################################
 ###################### GetNames ######################
 ##################################################################
 # Look for people in IRC log.
 sub GetNames
 {
-@_ == 2 || die;
-my($all, $scribe) = @_;
+@_ == 1 || die;
+my($all) = @_;
 
 # Some important data/constants:
-my @rooms = qw(MIT308 SophiaSofa DISA);
+my @rooms = qw(MIT308 MIT531 Stata531 SophiaSofa);
 
 my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
@@ -2729,69 +2680,6 @@ my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 @stopList = (@stopList, @rooms);
 @stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
 my %stopList = map {($_,$_)} @stopList;
-
-my %synonyms = ();
-%synonyms = qw(
-	alan-home	Alan
-	amymtg		Amy
-	caribou		Carine
-        Chaals		Charles
-        chaalsGVA	Charles
-        chaalsNCE	Charles
-	Dave		DaveRaggett
-	DaveR		DaveRaggett
-	DaveRagget	DaveRaggett
-	dbooth		dbooth
-	David		dbooth
-	DB		dbooth
-	DavidB		dbooth
-        danbri		DanBri
-	danc_		DanC
-	danc		DanC
-	dand		DanielD
-	EM		EricM
-	Eric		EricM
-	ericP-WA	EricP
-	ericP-air	EricP
-	ger		Gerald
-	HT		Henry
-	HH		Hugo
-	hugo		Hugo
-	ivan		Ivan
-	janSeaTac	Janet
-	karl		Karl
-	reagle-tu	JosephR
-	reagleMIT	JosephR
-	Joseph		JosephR
-	judy		Judy
-	MaxF		MaxF
-	MCF		Marie-Claire
-	MC		Marie-Claire
-	marie		Marie-Claire
-	mari		Marisol
-	MSM		MichaelSM
-	MSMbot		MichaelSM
-	Michael		MichaelSM
-	MJDuesrst	Martin
-	olivier		Olivier
-	plh		Philippe
-	plh-sjc		Philippe
-	Ralph		RalphS
-	rigo		Rigo
-	sandro		Sandro
-	sim		Simon
-	simHOME		Simon
-	Hernandez	Simon
-	SB		Steve
-	SusanL		SusanLesch
-	Ted		Ted
-	Tim		TimBL
-	VQ		VincentQ
-	) if $useTeamSynonyms;
-foreach my $n (values %synonyms)
-	{
-	$synonyms{$n} = $n;	# Make TimBL --> TimBL
-	}
 
 # Easier pattern matching:
 $all = "\n" . $all . "\n";
@@ -2873,23 +2761,9 @@ while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the p
 	}
 
 # Make the keys all lower case, so that they'll match:
-%synonyms = map {my $oldn = $_; tr/A-Z/a-z/; ($_, $synonyms{$oldn})} keys %synonyms;
 %names = map {my $oldn = $_; tr/A-Z/a-z/; ($_, $names{$oldn})} keys %names;
 # warn "Lower case name keys:\n";
 foreach my $n (sort keys %names)
-	{
-	# warn "	$n	$names{$n}\n";
-	}
-
-# Map synonyms to standardize spellings and expand abbreviations.
-%names = map 	{
-		exists($synonyms{$_}) 
-			? ($_, $synonyms{$_}) 
-			: ($_, $names{$_})
-		} keys %names;
-# At this point different keys may map to the same value.
-# warn "After applying synonyms:\n";
-foreach my $n (keys %names)
 	{
 	# warn "	$n	$names{$n}\n";
 	}
@@ -2914,7 +2788,7 @@ foreach my $n (values %names)
 
 # Make a list of all names seen (all variations) in lower case:
 my %allNames = ();
-foreach my $n (%names, %synonyms)
+foreach my $n (%names)
 	{
 	my $name = $n;
 	$name =~ tr/A-Z/a-z/;
@@ -2925,28 +2799,10 @@ foreach my $n (%names, %synonyms)
 my @allNameRefs = map { \$_ } @allNames;
 
 # Canonicalize the names in the IRC:
-my $expandedIRC = $all;
-my $nExpanded = 0;
-foreach my $n (keys %synonyms)
-	{
-	next if !$canonicalizeNames;
-	my $v = $synonyms{$n};
-	next if $v eq $n;
-	my $qn = quotemeta($n);
-	if ($expandedIRC =~ s/([^\w\-])($qn)([^\w\-])/$1$v$3/ig)
-		{
-		$nExpanded++;
-		# warn "============ START ============\n";
-		# warn "	$expandedIRC\n";
-		# warn "============ STOP ============\n";
-		}
-	}
-# warn "nExpanded: $nExpanded\n";
 
-my $lcScribe = &LC($scribe);
-$scribe = $synonyms{$lcScribe} if exists($synonyms{$lcScribe});
 my @sortedUniqNames = sort values %uniqNames;
-return($expandedIRC, $scribe, \@allNameRefs, @sortedUniqNames);
+# warn "EMPTY synonyms\n" if !%synonyms;
+return($all, \@allNameRefs, @sortedUniqNames);
 }
 
 ##################################################################
