@@ -131,6 +131,8 @@ my $prePhoneParagraphHTML = "<p class='phone'>";
 my $postPhoneParagraphHTML = "</p>";
 my $preIRCParagraphHTML = "<p class='irc'>";
 my $postIRCParagraphHTML = "</p>";
+my $preResolutionHTML = "<strong class='resolution'>";
+my $postResolutionHTML = "</strong>";
 
 my $preTopicHTML = "<h3";
 my $postTopicHTML = "</h3>";
@@ -1282,6 +1284,8 @@ $all =~ s/$postUniq/$postSpeakerHTML/g;
 $all =~ s/$preIRCUniq/$preIRCSpeakerHTML/g;
 $all =~ s/$postIRCUniq/$postIRCSpeakerHTML/g;
 
+# Highlight resolutions
+$all =~ s/\n\s*(RESOLUTION|RESOLVED): (.*)/\n${preResolutionHTML}RESOLUTION: $2$postResolutionHTML/g;
 
 # Add <br /> before continuation lines:
 $all =~ s/\n(\ *\.)/ <br>\n$1/g;
@@ -2975,7 +2979,7 @@ my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
 	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
-	AGREED Date queue no one in XachBot got it WARNING Present Agenda);
+	AGREED Date queue no one in XachBot got it WARNING Present Agenda RESOLUTION);
 @stopList = (@stopList, @rooms);
 @stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
 my %stopList = map {($_,$_)} @stopList;
