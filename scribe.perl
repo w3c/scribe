@@ -2,7 +2,7 @@
 
 my ($CVS_VERSION) = q$Revision$ =~ /(\d+[\d\.]*\.\d+)/;
 
-warn 'This is $Revision$ of $Date$ 
+warn 'This is scribe.perl $Revision$ of $Date$ 
 Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 
 ';
@@ -15,41 +15,15 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # Take a raw W3C IRC log, clean it up a bit, and put it into HTML
 # to create meeting minutes.  Reads stdin, writes stdout.
-# Several input formats are accepted (see below).
-# Input must follow certain conventions (see below).
-#
-# CONTRIBUTIONS
-# 	Please make improvements to this program!  Check them into CVS (or
-# 	email them to me) and notify me know by email.  Thanks!
-#
-# DOCUMENTATION
-# 	Is now at http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm
-#
-# USAGE: 
-#	perl scribe.perl [options] ircLogFile.txt > minutesFile.htm
-#	perl scribe.perl -sampleInput
-#	perl scribe.perl -sampleOutput
-#	perl scribe.perl -sampleTemplate
-#
-#
-# The best way to use this program is:
-#	1. Make a backup of your IRC log.
-#	2. Modify the IRC log to conform to the scribe conventions that this
-#	   program expects (described below).
-#	3. Run this program as described above.
-#	4. View the output in a browser.
-#	5. Go back to step 2 to make modifications, and repeat.
-#	   Once the output looks good enough, then . . .
-#	6. Manually edit the resulting HTML for any remaining fixes.
-#
-# It's a good idea to run the output through "tidy -c".
+# Input format and required scribing conventions are in the documentation:
+# http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm
+# It's a good idea to pipe the output through "tidy -c".
 # (See http://www.w3.org/People/Raggett/tidy/ .)
 #
-# INPUT FORMATS ACCEPTED
-# Input formats are normally auto detected.  The best match wins.
-# Format can be forced with the -inputFormat option.
-# Formats are recognized by "normalizer" functions.
-# Search for "Normalize" in the code below.
+# CONTRIBUTIONS
+# Please make improvements to this program!  Check them into CVS (or
+# email them to me) and notify me know by email.  Thanks!  -- DBooth
+#
 
 
 ######################################################################
@@ -153,6 +127,8 @@ while (@ARGV)
 	{
 	my $a = shift @ARGV;
 	if (0) {}
+	elsif ($a eq "") 
+		{ }
 	elsif ($a eq "-normalize") 
 		{ $normalizeOnly = 1; }
 	elsif ($a eq "-sampleInput") 
@@ -169,6 +145,8 @@ while (@ARGV)
 	        { $breakActions = 0; }
 	elsif ($a eq "-breakActions") 
 	        { $breakActions = 1; }
+	elsif ($a eq "-noTrustRRSAgent") 
+	        { $trustRRSAgent = 0; }
 	elsif ($a eq "-trustRRSAgent") 
 	        { $trustRRSAgent = 1; }
 	elsif ($a eq "-teamSynonyms") 
@@ -418,7 +396,7 @@ my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # Get the list of people present.
 # First look for zakim output, as the default:
 my @present = &GetPresentFromZakim($all); 
-warn "Got default list of people present from zakim.\n" if @present;
+warn "Default Present: " . join(", ", @present) . "\n" if @present;
 # Now look for explicit "Present: ... " commands:
 die if !defined($all);
 ($all, @present) = &GetPresentOrRegrets("Present", 3, $all, @present); 
