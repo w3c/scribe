@@ -14,7 +14,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # to create meeting minutes.  Reads stdin, writes stdout.
 # Several input formats are accepted (see below).
 # Input must follow certain conventions (see below).
-# 
+#
 # USAGE: 
 #	perl scribe.perl [options] ircLogFile.txt > minutesFile.htm
 #	perl scribe.perl -sampleInput
@@ -94,7 +94,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #	<dbooth> s/creme/cream/
 # Correct a mistake globally from this point back in the input:
 #	<dbooth> s/Baking/Cooking/g
-# Identify the IRC log produced by RRSAGENT:
+# Identify the IRC log produced by RRSAGENT (this also sets the date):
 #	<dbooth> rrsagent, where am i?
 #	<RRSAgent> See http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36
 # or:
@@ -123,9 +123,10 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #	dbooth: Rennes France.
 #
 # WARNING: The code is a horrible mess.  (Sorry!)  Please hold your nose if 
-# you look at it.  If you have something better, or fix this up at all, 
-# please let me know.  Perhaps it's a good example of Fred Brooke's advice
-# in Mythical Man Month: "Plan to throw one away". 
+# you look at it.  If you have something better, or make improvements
+# to this (and please do!), please let me know.  Perhaps it's a good 
+# example of Fred Brooke's advice in Mythical Man Month: "Plan to throw 
+# one away". 
 #
 ######################################################################
 
@@ -134,8 +135,6 @@ my $scribeName = "UNKNOWN"; # Default
 # Formatting:
 # my $preSpeakerHTML = "<strong>";
 # my $postSpeakerHTML = "</strong> <br />";
-my $tdoctype = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-"http://www.w3.org/TR/html4/loose.dtd">';
 my $preSpeakerHTML = "<b>";
 my $postSpeakerHTML = "</b>";
 my $preParagraphHTML = "<p>";
@@ -374,7 +373,7 @@ if (@present < 3)
 	{ 
 	if (@present > 0)  { warn "WARNING: Fewer than 3 people found present!\n\n"; }
 	else	{
-		warn "WARNING: No \"Present: ... \" found!\n";
+		warn "\nWARNING: No \"Present: ... \" found!\n";
 		warn "Possibly Present: @possiblyPresent\n"; 
 		warn "You can indicate the people present like this:
 <scribe> Present: dbooth jonathan mary\n\n";
@@ -765,7 +764,6 @@ $result =~ s/SV_PENDING_ACTION_ITEMS/$formattedPendingActions/;
 $result =~ s/SV_NEW_ACTION_ITEMS/$formattedActions/;
 $result =~ s/SV_AGENDA_BODIES/$all/;
 $result =~ s/SV_MEETING_TITLE/$title/g;
-$result = $tdoctype . "\n" . $result;
 
 my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
 if ($logURL eq "SV_MEETING_IRC_URL")
@@ -1332,6 +1330,7 @@ return $sampleInput;
 sub PublicTemplate
 {
 my $template = <<'PublicTemplate-EOF'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -1428,6 +1427,7 @@ return $template;
 sub MemberTemplate
 {
 my $template = <<'MemberTemplate-EOF'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -1524,6 +1524,7 @@ return $template;
 sub TeamTemplate
 {
 my $template = <<'TeamTemplate-EOF'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -1621,6 +1622,7 @@ return $template;
 sub MITTemplate
 {
 my $template = <<'MITTemplate-EOF'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
