@@ -113,7 +113,7 @@ my $preTopicHTML = "<h3";
 my $postTopicHTML = "</h3>";
 
 # Other globals
-my $debug = 0;
+my $debug = 1;
 my $debugActions = 0;
 my $namePattern = '([\\w]([\\w\\d\\-\\.]*))';
 # warn "namePattern: $namePattern\n";
@@ -484,6 +484,21 @@ if ($canonicalizeNames)
 	$all =~ s/(\w+)\-iMac\b/$1/ig;
 	}
 
+# Determine scribe name and scribeNick.
+# This needs to be done BEFORE handling $dashTopics and $useZakimTopics
+# because they insert <scribe> lines, which would otherwise mess up
+# the lookahead processing in GetScribeNamesAndNicks.
+if (1)
+	{
+	my ($newAll, $scribeNamesRef, $scribeNicksRef) = 
+		&GetScribeNamesAndNicks($all, \@scribeNames, \@scribeNicks);
+	$all = $newAll;
+	@scribeNames = @$scribeNamesRef;
+	@scribeNicks = @$scribeNicksRef;
+	warn "Scribes: ", join(", ", @scribeNames), "\n";
+	warn "ScribeNicks: ", join(", ", @scribeNicks), "\n";
+	}
+
 if ($useZakimTopics)
 	{
 	# Treat zakim statements like:
@@ -588,22 +603,6 @@ my @uniqNames = ();
 my $allNameRefsRef;
 ($all, $allNameRefsRef, @uniqNames) = &GetNames($all);
 my @allNames = map { ${$_} } @{$allNameRefsRef};
-
-# Determine scribe name and scribeNick:
-if (1)
-	{
-	# $scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)\s*\n/\n/i;
-	# $scribeNick = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe[ _\-]?Nick\s*\:\s*(.+?)\s*\n/\n/i;
-	# $scribeName = &Trim($scribeName);
-	# $scribeNick = &Trim($scribeNick);
-	my ($newAll, $scribeNamesRef, $scribeNicksRef) = 
-		&GetScribeNamesAndNicks($all, \@scribeNames, \@scribeNicks);
-	$all = $newAll;
-	@scribeNames = @$scribeNamesRef;
-	@scribeNicks = @$scribeNicksRef;
-	warn "Scribes: ", join(", ", @scribeNames), "\n";
-	warn "ScribeNicks: ", join(", ", @scribeNicks), "\n";
-	}
 
 push(@allNames,"scribe");
 my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
@@ -980,7 +979,7 @@ foreach my $key ((keys %actions))
 			}
 		@good = () if @good != @names; # Fail
 		}
-	if ((!@good) && $a =~ m/\A([a-zA-Z0-9\-\_\.]+)/)
+	if ((!@good) && $a =~ m/\A([a-zA-Z0-9\-\_\.]+)/i)
 		{
 		my $n = $1;
 		@names = ($n);
@@ -1091,151 +1090,7 @@ else	{
 	}
 
 
-if (0)
-{
-$all = &PutSpeakerOnEveryLine($all);
-# Convert from:
-#	<dbooth> DanC: something
-#	<dbooth> DanC: something
-#	<DanC> something
-#	<DanC> something
-#	<dbooth> DanC: something
-#	<dbooth> ----
-#	<dbooth> Whatever
-# to:
-#	DanC: something
-#	 ... something
-#	<DanC> something
-#	 ... something
-#	DanC: something
-#	----------------------------------------
-#	<dbooth> Whatever
-my $prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
-my $prevPattern; # Initialized below
-my @linesIn = split(/\n/, $all);
-my @linesOut = ();
-while (@linesIn)
-	{
-	my $line = shift @linesIn;
-	warn "LINE (BEFORE): $line\n" if $debug;
-	# Ignore empty lines
-	if ($line =~ m/\A\s*\Z/)
-		{
-		warn "  BLANK: $line\n" if $debug;
-		next;
-		}
-	# Determine rough line format
-	my $writer = "";
-	my $speaker = "";
-	my $text = "";
-	# <writer> speaker: text
-	if ($line =~ m/\A\<([a-zA-Z0-9\-_\.]+)\>\s*([a-zA-Z0-9\-_\.]+)\s*\:\s*(.*?)\s*\Z/i )
-		{
-		$writer = $1;
-		$speaker = $2;
-		$text = $3;
-		warn "FIRST match 1:$1 2:$2 3:$3 LINE: $line\n" if $debug;
-		}
-	# <writer> text
-	elsif ($line =~ m/\A\<([a-zA-Z0-9\-_\.]+)\>\s*(.*?)\s*\Z/i )
-		{
-		$writer = $1;
-		$speaker = "";
-		$text = $2;
-		warn "SECOND match 1:$1 2:$2 LINE: $line\n" if $debug;
-		}
-	else	{
-		die "DIED FROM UNKNOWN LINE FORMAT: $line\n\n";
-		}
-	# Make lower case versions, for easier comparison
-	die if !defined($writer);
-	die if !defined($speaker);
-	die if !defined($prevSpeaker);
-	my $writerLC = &LC($writer);
-	my $speakerLC = &LC($speaker);
-	my $prevSpeakerLC = &LC($prevSpeaker);
-	$prevPattern = quotemeta($prevSpeaker);
-	warn "writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if $debug;
-	# warn "PHILIPPE: writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if &Trim($speaker) eq "philippe";
-	# warn "EMPTY TEXT: writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if &Trim($text) eq "";
-	# Process the various commands
-	if (0) {}
-	# Topic: ... 
-	elsif ($speakerLC eq "topic")
-		{
-		warn "  TOPIC: $line\n" if $debug;
-		# New topic.
-		# Force the speaker name to be repeated next time
-		$prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
-		}
-	# Separator:
-	#	<dbooth> ----
-	elsif ($text =~ m/\A\-\-\-+\Z/ && !$speaker)
-		{
-		warn "  SEPARATOR1: $line\n" if $debug;
-		my $dashes = '-' x 30;
-		$line = $dashes;
-		}
-	# Separator:
-	#	<dbooth> ====
-	elsif ($text =~ m/\A\=\=\=+\Z/ && !$speaker)
-		{
-		warn "  SEPARATOR2: $line\n" if $debug;
-		my $dashes = '=' x 30;
-		$line = $dashes;
-		}
-	# Dots continuation line.
-	# This commented out version is intended for when the "..." is
-	# already on the line when we get here:
-	# elsif ($line =~ s/\A\<scribe\>\s*($prevPattern)//i) 
-	elsif ($line =~ s/\A\<scribe\>\s*($prevPattern)\s*/ ... /i) 
-		{
-		# $line = " ... $text";
-		warn "  SAME SPEAKER: $line\n" if $debug;
-		}
-	# BUG: The \s* before the ":" in the pattern below doesn't work right,
-	# because the ":" is stored as part of $prevSpeaker, so it
-	# won't match right the next time "<dbooth> joe : whatever" is
-	# encountered.
-	elsif ($line =~ s/\A\<scribe\>\s*(($speakerPattern)\:)\s*/$1 /i )
-		{
-		warn "  NEW SPEAKER: $line\n" if $debug;
-		# New speaker
-		$prevSpeaker = "$1";
-		$prevPattern = quotemeta($prevSpeaker);
-		}
-	elsif ($line =~ m/\A$prevPattern\s*.*\bACTION\s*\:/i)
-		{
-		warn "  ACTION: $line\n" if $debug;
-		}
-	elsif ($line =~ s/\A$prevPattern\s*/ ... /i)
-		{
-		warn "  SCRIBE CONTINUES: $line\n" if $debug;
-		}
-	elsif ($line =~ s/\A(\<scribe\>)\s*/Scribe\: /i )
-		{
-		warn "  SCRIBE SPEAKS: $line\n" if $debug;
-		# Scribe speaks
-		$prevSpeaker = $1;
-		$prevPattern = quotemeta($prevSpeaker);
-		# die "line: $line\n" if $line =~ m/Closing/;
-		}
-	elsif ($line =~ m/\A(\<$namePattern\>)/i)
-		{
-		warn "  IRC COMMENT: $line\n" if $debug;
-		$prevSpeaker = $1;
-		$prevPattern = quotemeta($prevSpeaker);
-		}
-	warn "LINE (AFTER): $line\n" if $debug;
-	push(@linesOut, $line) if $line ne "";	# Default
-	# die if $line =~ "Topic";
-	}
-$all = join("\n", @linesOut);
-$all = "\n" . $all . "\n";	# Easier pattern matching
-}
 
-else
-{
 if (0)
 {
 warn "############# TEST DATA ONLY #############\n";
@@ -1249,7 +1104,7 @@ $all = '<scribe> dbooth: dbooth said 1
 ';
 }
 my $debugCurrentSpeaker = 0;
-my @lines = split(/\n/, $all);
+@lines = split(/\n/, $all);
 my $prevSpeaker = "UNKNOWN_SPEAKER"; # Most recent speaker minuted by scribe
 my $pleaseContinue = 0;
 for (my $i=0; $i<@lines; $i++)
@@ -1326,7 +1181,7 @@ for (my $i=0; $i<@lines; $i++)
 		}
 	}
 $all = "\n" . join("\n", @lines) . "\n";
-}
+
 
 # Experimental code (untested) commented out:
 if (0) 
@@ -1408,7 +1263,7 @@ $all =~ s/$postIRCUniq/$postIRCSpeakerHTML/g;
 # Add <br /> before continuation lines:
 $all =~ s/\n(\ *\.)/ <br>\n$1/g;
 # Collapse multiple <br />s:
-$all =~ s/<br>((\s*<br>)+)/<br \/>/g;
+$all =~ s/<br>((\s*<br>)+)/<br \/>/ig;
 # Standardize continuation lines:
 # $all =~ s/\n\s*\.+/\n\.\.\./g;
 # Make links:
@@ -1477,7 +1332,7 @@ exit 0;
 # all <dbooth> lines to <scribe> lines, where dbooth is the scribeNick.
 # The logic here is complicated by the fact that we have both a Scribe
 # command and a ScribeNick command, and the given Scribe name will be
-# treated as the ScribeNick (presumabely if ScribeNick isn't specified).
+# treated as the ScribeNick (presumably if ScribeNick isn't specified).
 # However, there is some ambiguity here.  In particular, if both a
 # Scribe and later a ScribeNick is specified, then we don't know for
 # sure whether that was supposed to be specifying two different scribes,
@@ -1530,21 +1385,21 @@ COUNT_SCRIBE_COMMANDS: for (my $i=0; $i<@lines; $i++)
 		}
 	else {} # Do nothing
 	}
-@scribeCommands = &Uniq(@scribeCommands);
-@scribeNickCommands = &Uniq(@scribeNickCommands);
+@scribeCommands = &CaseInsensitiveUniq(@scribeCommands);
+@scribeNickCommands = &CaseInsensitiveUniq(@scribeNickCommands);
 
 # Infer the ScribeNick from ScribeName?
-my @totalScribes = &Uniq(@scribeCommands, @scribeNames);
-my @totalScribeNicks = &Uniq(@scribeNickCommands, @scribeNicks);
+my @totalScribes = &CaseInsensitiveUniq(@scribeCommands, @scribeNames);
+my @totalScribeNicks = &CaseInsensitiveUniq(@scribeNickCommands, @scribeNicks);
 if ((!@totalScribeNicks) && (@totalScribes==1) && exists($writersFound{&LC($totalScribes[0])}))
 	{
 	my $scribeNick = $totalScribes[0];
-	warn "No ScribeNick specified.  Inferring ScribeNick: $scribeNick\n";
+	# warn "No ScribeNick specified.  Inferring ScribeNick: $scribeNick\n";
 	push(@scribeNicks, $scribeNick);
 	}
 
 # Guess the ScribeNick if none was specified or inferrable.
-@totalScribeNicks = &Uniq(@scribeNickCommands, @scribeNicks);
+@totalScribeNicks = &CaseInsensitiveUniq(@scribeNickCommands, @scribeNicks);
 if (((!@totalScribeNicks) && (!@totalScribes))
   || ((!@totalScribeNicks) && (@totalScribes==1) && (!exists($writersFound{&LC($totalScribes[0])})) && !exists($writersFound{"scribe"})))
 	{
@@ -1558,7 +1413,9 @@ if (((!@totalScribeNicks) && (!@totalScribes))
 # Ditto if there is only one ScribeNick command:
 @scribeNicks = @scribeNickCommands if (!@scribeNicks) && (@scribeNickCommands == 1);
 
-# Now we're ready to process potentially multiple scribes.
+# Now we're ready to process potentially multiple scribes,
+# which involves changing each "<dbooth> ..." line to "<scribe> ...",
+# where dbooth is the current scribeNick.
 my $currentScribeName = "";
 $currentScribeName = $scribeNames[0] if @scribeNames==1;
 my $currentScribeNick = "";
@@ -1577,8 +1434,10 @@ LINE: for (my $i=0; $i<@lines; $i++)
 	# Avoid unused var warning:
 	($writer, $type, $value, $rest, $allButWriter) = 
 		($writer, $type, $value, $rest, $allButWriter); 
+	# warn "LINE: $lines[$i]\n" if $debug;
+	# warn "currentScribeNickPattern: $currentScribeNickPattern\n" if $debug && $writer =~ m/dbooth/;
 	# Is this any kind of scribe line?
-	if ($currentScribeNickPattern && ($writer =~ m/\A$currentScribeNickPattern\Z/))
+	if ($currentScribeNickPattern && ($writer =~ m/\A$currentScribeNickPattern\Z/i))
 		{ # Scribe line "<dbooth> ...".  Convert to "<scribe> ..."
 		$lines[$i] = "<scribe> $allButWriter";
 		$nLinesCurrentScribeNick++; # This may include <scribe> lines
@@ -1612,6 +1471,7 @@ LINE: for (my $i=0; $i<@lines; $i++)
 					|| ($lcWriter2 eq "scribe"))
 				{
 				$newNickFound = $writer2;
+				# warn "newNickFound: $newNickFound LINE: $lines[$j]\n" if $debug;
 				last LOOKAHEAD;
 				}
 			last LOOKAHEAD if ($type2 eq "COMMAND" && $value2 eq "scribe");
@@ -1675,8 +1535,8 @@ if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0)
 	warn "WARNING: No scribe lines found matching ScribeNick pattern: <$currentScribeNickPattern> ...\n";
 	}
 $all = "\n" . join("\n", @lines) . "\n";
-@scribeNames = &Uniq(@scribeNames);
-@scribeNicks = &Uniq(@scribeNicks);
+@scribeNames = &CaseInsensitiveUniq(@scribeNames);
+@scribeNicks = &CaseInsensitiveUniq(@scribeNicks);
 
 # Default to using ScribeNicks for ScribeNames if no ScribeNames.
 if ((!@scribeNames) && @scribeNicks)
@@ -1698,7 +1558,7 @@ warn "\nWARNING: $totalScribeLines scribe lines found (out of $totalLines total 
 	if (($totalLines > 100) && ($totalScribeLines/$totalLines < 0.01))
 		|| ($totalScribeLines < 5);
 
-warn "GetScribeNamesAndNicks RETURNING ScribeNames: @scribeNames ScribeNicks: @scribeNicks\n" if $debug;
+# warn "GetScribeNamesAndNicks RETURNING ScribeNames: @scribeNames ScribeNicks: @scribeNicks\n" if $debug;
 return ($all, \@scribeNames, \@scribeNicks);
 }
 
@@ -1799,6 +1659,26 @@ my @new = map {
 		&Uniq(@w);
 		} @old;
 return(@new);
+}
+
+###################################################################
+####################### CaseInsensitiveUniq #######################
+###################################################################
+# Return one copy of each thing in the given list.
+# Order is preserved, case is ignored.
+sub CaseInsensitiveUniq
+{
+my @words = @_;
+my %seen = (); # LC version
+my @result = ();
+foreach my $w (@words)
+	{
+	my $lcw = &LC($w);	# Lower case
+	next if exists($seen{$lcw});
+	$seen{$lcw} = $w;
+	push(@result, $w);
+	}
+return(@result);
 }
 
 ###################################################################
@@ -2116,7 +1996,7 @@ my @allLines = split(/\n/, $all);
 my $currentSpeaker = "UNKNOWN_SPEAKER";
 for (my $i=0; $i<@allLines; $i++)
 	{
-	# warn "$allLines[$i]\n" if $allLines[$i] =~ m/Liam/;
+	# warn "$allLines[$i]\n" if $allLines[$i] =~ m/Liam/; # debug
 	if ($allLines[$i] =~ m/\A\<scribe\>(\s?\s?)($speakerPattern)\s*\:/i)
 		{
 		# The $speakerPattern in the pattern match above is
@@ -2426,7 +2306,7 @@ if (@lines && $lines[0] =~ m/\AStart of \S+ buffer/)
 	}
 # Last line may be:
 #	End of &t-and-s buffer    Fri Apr 16 21:44:19 2004
-if (@lines && $lines[@lines-1] =~ m/\AEnd of \S+ buffer/)
+if (@lines && $lines[@lines-1] =~ m/\AEnd of \S+ buffer/i)
 	{
 	$n++;
 	pop @lines;
@@ -2477,21 +2357,21 @@ if (@lines && &Trim($lines[0]) eq "")
 	}
 # Second line may be:
 #	Session Start: Thu Jun 24 09:22:36 2004
-if (@lines && $lines[0] =~ m/\ASession Start\:/)
+if (@lines && $lines[0] =~ m/\ASession Start\:/i)
 	{
 	$n++;
 	shift @lines;
 	}
 # Third line may be:
 #	Session Ident: &arch
-if (@lines && $lines[0] =~ m/\ASession Ident\:/)
+if (@lines && $lines[0] =~ m/\ASession Ident\:/i)
 	{
 	$n++;
 	shift @lines;
 	}
 # Last line may be:
 #	Session Close: Thu Jun 24 09:23:59 2004
-if (@lines && $lines[@lines-1] =~ m/\ASession Close\:/)
+if (@lines && $lines[@lines-1] =~ m/\ASession Close\:/i)
 	{
 	$n++;
 	pop @lines;
@@ -2510,11 +2390,11 @@ foreach my $line (@lines)
 	#	
 	#	Session Start: Thu Jun 24 09:22:36 2004
 	#	Session Ident: &arch
-	if ($line =~ m/\ASession Close\:/) { $n++; $line = ""; }
-	elsif ($line =~ m/\ASession Start\:/) { $n++; $line = ""; }
-	elsif ($line =~ m/\ASession Ident\:/) { $n++; $line = ""; }
+	if ($line =~ m/\ASession Close\:/i) { $n++; $line = ""; }
+	elsif ($line =~ m/\ASession Start\:/i) { $n++; $line = ""; }
+	elsif ($line =~ m/\ASession Ident\:/i) { $n++; $line = ""; }
 	# * unlogged comment (delete)
-	elsif ($line =~ m/\A(\[$timePattern\]\s)\*/) { $n++; $line = ""; }
+	elsif ($line =~ m/\A(\[$timePattern\]\s)\*/i) { $n++; $line = ""; }
 	# <ericn> Discussion on how to progress
 	elsif ($line =~ s/\A(\[$timePattern\]\s)(\<$namePattern\>\s)/$5/i) { $n++; }
 	else	{
@@ -2677,7 +2557,7 @@ while ($i < (@lines-1))
 	# 	If it's abstract, it goes into portType 
 	# if ($linePair =~ s/\A($timePattern)\s+\[($namePattern)\][\ \t]*\n/\<$6\> /i)
 	my $name = "";
-	if ($line1 =~ m/\A($timePattern)\s+\[($namePattern)\]\Z/
+	if ($line1 =~ m/\A($timePattern)\s+\[($namePattern)\]\Z/i
 		&& ($name = $6)	# Assignment!  Save that value!
 		&& $line2 !~ m/\A($timePattern)\s+\[($namePattern)\]/i)
 		{
@@ -3163,7 +3043,7 @@ foreach my $n (keys %names)
 	# Filter out names less than two chars in length:
 	elsif (length($n) < 2) { delete $names{$n}; }
 	# Filter out names not starting with a letter
-	elsif ($names{$n} !~ m/\A[a-zA-Z]/) { delete $names{$n}; }
+	elsif ($names{$n} !~ m/\A[a-zA-Z]/i) { delete $names{$n}; }
 	}
 
 # Make a list of unique names for the attendee list:
