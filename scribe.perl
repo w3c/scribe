@@ -3666,7 +3666,7 @@ Joseph Reagle <site-policy@w3.org>
 
 Last revised by Reagle $Date$
 
-End_of_W3C_Software_License_Full_Text 
+End_of_W3C_Software_License_Full_Text
 ; 
 }
 
