@@ -47,8 +47,6 @@ use strict;
 #
 # Also define $defaultMeetingTitle from zakim conference name.
 #
-# 00. Permit s|old|new| substitutions, so that URLs can be inserted.
-#
 # 00. Fix formatting processing to prevent generating invalid HTML.
 # This would also be a good step toward processing one line at a time,
 # and toward making the formatting be fully template-based.
@@ -59,9 +57,8 @@ use strict;
 # http://www.w3.org/2004/11/04-ws-desc-minutes.htm#item06
 # The relevant code below may be around line 3581.
 #
-# 0.1 Summarize RESOLUTIONS at the end.
-#
-# 1.1. Set up regression testing, so that we can better test future versions.
+# 0.1 Summarize RESOLUTIONS at the beginning or end.  (Also move summary
+# of action items to the beginning?)
 #
 # 1.2. Add a "Subtopic: ..." command?
 #
