@@ -25,6 +25,11 @@ use strict;
 ######################################################################
 # FEATURE WISH LIST / BUG LIST:
 #
+# 00. Fix formatting processing to prevent generating invalid HTML.
+# This would also be a good step toward processing one line at a time,
+# and toward making the formatting be fully template-based.
+# test-data/validHTML.txt provides a simple input test case.
+#
 # 0. BUG: URLs written like <http://...> are formatted as IRC statements.
 # See the text pasted inside [[ ... ]] at
 # http://www.w3.org/2004/11/04-ws-desc-minutes.htm#item06
@@ -184,7 +189,13 @@ my @ucActionStatusListReferences =
         [qw( DONE COMPLETED FINISHED CLOSED )],
         [qw( DROPPED RETIRED CANCELLED CANCELED WITHDRAWN )],
 	);
-# Flatten the list:
+my %actionStatusSynonymRefs =
+	map { (${@{$_}}[0], $_) } @ucActionStatusListReferences;
+my %closedActionStatuses = map {($_,$_)} 
+	(@{$actionStatusSynonymRefs{"DONE"}}, @{$actionStatusSynonymRefs{"DROPPED"}});
+my %lcClosedActionStatuses = map {&LC($_)} %closedActionStatuses;
+# warn "lcClosedActionStatuses: " . join("\n", %lcClosedActionStatuses) . "\n";
+# Flat list of statuses:
 my @ucActionStatuses = map { @{$_} } @ucActionStatusListReferences;
 
 my @actionStatuses = &Uniq(&WordVariations(map {&LC($_)} @ucActionStatuses));
@@ -1162,21 +1173,21 @@ foreach my $key ((keys %actions))
 	# Skip completed action items.  Check the status.
 	die if !exists($actions{$key});
 	my $lcs = &LC($actions{$key});
-	my %completedStatuses = map {($_,$_)} 
-		qw(done finished dropped completed retired deleted);
-	next if exists($completedStatuses{$lcs});
+	# my %closedActionStatuses = map {($_,$_)} 
+	# 	qw(done finished dropped completed retired deleted);
+	next if exists($lcClosedActionStatuses{$lcs});
 	# Remove leading date:
 	#	ACTION: 2003-10-09: Bijan to look into message extensibility Issues
 	#	ACTION: 10/09/03: Bijan to look into message extensibility Issues
 	#	ACTION: 10/9: Bijan to look into message extensibility Issues
-	$a =~ s/\A\d+[\-\/]\d+(([\-\/]\d+)?)(\:?)\s*//;
+	$a =~ s/\A\d+[\-\/]\d+(([\-\/]\d+)?)(\:?)\s*//i;
 	# Look for action recipients
 	my @names = ();
 	my @good = ();
 	if ($a =~ m/\s+(to)\s+/i)
 		{
 		my $list = $`;
-		@names = grep {$_ ne "and"} split(/[^a-zA-Z0-9\-\_\.]+/, $list);
+		@names = grep {&LC($_) ne "and"} split(/[^a-zA-Z0-9\-\_\.]+/, $list);
 		# warn "names: @names\n";
 		foreach my $n (@names)
 			{
@@ -1560,7 +1571,7 @@ $draftWarningHTML = '' if !$draft;
 my $diagnosticsHTML = "<hr />
 <h2>Scribe.perl diagnostic output</h2>
 [Delete this section before finalizing the minutes.] <br>
-<pre>\n" . &EscapeHTML($diagnostics) . "\n</pre>
+<pre>\n" . &MakeLinks(&EscapeHTML($diagnostics)) . "\n</pre>
 [End of <a href=\"http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm\">scribe.perl</a> diagnostic output]\n";
 $diagnosticsHTML = '' if !$embedDiagnostics;
 ($result =~ s/SV_DIAGNOSTICS/$diagnosticsHTML/g) || warn "\nWARNING: SV_DIAGNOSTICS not found in template.\nYou can ignore this warning if your minutes template does not\nneed to contain scribe.perl's diagnostic output.\n\n";
@@ -1593,8 +1604,10 @@ return("");
 ################### MakeLinks #####################
 #########################################################
 # Convert URLs into links.
+# MakeURLs
 sub MakeLinks
 {
+@_ == 1 || die;
 my ($all) = @_;
 # URL pattern from http://www.stylusstudio.com/xmldev/200108/post60960.html 
 # my $anyUriPattern = '(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)?/{0,2}[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?';
@@ -2273,7 +2286,12 @@ foreach my $line (@zakimLines)
 		next if !@people;
 		if (@present)
 			{
-			&Warn("\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n");
+			# Skip warning if new list is a superset of old.
+			my @tOldPlusNew = &Uniq(sort (@present, @people));
+			my @tNew = &Uniq(sort @people);
+
+			&Warn("\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n")
+				if (!&Equal(\@tOldPlusNew, \@tNew));
 			}
 		@present = @people;
 		}
