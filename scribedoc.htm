@@ -8,9 +8,10 @@
   <meta name="author" content="David Booth">
 </head>
 <body>
-<p><a href="http://www.w3.org/"><img src="scribe_files/w3c_home.png"
- alt="W3C" border="0" height="48" width="72"></a>&nbsp;</p>
-<h1>Scribe.perl - Generate Meeting Minutes from an IRC Log</h1>
+<h1>&nbsp;<a href="http://www.w3.org/"><img
+ src="http://www.w3.org/Icons/w3c_home" alt="W3C"
+ style="border: 0px solid ; height: 48px; width: 72px;" title=""></a>&nbsp;
+Scribe.perl - Generate Meeting Minutes from an IRC Log</h1>
 <span style="font-style: italic;">This documentation is
 unfinished.&nbsp; See the <a
  href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">the
@@ -23,33 +24,39 @@ is a crude perl script for generating meeting minutes from an IRC, IM
 or other log that has been written to follow some simple minuting
 conventions. <br>
 <h2>Quick Start</h2>
+Step 1:&nbsp; Invite <a href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a>
+and <a href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a>
+(skip this step if you're not using W3C's IRC):<br>
 <table cellpadding="2" cellspacing="2" border="1"
  style="text-align: left; width: 100%;">
   <tbody>
-    <tr style="font-weight: bold;">
-      <td style="vertical-align: top;" rowspan="1" colspan="2">Invite <a
- href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a> and <a
- href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a>
-(skip this if you're not using W3C's IRC):</td>
+    <tr>
+      <td
+ style="vertical-align: top; text-align: center; white-space: nowrap;"><span
+ style="font-weight: bold;">IRC Command</span><br>
+      </td>
+      <td
+ style="vertical-align: top; text-align: center; font-weight: bold;">Explanation<br>
+      </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code>/invite rrsagent <span
- style="font-style: italic;">#ws-arch</span></code></td>
+      <td style="vertical-align: top; white-space: nowrap;"><code>/invite&nbsp;rrsagent</code>
+      <code><span style="font-style: italic;">#ws-arch</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>#ws-arch</code>
 should be your IRC channel<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code>/invite zakim <span
- style="font-style: italic;">#ws-arch</span></code></td>
+      <td style="vertical-align: top; white-space: nowrap;"><code>/invite</code>
+      <code>zakim</code> <code><span style="font-style: italic;">#ws-arch</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>#ws-arch</code>
 should be your IRC channel<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code>zakim, this will be <span
- style="font-style: italic;">ws_arch</span><br>
-      </code></td>
+      <td style="vertical-align: top; white-space: nowrap;"><code>zakim,</code>
+      <code>this</code> <code>will</code> <code>be</code> <code><span
+ style="font-style: italic;">ws_arch</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>ws_arch</code>
 should be your meeting <br>
 name as shown in the <a
@@ -57,12 +64,25 @@ name as shown in the <a
 teleconference calendar</a><br>
       </td>
     </tr>
-    <tr style="font-weight: bold;">
-      <td style="vertical-align: top;" rowspan="1" colspan="2">Start
-the meeting:</td>
+  </tbody>
+</table>
+<br>
+Step 2: Start
+the meeting:
+<table cellpadding="2" cellspacing="2" border="1"
+ style="text-align: left; width: 100%;">
+  <tbody>
+    <tr>
+      <td
+ style="vertical-align: top; text-align: center; white-space: nowrap;"><span
+ style="font-weight: bold;">IRC Command</span><br>
+      </td>
+      <td
+ style="vertical-align: top; text-align: center; font-weight: bold;">Explanation<br>
+      </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">Scribe:</span> <span
  style="font-style: italic;">dbooth</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>dbooth</code>
@@ -73,17 +93,17 @@ your IRC nickname to "scribe".<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">Meeting:</span> <span
- style="font-style: italic;">WS Arch
-Teleconference</span><br>
+ style="font-style: italic;">WS Arch</span></code> <code><span
+ style="font-style: italic;">Teleconference</span><br>
       </code></td>
       <td style="vertical-align: top; font-style: italic;">Record
 meeting title<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">Chair:</span> <span
  style="font-style: italic;">Mike</span><br style="font-style: italic;">
       </code></td>
@@ -91,12 +111,24 @@ meeting title<br>
 who chaired<br>
       </td>
     </tr>
-    <tr style="font-weight: bold;">
-      <td style="vertical-align: top;" rowspan="1" colspan="2">Record
-meeting notes:</td>
+  </tbody>
+</table>
+<br>
+Step 3: Record meeting notes:<br>
+<table cellpadding="2" cellspacing="2" border="1"
+ style="text-align: left; width: 100%;">
+  <tbody>
+    <tr>
+      <td
+ style="vertical-align: top; text-align: center; white-space: nowrap;"><span
+ style="font-weight: bold;">IRC Command</span><br>
+      </td>
+      <td
+ style="vertical-align: top; text-align: center; font-weight: bold;">Explanation<br>
+      </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">Topic:</span> <span
  style="font-style: italic;">Debate on Feature X</span><br>
       </code></td>
@@ -107,7 +139,7 @@ bot's agenda control.&nbsp; (See the -useZakimTopics option below.)<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-style: italic;">Mike</span><span style="font-weight: bold;">:</span>
       <span style="font-style: italic;">Feature X is great</span></code><br>
       </td>
@@ -117,7 +149,7 @@ NOTE: Speaker's name must <span style="text-decoration: underline;">not</span>
 contain spaces! </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">... </span><span
  style="font-style: italic;">and easy to implement.</span></code><br>
       </td>
@@ -132,7 +164,7 @@ Feedback, anyone?&nbsp; In any case, at present both forms work.)</span>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">ACTION:</span> <span
  style="font-style: italic;">Frank </span><span
  style="font-weight: bold;">to</span><span style="font-style: italic;">
@@ -144,7 +176,7 @@ action.<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">ACTION:</span> <span
  style="font-style: italic;">Mary </span><span
  style="font-weight: bold;">to</span><span style="font-style: italic;">
@@ -152,11 +184,7 @@ write spec</span> <span style="font-weight: bold;">[</span><span
  style="font-style: italic;">PENDING</span><span
  style="font-weight: bold;">]<br>
       </span></code><code><span style="font-weight: bold;"><br>
-[</span><span style="font-style: italic;">PENDING</span><span
- style="font-weight: bold;">] ACTION:</span> <span
- style="font-style: italic;">Mary </span><span
- style="font-weight: bold;">to</span><span style="font-style: italic;">
-write spec</span></code><code><br>
+      </span><span style="font-style: italic;"></span></code><code><br>
       </code></td>
       <td style="vertical-align: top; font-style: italic;">Record old
 action and status: <br>
@@ -167,14 +195,66 @@ following the action item.<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><span style="font-weight: bold;">Finish
-the meeting:</span><br>
-      </td>
-      <td style="vertical-align: top;"><br>
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
+ style="font-weight: bold;">[</span><span style="font-style: italic;">PENDING</span><span
+ style="font-weight: bold;">] ACTION:</span> <span
+ style="font-style: italic;">Mary </span><span
+ style="font-weight: bold;">to</span><span style="font-style: italic;">
+write spec</span></code></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">Alternate
+syntax for recording action status.</span><br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code
+ style="font-weight: bold;">s/</code><code><span
+ style="font-style: italic;">Mary</span></code><code
+ style="font-weight: bold;">/</code><code><span
+ style="font-style: italic;">Marie</span></code><code
+ style="font-weight: bold;">/</code><code style="font-weight: bold;"></code></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">Change
+most recent occurrence of "Mary" to "Marie".</span><br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; white-space: nowrap;"><code
+ style="font-weight: bold;">s/</code><code><span
+ style="font-style: italic;">Mary</span></code><code
+ style="font-weight: bold;">/</code><code><span
+ style="font-style: italic;">Marie</span></code><code
+ style="font-weight: bold;">/g</code></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">Change
+all previous occurrences of "Mary" to "Marie".</span></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; white-space: nowrap;"><code
+ style="font-weight: bold;">s/</code><code><span
+ style="font-style: italic;">Mary</span></code><code
+ style="font-weight: bold;">/</code><code><span
+ style="font-style: italic;">Marie</span></code><code
+ style="font-weight: bold;">/G</code><code style="font-weight: bold;"></code></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">Change
+all previous and future occurrences of "Mary" to "Marie" (within this
+document).</span></td>
+    </tr>
+  </tbody>
+</table>
+<br>
+Step 4: Finish the meeting:<br>
+<table cellpadding="2" cellspacing="2" border="1"
+ style="text-align: left; width: 100%;">
+  <tbody>
+    <tr>
+      <td
+ style="vertical-align: top; text-align: center; white-space: nowrap;"><span
+ style="font-weight: bold;">IRC Command</span><br>
+      </td>
+      <td
+ style="vertical-align: top; text-align: center; font-weight: bold;">Explanation<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">zakim, bye</span><br>
       </code></td>
       <td style="vertical-align: top; font-style: italic;">Dismiss
@@ -183,7 +263,7 @@ zakim bot, which will generate a list of attendees.&nbsp; Use "Present:
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">rrsagent, where am i?</span></code></td>
       <td style="vertical-align: top; font-style: italic;">Determine
 log location.&nbsp; Scribe.perl will look for this, but you'll need it
@@ -191,7 +271,7 @@ also below.<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">rrsagent, bye</span></code></td>
       <td style="vertical-align: top; font-style: italic;">Dismiss
 rrsagent, which will also generate a list of action items that will be
@@ -199,11 +279,19 @@ preferred if you use the -trustRRSAgent option.&nbsp; (Otherwise the
 action items will be taken from whereever they were first typed.)<br>
       </td>
     </tr>
+  </tbody>
+</table>
+<br>
+Step 5: Generate the minutes:<br>
+<table cellpadding="2" cellspacing="2" border="1"
+ style="text-align: left; width: 100%;">
+  <tbody>
     <tr>
-      <td style="vertical-align: top;"><span style="font-weight: bold;">Generate
-minutes:</span><br>
+      <td style="vertical-align: top; text-align: center;"><span
+ style="font-weight: bold;">Shell Command</span><br>
       </td>
-      <td style="vertical-align: top;"><br>
+      <td
+ style="vertical-align: top; text-align: center; font-weight: bold;">Explanation<br>
       </td>
     </tr>
     <tr>
@@ -216,7 +304,7 @@ Strip #fragid and add .txt to the URL that rrsagent reported above when
 you asked "rrsagent, where am i?".) </span></td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><code><span
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">perl scribe.perl</span> <span
  style="font-style: italic;">log.txt</span> <span
  style="font-weight: bold;">&gt;</span> <span
@@ -240,11 +328,12 @@ Option 1 is best if you forgot to indicate who is scribe ("Scribe:
   </tbody>
 </table>
 <br>
-<br>
 <pre><code></code><code></code></pre>
 <h2>Running Scribe.perl</h2>
 Scribe.perl reads standard input and writes to standard output:<br>
-<pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> log.txt &gt; minutes.html<br></code></pre>
+<pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> <span
+ style="font-style: italic;">log.txt</span> &gt; <span
+ style="font-style: italic;">minutes.html</span><br></code></pre>
 Suggested usage:<br>
 &nbsp;&nbsp;&nbsp; 1. Make a backup of your IRC log.<br>
 &nbsp;&nbsp;&nbsp; 2. Modify the IRC log to make corrections or conform
