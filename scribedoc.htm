@@ -505,7 +505,7 @@ environment variable</li>
 These options are used to accommodate the different input syntaxes and
 scribing styles.<br>
 <br>
--dashTopics<br>
+<span style="font-weight: bold;">-dashTopics</span><br>
 <div style="margin-left: 40px;">Indicate that dash lines are used to
 indicate that the next line is the
 start of a new topic, such as:<br>
@@ -515,7 +515,7 @@ start of a new topic, such as:<br>
 </div>
 <pre style="margin-left: 40px;">&lt;Philippe&gt; Topic: Review of Action Items<br></pre>
 <br>
--implicitContinuations<br>
+<span style="font-weight: bold;">-implicitContinuations</span><br>
 <div style="margin-left: 40px;">Indicate that the scribe used implicit
 continuation lines like
 this:<br>
@@ -531,9 +531,9 @@ For example, the "(Group agrees)" statement below will be incorrectly
 attributed to Mary,
 instead of being a scribe comment:<br>
 </div>
-<pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br>&lt;dbooth&gt; (Group agrees)</code></pre>
+<pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br>&lt;dbooth&gt; (Group agrees)<br><br></code></pre>
 <dl>
-  <dt>-useZakimTopics</dt>
+  <dt style="font-weight: bold;">-useZakimTopics</dt>
   <dd>[Default] Use Zakim bot to change topics, such as "zakim, take up
 next
 agendum". Specifically, treat Zakim statements like:
@@ -541,12 +541,13 @@ agendum". Specifically, treat Zakim statements like:
 as equivalent to the command:
     <pre><code>&lt;scribe&gt; Topic: UTF16 PR issue </code></pre>
   </dd>
-  <dt>-noUseZakimTopics</dt>
+  <dt style="font-weight: bold;">-noUseZakimTopics</dt>
   <dd>Turn off the -useZakimTopics option. </dd>
   <dt><br>
   </dt>
   <br>
-  <dt>-inputFormat <span style="font-style: italic;">NameOfFormat</span></dt>
+  <dt><span style="font-weight: bold;">-inputFormat</span> <span
+ style="font-style: italic;">NameOfFormat</span></dt>
   <dd>Force input to be treated as <span style="font-style: italic;">NameOfFormat</span>,
 which must be one of the formats listed in <a
  href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#input_formats">Input
@@ -852,7 +853,7 @@ LC71; on to LC82.</tt><br>
 <big><code><span style="font-weight: bold;">Meeting: <span
  style="font-style: italic;">Baking Club</span></span></code></big><br
  style="font-weight: bold;">
-Use Baking Club for the title of the meeting minutes.&nbsp; This
+Use "Baking Club" as the title of the meeting minutes.&nbsp; This
 command should only be done once.<br>
 <br>
 <big><code><span style="font-weight: bold;">Chair: <span
@@ -902,7 +903,8 @@ Indicate who sent regrets (optional).<br>
 <br>
 <big style="font-weight: bold;"><code>Date: <span
  style="font-style: italic;">05 Dec 2002</span></code></big><br>
-Fix the meeting date.&nbsp; Not usually needed, because the default is
+Specify the meeting date.&nbsp; Not usually needed, because the default
+is
 auto set from the IRC log name or the current date.<br>
 <br>
 <big style="font-weight: bold;"><code>ACTION: <span
@@ -949,6 +951,7 @@ like: <br>
 minutes, such as:<br>
 <div style="margin-left: 40px;"><code>&lt;a name="foo"&gt;</code><br>
 </div>
+This is mostly for use internally by scribe.perl.<br>
 <h2><a name="editing_the_log"></a>Manually Editing the Log</h2>
 In addition to the "realtime" <a href="#correcting_mistakes">editing
 commands</a> above, you may manually edit your
@@ -972,7 +975,7 @@ specified.)
 <br>
 <h2><a name="input_formats"></a>Input Formats<br>
 </h2>
-Several log formats are accepted, and are described below:<br>
+Several log formats are recognized, and are described below:<br>
 <ul>
   <li><a href="#RRSAgent_Text_Format">RRSAgent_Text_Format</a>&nbsp;
 (RECOMMENDED)<br>
@@ -980,8 +983,10 @@ Several log formats are accepted, and are described below:<br>
   <li><a href="#RRSAgent_HTML_Format">RRSAgent_HTML_Format</a></li>
   <li><a href="#RRSAgent_Visible_HTML_Text_Paste_Format">RRSAgent_Visible_HTML</a><a
  href="#RRSAgent_Visible_HTML_Text_Paste_Format">_Text_Paste_Format</a></li>
+  <li><a href="scribedoc.htm#Mirc_Timestamped_Log_Format">Mirc_Timestamped_Log_Format</a></li>
   <li><a href="#Mirc_Text_Format">Mirc_Text_Format</a></li>
-  <li><a href="#Mirc_Timestamped_Log_Format">Mirc_Timestamped_Log_Format</a></li>
+  <li><a href="#Normalized_Format">Normalized_Format</a><br>
+  </li>
   <li><a href="#XChat_Timestamped_Log_Format">XChat_Timestamped_Log_Format</a></li>
   <li><a href="#Irssi_ISO8601_Log_Text_Format">Irssi_ISO8601_Log_Text_Format</a></li>
   <li><a href="#Yahoo_IM_Format">Yahoo_IM_Format</a></li>
@@ -993,10 +998,19 @@ input.&nbsp; If necessary, you can specify the input format explicitly
 using the -inputFormat option and specifying the name of the format
 such as "-inputFormat RRSAgent_Text_Format".&nbsp; The names of
 the formats are actually the perl function names used in the
-code.&nbsp; If you wish to use a log format that is not listed, please
-email an example to dbooth@w3.org so that I can consider adding support
-for it.<br>
+code.&nbsp; <br>
 <br>
+<span style="font-weight: bold;">If you have a log format that is not
+recognized</span>:<br>
+<ol>
+  <li>Try doing global search/replace in a text editor, to convert it
+into a
+recognized format, such as <a href="scribedoc.htm#Normalized_Format">Normalized_Format</a>;
+and</li>
+  <li>Please
+email an example to dbooth@w3.org so that I can consider adding support
+for it.</li>
+</ol>
 <h3><a name="RRSAgent_Text_Format"></a>RRSAgent_Text_Format <span
  style="color: rgb(51, 204, 0);">(RECOMMENDED)</span><br>
 </h3>
@@ -1022,13 +1036,23 @@ and then copy and paste the text from the browser window, only the
 displayed text is copied -- not the raw HTML tags.&nbsp; <a
  href="http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0002/ExampleFormat-RRSAgent_Visible_HTML_Text_Paste_Format.txt">Example:</a><br>
 <pre><code>20:41:27 [</code><code>dbooth</code><code>]<br>     </code><code>Mike: Feature X would benefit users.</code><code><br>20:41:37 [dbooth]<br>     </code><code>... and implementation would be easy</code><code>.<br></code><code>20:41:47 [</code><code>ericn</code><code>]<br>     I agree.</code><code><br></code></pre>
+<h3><a name="Mirc_Timestamped_Log_Format"></a>Mirc_Timestamped_Log_Format</h3>
+Timestamped log format produced by mIRC.&nbsp; Example:<br>
+<pre><code>[19:35] &lt;Zakim&gt; Steven should now be muted<br>[19:36] &lt;ph&gt; http://lists.w3.org/Archives/Member/w3c-html-cg/2004JanMar/0038.html<br>[19:36] * Zakim hears Steven's hand up<br>[19:36] * Zakim sees Steven on the speaker queue</code></pre>
 <h3><a name="Mirc_Text_Format"></a>Mirc_Text_Format</h3>
 The format produced by mIRC when you do Buffer--&gt;Save As.&nbsp;
 Example:<br>
-<pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;ericn&gt; I agree.<br></code></pre>
-<h3><a name="Mirc_Timestamped_Log_Format"></a>Mirc_Timestamped_Log_Format</h3>
-Timestamped log format produced by mIRC.&nbsp; Example:<br>
-<pre><code>[19:35] &lt;Zakim&gt; Steven should now be muted<br>[19:36] &lt;ph&gt; http://lists.w3.org/Archives/Member/w3c-html-cg/2004JanMar/0038.html<br>[19:36] * Zakim hears Steven's hand up<br>[19:36] * Zakim sees Steven on the speaker queue<br></code></pre>
+<pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;dbooth&gt; This is pretending to be a long<br> line that mIRC breaks in order to display,<br> but scribe.perl will re-join into a single line.<br>&lt;ericn&gt; I agree.<br></code></pre>
+<h3><a name="Normalized_Format"></a>Normalized_Format</h3>
+This is the format used internally by scribe.perl.&nbsp; <span
+ style="font-style: italic;">Scribe.perl converts all other
+formats to this format before processing.</span>&nbsp;&nbsp;
+Superficially it looks similar to the Mirc_Text_Format, except that
+Mirc_Text_Format may contain broken lines that still need to be
+rejoined back into single, long lines.&nbsp;
+Example:<br>
+<pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;dbooth&gt; This is pretending to be a long line that mIRC breaks in order to display, but scribe.perl will re-join into a single line.<br>&lt;ericn&gt; I agree.</code></pre>
+<pre><code></code><code></code></pre>
 <h3><a name="XChat_Timestamped_Log_Format"></a>XChat_Timestamped_Log_Format</h3>
 Timestamped log format produced by X-Chat.&nbsp; <a
  href="http://lists.w3.org/Archives/Public/www-archive/2005Feb/0026.html">Example</a>:<br>
@@ -1037,7 +1061,10 @@ Timestamped log format produced by X-Chat.&nbsp; <a
 The format produced by Irssi logging with <a
  href="http://www.w3.org/TR/NOTE-datetime">ISO8601 timestamp</a>
 prefixes.&nbsp; Example:<br>
-<pre><code></code>2003-12-18T15:27:21-0500 &lt;dbooth&gt; <code>M</code><code>ike: Feature X would benefit users</code><code>.</code><br>2003-12-18T15:27:36-0500 &lt;dbooth&gt; <code>... and implementation would be easy</code><code></code><code></code>.<br>2003-12-18T15:27:36-0500 &lt;ericn&gt; I agree.<br><code></code></pre>
+<pre><code></code>2003-12-18T15:27:21-0500 &lt;dbooth&gt; <code>M</code><code>ike: Feature X would benefit users</code><code>.</code><br>2003-12-18T15:27:36-0500 &lt;dbooth&gt; <code>... and implementation would be easy</code><code></code><code></code>.<br>2003-12-18T15:27:36-0500 &lt;ericn&gt; I agree.</pre>
+The date, seconds and timezone are optional, so the following is also
+recognized:<br>
+<pre><code></code>15:27 &lt;dbooth&gt; <code>M</code><code>ike: Feature X would benefit users</code><code>.</code><br>15:27 &lt;dbooth&gt; <code>... and implementation would be easy</code><code></code><code></code>.<br>15:27 &lt;ericn&gt; I agree.<br><code></code></pre>
 <h3><a name="Yahoo_IM_Format"></a>Yahoo_IM_Format</h3>
 The format produced when you save a Yahoo IM session.&nbsp; Example:<br>
 <pre><code>dbooth: </code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br>dbooth: </code><code>... and implementation would be easy</code><code></code><code>.<br>ericn: I agree.<br></code></pre>
