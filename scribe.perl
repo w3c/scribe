@@ -33,13 +33,9 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 0000. Add  -embedDiagnostics option that dumps the
+# 000. Add  -embedDiagnostics option that dumps the
 # (scribe.perl only) diagnostics into a <div> at the end of the minutes.
 #
-# 000. BUG: Alternate ACTION syntax permitted by RRSAgent is not recognized:
-# <DanC> ACTION EricM: get coffee for all of us
-# See http://lists.w3.org/Archives/Member/w3c-archive/2004Oct/0123.html 
-# 
 # 00. BUG: URLs written like <http://...> are formatted as IRC statements.
 # See the text pasted inside [[ ... ]] at
 # http://www.w3.org/2004/11/04-ws-desc-minutes.htm#item06
@@ -721,6 +717,31 @@ my @lines = split(/\n/, $all);
 my %debugTypesSeen = ();
 for (my $i=0; $i<(@lines-1); $i++)
 	{
+	if (1)
+		{
+		# Handle alternate syntax permitted by RRSAgent:
+		# 	ACTION dbooth: fix this bug
+		# Convert it to:
+		# 	ACTION: dbooth to fix this bug
+		# The regex in RRSAgent is currently:
+		# 	^\s*(?:ACTION\s*|action\s*)(?:(\w+)\s*|)(:)\s*(.*)$
+		# However, Ralph mentioned that if it were expanded to permit
+		# multiple people then names would be comma separated, so
+		# we'll allow for that here, even though I don't like 
+		# this alternate action syntax, because it's different from
+		# the syntax of all other commands.
+		die if !defined($lines[$i]);
+		my ($writer, undef, undef, undef, $allButWriter) = &ParseLine($lines[$i]);
+		if ($allButWriter =~ m/\A\s*ACTION\s+((\w+)(\s*\,\s*\w+)*)\s*\:\s*/i)
+			{
+			my $actionee = $1;
+			my $task = $';
+			# warn "Found new action syntax: actionee: $actionee task: $task\n";
+			$lines[$i] = "<$writer> ACTION: $actionee to $task";
+			# warn "Normalized: $lines[$i]\n";
+			}
+		}
+
 	# First move the status out from in front of ACTION,
 	# so that ACTION is always at the beginning.
 	# Convert lines like: 
