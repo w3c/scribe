@@ -50,9 +50,11 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # 1. integration between scribe.perl and mit-2 minutes extractor
 #
-# 1.0. Set up regression testing, so that we can better test future versions.
+# 1.0. Add a -log option to indicate the IRC log location.
 #
-# 1.1. Add a "Subtopic: ..." command.
+# 1.1. Set up regression testing, so that we can better test future versions.
+#
+# 1.2. Add a "Subtopic: ..." command?
 #
 # 2. Add a warning if a command word appears at the beginning of a line
 # but is not followed by a colon.  Ditto for action status word followed
@@ -100,10 +102,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # 8. Restructure the code to go through a big loop, processing one line
 # at a time, with look-ahead to join continuation lines.
 #
-# 9. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
-# excuses itself
-#
-# 10. Delete extra stopList from GetNames.  (There is already a global one.)
+# 9. Delete extra stopList from GetNames.  (There is already a global one.)
 #
 
 ######################################################################
@@ -309,6 +308,8 @@ while($restartForEmbeddedOptions)
 			{ $trustRRSAgent = 1; }
 		elsif ($a eq "-teamSynonyms") 
 			{ warn "\nWARNING: -teamSynonyms option no longer implemented\n\n"; }
+		elsif ($a eq "-plain") 
+			{ $template = &PlainTemplate(); }
 		elsif ($a eq "-mit") 
 			{ $template = &MITTemplate(); }
 		elsif ($a eq "-team") 
@@ -699,12 +700,16 @@ You should specify the meeting chair like this:
 <dbooth> Chair: dbooth\n\n";
 	}
 
-# Grab IRC Log URL.  Do this before looking for the date, because
+# Grab IRC LOG URL.  Do this before looking for the date, because
 # we can figure out the date from the IRC log name.
 my $logURL = "SV_MEETING_IRC_URL";
 # <RRSAgent>   recorded in http://www.w3.org/2002/04/05-arch-irc#T15-46-50
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(http\:([^\s\#]+))/i;
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
+# <RRSAgent> RRSAgent is logging to http://www.w3.org/2005/01/05-arch-irc
+$logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>.*(\s+is\s+logging\s+to)\s+(http\:([^\s\#]+))/i;
+# <scribe> IRC: http://www.w3.org/2005/01/05-arch-irc
+$logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>.*(\s+is\s+logging\s+to)\s+(http\:([^\s\#]+))/i;
 $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC([\s_]*)Log))\s*\:\s*(.*)\n/\n/i;
 
 # Grab and remove date from $all
@@ -3222,6 +3227,78 @@ else	{
 }
 
 ##################################################################
+###################### PlainTemplate ############################
+##################################################################
+sub PlainTemplate
+{
+my $template = <<'PlainTemplate-EOF'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang='en'>
+<head>
+  <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/public.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <meta content="SV_MEETING_TITLE" name="Title">  
+  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+</head>
+
+<body>
+SV_DRAFT_WARNING
+<h1>SV_MEETING_TITLE</h1>
+<h2>SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h2>
+
+SV_FORMATTED_AGENDA_LINK
+
+SV_FORMATTED_IRC_URL
+
+<h2><a name="attendees">Attendees</a></h2>
+
+<div class="intro">
+<dl>
+<dt>Present</dt>
+<dd>SV_PRESENT_ATTENDEES</dd>
+<dt>Regrets</dt>
+<dd>SV_REGRETS</dd>
+<dt>Chair</dt>
+<dd>SV_MEETING_CHAIR </dd>
+<dt>Scribe</dt>
+<dd>SV_MEETING_SCRIBE</dd>
+</dl>
+</div>
+
+<h2>Contents</h2>
+<ul>
+  <li><a href="#agenda">Topics</a>
+	<ol>
+	SV_MEETING_AGENDA
+	</ol>
+  </li>
+  <li><a href="#ActionSummary">Summary of Action Items</a></li>
+</ul>
+<hr>
+<div class="meeting">
+SV_AGENDA_BODIES
+</div>
+<h2><a name="ActionSummary">Summary of Action Items</a></h2>
+<!-- Action Items -->
+SV_ACTION_ITEMS
+
+<hr>
+
+<address>
+  Minutes formatted by David Booth's 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
+  $Date$ 
+</address>
+</body>
+</html>
+PlainTemplate-EOF
+;
+return $template;
+}
+
+##################################################################
 ###################### PublicTemplate ############################
 ##################################################################
 sub PublicTemplate
@@ -3288,7 +3365,7 @@ SV_ACTION_ITEMS
 
 <address>
   Minutes formatted by David Booth's 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
 </body>
@@ -3365,7 +3442,7 @@ SV_ACTION_ITEMS
 
 <address>
   Minutes formatted by David Booth's 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
 </body>
@@ -3444,7 +3521,7 @@ SV_ACTION_ITEMS
 
 <address>
   Minutes formatted by David Booth's 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
 </body>
@@ -3535,7 +3612,7 @@ SV_ACTION_ITEMS
 
 <address>
   Minutes formatted by David Booth's 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
 </body>
