@@ -414,19 +414,20 @@ foreach my $line (@allLines)
 		warn "\nWARNING: Replacing previous list of people present.\nUse 'Present+: ... ' if you meant to add people without replacing the list.\n" if @present;
 		@present = @p;
 		}
-	warn "Present: @present\n"; 
 	}
 @allLines = @newAllLines;
 $all = "\n" . join("\n", @allLines) . "\n";
-if (@present < 3) 
-	{ 
-	if (@present > 0)  { warn "WARNING: Fewer than 3 people found present!\n\n"; }
-	else	{
-		warn "\nWARNING: No \"Present: ... \" found!\n";
-		warn "Possibly Present: @possiblyPresent\n"; 
-		warn "You can indicate the people present like this:
-<scribe> Present: dbooth jonathan mary\n\n";
-		}
+if (@present == 0)	
+	{
+	warn "\nWARNING: No \"Present: ... \" found!\n";
+	warn "Possibly Present: @possiblyPresent\n"; 
+	warn "You can indicate the people present like this:
+<scribe> Present: dbooth jonathan mary
+<scribe> Present+ amy\n\n";
+	}
+else	{
+	warn "Present: @present\n"; 
+	warn "WARNING: Fewer than 3 people found present!\n\n" if @present < 3;
 	}
 
 # Get the list of regrets:
