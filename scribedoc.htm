@@ -232,8 +232,15 @@ Option 1 is best if you forgot to indicate who is scribe ("Scribe:
 <h2>Running Scribe.perl</h2>
 Scribe.perl reads standard input and writes to standard output:<br>
 <pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> log.txt &gt; minutes.html<br></code></pre>
-<h3>Options<br>
-</h3>
+<h3>Options</h3>
+<span style="font-style: italic;">I'm not sure what HTML format to use,
+for listing the options below.&nbsp; Any suggestions?&nbsp; I'm using
+the&nbsp; mozilla HTML editor.&nbsp; Thus far I've been trying out a
+definition list, but I haven't been able to figure out how to create
+definition lists in the Mozilla editor without resorting to manually
+inserting the &lt;dt&gt; tags.&nbsp; Any ideas?&nbsp; -- dbooth@w3.org</span><br>
+<br>
+<br>
 <dl>
   <dt>-implicitContinuations</dt>
   <dd>Indicate that the scribe used implicit continuation lines like
@@ -272,7 +279,10 @@ access.<br>
   <dd>Use the built-in template that is styled for W3C team-only access.</dd>
   <dt>-mit</dt>
   <dd>Use the built-in template that is styled for W3C MIT site
-meetings.</dd>
+meetings.&nbsp;&nbsp; After scribe.perl generates your HTML, you will
+still have to manually insert&nbsp; the&nbsp; "Two Minutes"
+reports.&nbsp; Use the <a href="http://cgi.w3.org/team-bin/mit-2mins">Two
+Minutes CGI Script</a> to generate them.</dd>
   <dt><br>
   </dt>
   <dt>-template <span style="font-style: italic;">templateFile.html</span></dt>
@@ -341,20 +351,20 @@ Log: <br>
 Replace the most recent occurrence of <span style="font-style: italic;">old
 </span>with <span style="font-style: italic;">new</span>.&nbsp; <span
  style="font-style: italic;">Old</span> is treated as a fixed string
-(escaped using quotemeta(...)) -- not a regular expression.<br
+(it will be escaped using quotemeta(...)) -- not a regular expression.<br
  style="font-style: italic;">
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
  style="font-style: italic;">new</span><span style="font-weight: bold;">/g</span>&nbsp;
 <br>
-Replace globally from this point backward<br>
+Replace globally from this point backward.<br>
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
  style="font-style: italic;">new</span><span style="font-weight: bold;">/G</span>&nbsp;
 <br>
-Replace globally, both forward and backward<br>
+Replace globally, both forward and backward.<br>
 <br>
 <br>
 <h2>Input Formats Accepted</h2>
