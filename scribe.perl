@@ -1292,6 +1292,9 @@ $all =~ s/<br>((\s*<br>)+)/<br \/>/ig;
 # Make links:
 $all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
 
+# Add <hr /> in place of "--------------------------"
+$all =~ s/-{20,}/ <hr>\n/g;
+
 # Put into template:
 # $all =~ s/\A\s*<\/p>//;
 # $all .= "\n<\/p>\n";
