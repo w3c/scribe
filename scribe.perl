@@ -1,5 +1,7 @@
 #! perl -w
 
+my ($CVS_VERSION) = q$Revision$ =~ /(\d+[\d\.]*\.\d+)/;
+
 warn 'This is $Revision$ of $Date$ 
 Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 
@@ -977,6 +979,9 @@ if ($result !~ s/SV_ACTION_ITEMS/$formattedActions/)
 	}
 $result =~ s/SV_AGENDA_BODIES/$all/;
 $result =~ s/SV_MEETING_TITLE/$title/g;
+
+# Version
+$result =~ s/SCRIBEPERL_VERSION/$CVS_VERSION/;
 
 my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
 if ($logURL eq "SV_MEETING_IRC_URL")
@@ -1985,8 +1990,8 @@ SV_ACTION_ITEMS
   </a> 
   -->
   <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
-  Minutes formatted by David Booth's perl script: 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
+  Minutes formatted by David Booth's 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
   $Date$ 
 </address>
 </body>
@@ -2080,8 +2085,8 @@ SV_ACTION_ITEMS
   </a> 
   -->
   <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
-  Minutes formatted by David Booth's perl script: 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
+  Minutes formatted by David Booth's 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
   $Date$ 
 </address>
 </body>
@@ -2176,8 +2181,8 @@ SV_ACTION_ITEMS
   </a> 
   -->
   <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
-  Minutes formatted by David Booth's perl script: 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
+  Minutes formatted by David Booth's 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
   $Date$ 
 </address>
 </body>
@@ -2273,8 +2278,8 @@ SV_ACTION_ITEMS
   </a> 
   -->
   <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
-  Minutes formatted by David Booth's perl script: 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
+  Minutes formatted by David Booth's 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
   $Date$ 
 </address>
 </body>
