@@ -171,7 +171,8 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 1. Recognize "next agendum" instead of "Topic:..."
+# 1. Adopt Karl's improved HTML style for MIT minutes.
+# See http://lists.w3.org/Archives/Team/w3t/2003Dec/0158.html
 #
 # 2. Allow the scribe to change.  Process multiple "Scribe: dbooth" commands.
 #
@@ -210,8 +211,6 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # 7. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
 # excuses itself
 #
-# 8. Add a normalizer function for the format from hugo's log in
-# http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
 #
 
 ######################################################################
