@@ -55,9 +55,6 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #				W3C MIT style.
 #				(Search for "sub PublicTemplate" below.)
 #
-#	-trustRRSAgent		Don't try to be smart about action items.
-#				Just trust what RRSAgent says
-#
 # The best way to use this program is:
 #	1. Make a backup of your IRC log.
 #	2. Modify the IRC log to conform to the scribe conventions that this
@@ -150,7 +147,6 @@ my $all = "";			# Input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
 my $scribeOnly = 0;		# Only select scribe lines
-my $trustRRSAgent = 0;		# Trust RRSAgent?
 
 @ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
 my @args = ();
@@ -169,8 +165,6 @@ while (@ARGV)
 		{ $scribeOnly = 1; }
 	elsif ($a eq "-canon") 
 		{ $canonicalizeNames = 1; }
-	elsif ($a eq "-trustRRSAgent") 
-		{ $trustRRSAgent = 1; }
 	elsif ($a eq "-teamSynonyms") 
 		{ $useTeamSynonyms = 1; }
 	elsif ($a eq "-mit") 
@@ -229,6 +223,7 @@ foreach my $f (qw(
 		NormalizerRRSAgentHtml 
 		NormalizerRRSAgentHTMLText
 		NormalizerYahoo
+		NormalizerPlainText
 		))
 	{
 	my ($score, $newAll) = &$f($all);
@@ -439,35 +434,14 @@ $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
 
 # Grab and remove date from $all
-my ($all, $day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
+my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
-my %doneActions = ();
-my %pendingActions = ();
-my %actions = ();
-if ($trustRRSAgent) {
-    my @lines = split(/\n/, $all);
-    for (my $i = 0; $i <= $#lines; $i++) {
-	$_ = $lines[$i];
-	next unless (m/^<RRSAgent>/);
-	if (m/^<RRSAgent> I see \d+ open action items:$/) {
-	    # RRSAgent is giving us a new list of action items
-	    # Forget the list that we had until now
-	    %actions = ();
-	    next;
-	}
-	next unless (m/<RRSAgent> ACTION: (.*)$/);
-	my $action = "$1";
-	$action =~ s/\s+\Z//;
-	$action =~ s/\s*\[\d+\]\Z//;
-	next if exists($actions{$action});
-	$actions{$action} = $action;
-    }
-} else {
 # Totally kludgy, but look for DONE action items in order to subtract them
 # from new/pending action items.
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4] -- DONE
 # <dbooth> DONE: ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
 my $t = $all;
+my %doneActions = ();
 while ($t =~ s/\n\<[^\>]+\>\s*DONE\s*(\:|\ |(\-+))\s*ACTION\s*\:\s*(.*)/\n/)
 	{
 	my $action = "$3";
@@ -478,7 +452,7 @@ while ($t =~ s/\n\<[^\>]+\>\s*DONE\s*(\:|\ |(\-+))\s*ACTION\s*\:\s*(.*)/\n/)
 	$doneActions{$action} = $action;
 	}
 # warn "DONE ACTIONS 1:\n";
-while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[\-\ ]+DONE\s*\n/\n\n/)
+while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[^a-zA-Z0-9]+DONE([^a-zA-Z0-9]*)\s*\n/\n\n/)
 	{
 	my $action = "$1";
 	$action =~ s/\A\s+//;
@@ -492,6 +466,7 @@ while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[\-\ ]+DONE\s*\n/\n\n/)
 # from new action items.
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4] -- PENDING
 # <dbooth> PENDING: ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
+my %pendingActions = ();
 while ($t =~ s/\n\<[^\>]+\>\s*PENDING\s*(\:|\ |(\-+))\ *ACTION\s*\:\s*(.*)/\n/)
 	{
 	my $action = "$3";
@@ -502,7 +477,7 @@ while ($t =~ s/\n\<[^\>]+\>\s*PENDING\s*(\:|\ |(\-+))\ *ACTION\s*\:\s*(.*)/\n/)
 	$pendingActions{$action} = $action;
 	}
 # warn "PENDING ACTIONS 1:\n";
-while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[\-\ ]+PENDING\s*\n/\n\n/)
+while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[^a-zA-Z0-9]+PENDING([^a-zA-Z0-9]*)\s*\n/\n\n/)
 	{
 	my $action = "$1";
 	$action =~ s/\A\s+//;
@@ -515,6 +490,7 @@ while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[\-\ ]+PENDING\s*\n/\n\n/)
 # Grab ACTION items:
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg.
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
+my %actions = ();
 while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*)/\n/)
 	{
 	my $action = "$1";
@@ -534,7 +510,6 @@ foreach my $action (keys %pendingActions)
 	{
 	delete($actions{$action});	# delete from actions list (if there)
 	}
-}
 
 # Format the resulting action items:
 # warn "ACTIONS:\n";
@@ -544,9 +519,6 @@ foreach my $a (sort keys %actions)
 	# warn "	$a\n";
 	$formattedActions .= "<strong>ACTION:</strong> " . $a . " <br />\n";
 	}
-if ($formattedActions eq '') {
-    warn "No action items found\n";
-}
 
 # Format the resulting done action items:
 # warn "DONE ACTIONS 2:\n";
@@ -618,7 +590,7 @@ foreach my $line (@lines)
 	# Ignore zakim lines
 	next if $line =~ m/\A\<Zakim\>/i;
 	next if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
-	next if $line =~ m/\A\<$namePattern\>\s*agenda\s*[\+\-\=\?]/i;
+	next if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
 	next if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
 	next if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
 	next if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
@@ -959,6 +931,46 @@ return($score, $all);
 }
 
 ##################################################################
+########################## NormalizerPlainText #########################
+##################################################################
+# This is just a plain text file of notes made by the scribe.
+# This format does NOT use timestamps, nor does it use <speakerName>
+# at the beginning of each line.  It does still use the "dbooth: ..."
+# convention to indicate what someone said.
+sub NormalizerPlainText
+{
+die if @_ != 1;
+my ($all) = @_;
+# Join continued lines:
+# Count the number of recognized lines
+my @lines = split(/\n/, $all);
+my $n = 0;
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+for (my $i=0; $i<@lines; $i++)
+	{
+	# Lines should NOT have timestamps:
+	# 	20:41:27 <ericn> Review of minutes 
+	next if $lines[$i] =~ m/\A$timePattern\s+/;
+	# Lines should NOT start with <speakerName>:
+	# 	<ericn> Review of minutes 
+	next if $lines[$i] =~ m/\A(\<$namePattern\>\s)/;
+	# warn "LINE: $lines[$i]\n";
+	$n++;
+	}
+# Now add "<scribe> " to the beginning of each line, to make it like
+# the standard format.
+for (my $i=0; $i<@lines; $i++)
+	{
+	$lines[$i] = "<scribe> " . $lines[$i];
+	}
+$all = join("\n", @lines);
+# warn "NormalizerPlainText n matches: $n\n";
+my $score = $n / @lines;
+return($score, $all);
+}
+
+##################################################################
 ##################### GetTemplate ####################
 ##################################################################
 sub GetTemplate
@@ -1025,7 +1037,10 @@ elsif ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/)
 	}
 else
 	{
-	warn "WARNING: No date found.  Assuming today.  (Hint: Specify the IRC log, and the date will be determined from that.)\n";
+	warn "WARNING: No date found!  Assuming today.  (Hint: Specify\n";
+	warn "the IRC log, and the date will be determined from that.)\n";
+	warn "Or specify the date like this:\n";
+	warn "<dbooth> Date: 12 Sep 2002\n\n";
 	# Assume today's date by default.
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	$mon++;	# put in range [1..12] instead of [0..11].
@@ -1038,7 +1053,7 @@ else
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	}
 # warn "GetDate Returning date info: @date\n";
-return ($all, @date);
+return @date;
 }
 
 
@@ -1055,7 +1070,7 @@ my($all, $scribe) = @_;
 # Some important data/constants:
 my @rooms = qw(MIT308 SophiaSofa DISA);
 
-my @stopList = qw(a q on items Zakim Topic muted and agenda Regrets http the
+my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
 	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
@@ -1304,6 +1319,9 @@ my $sampleInput = <<'SampleInput-EOF'
 <Philippe> PENDING ACTION: Barbara to bake 3 pies 
 <Philippe> ----
 <Philippe> DONE ACTION: David to make ice cream 
+<Philippe> ACTION: David to make frosting -- DONE
+<Philippe> ACTION: David to make candles  *DONE*
+<Philippe> ACTION: David to make world peace  *PENDING*
 <dbooth> Topic: What to Eat for Dessert
 <dbooth> Joseph: I think that we should all eat cake
 <dbooth> ... with ice creme.
