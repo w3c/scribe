@@ -51,8 +51,8 @@ and </span><a style="font-weight: bold;"
  href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a><span
  style="font-weight: bold;">
 (skip this step if you're not using W3C's IRC):</span><br>
-<table cellpadding="2" cellspacing="2" border="1"
- style="text-align: left; width: 100%;">
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
   <tbody>
     <tr>
       <td
@@ -93,8 +93,8 @@ teleconference calendar</a><br>
 <br>
 <span style="font-weight: bold;">Step 2: Start
 the meeting:</span>
-<table cellpadding="2" cellspacing="2" border="1"
- style="text-align: left; width: 100%;">
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
   <tbody>
     <tr>
       <td
@@ -116,7 +116,8 @@ is the name of the scribe as it should appear in the generated
 minutes.&nbsp; The ScribeNick will be used instead if Scribe is not
 specified.&nbsp; <span style="font-weight: bold;">If there are
 multiple
-scribes:</span> Issue this command whenever the scribe name changes.<br>
+scribes:</span> Issue this command and the ScribeNick: command whenever
+the scribe name changes.<br>
       </td>
     </tr>
     <tr>
@@ -132,7 +133,7 @@ your IRC nickname to "scribe".&nbsp; <span style="font-weight: bold;">If
 there are multiple
 scribes</span><span style="font-weight: bold;">:</span> Issue this
 command
-whenever the scribe nickname changes. </td>
+and the Scribe: command whenever the scribe nickname changes. </td>
     </tr>
     <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code><span
@@ -157,8 +158,8 @@ who chaired<br>
 </table>
 <br>
 <span style="font-weight: bold;">Step 3: Take notes in IRC:</span><br>
-<table cellpadding="2" cellspacing="2" border="1"
- style="text-align: left; width: 100%;">
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
   <tbody>
     <tr>
       <td
@@ -302,15 +303,16 @@ document).</span></td>
  style="font-weight: bold;"></code></td>
       <td style="vertical-align: top;"><span style="font-style: italic;">Insert
 a "Topic: Vote on Feature Y" line before the line containing the
-literal string "Time to vote" (not a regex).<br>
+literal string "Time to vote" (<span style="font-weight: bold;">not a
+regex</span>).<br>
       </span></td>
     </tr>
   </tbody>
 </table>
 <br>
 <span style="font-weight: bold;">Step 4: Finish the meeting:</span><br>
-<table cellpadding="2" cellspacing="2" border="1"
- style="text-align: left; width: 100%;">
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
   <tbody>
     <tr>
       <td
@@ -365,8 +367,8 @@ are not using RRSAgent.)<br>
 <br>
 <span style="font-weight: bold;">Step 5: </span><span
  style="font-weight: bold;">Generate minutes:</span><br>
-<table cellpadding="2" cellspacing="2" border="1"
- style="text-align: left; width: 100%;">
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
   <tbody>
     <tr>
       <td style="vertical-align: top; text-align: center;"><span
@@ -449,28 +451,43 @@ Learn its conventions, they're simple.)</li>
 </ul>
 <h2><a name="running"></a>Running scribe.perl</h2>
 Scribe.perl reads standard input and writes to standard
-output:<br>
-<pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> &lt; <span
- style="font-style: italic;">log.txt</span>  &gt; <span
- style="font-style: italic;">minutes.html<br></span></code><code><span
- style="font-style: italic;"></span></code></pre>
+output:<code></code><code><br>
+<br>
+</code>
+<div style="margin-left: 40px;"><code>perl scribe.perl <span
+ style="font-style: italic;">[options]</span> &lt; <span
+ style="font-style: italic;">log.txt</span> &gt; <span
+ style="font-style: italic;">minutes.html</span></code><br>
+</div>
+<div style="margin-left: 40px;"><code><span style="font-style: italic;"></span></code></div>
+<pre><code><span style="font-style: italic;"></span></code></pre>
 It can also be <a href="http://www.w3.org/2002/03/RRSAgent#minutes">invoked
 by RRSAgent</a> from IRC (provided you're using RRSAgent):<br>
-<pre>rrsagent, draft minutes</pre>
+<pre style="margin-left: 40px;">rrsagent, draft minutes</pre>
 <pre><code><span style="font-style: italic;"></span></code></pre>
-
 <h2><a name="options"></a>Options</h2>
 Options described below are grouped in several categories:
 <ul>
-<li><a href="options_input_style">Input Style Options</a></li>
-<li><a href="options_output_format">Output Format Options</a></li>
-<li><a href="options_template">Template Options</a></li>
-<li><a href="options_scribe_identification">Scribe Identification Options</a></li>
-<li><a href="options_misc">Miscellaneous Options</a></li>
+  <li><a href="options_input_style">Input Style Options</a></li>
+  <li><a href="options_output_format">Output Format Options</a></li>
+  <li><a href="options_template">Template Options</a></li>
+  <li><a href="options_scribe_identification">Scribe Identification
+Options</a></li>
+  <li><a href="options_misc">Miscellaneous Options</a></li>
+</ul>
+There are three ways to specify options (from highest to lowest
+priority):<br>
+<ul>
+  <li>On the shell command line, when invoking scribe.perl</li>
+  <li>Using the "<a href="#command_scribeoptions">ScribeOptions:</a>"
+command in IRC</li>
+  <li>Via the <a href="#Environment_Variables">SCRIBEOPTIONS</a>
+environment variable</li>
 </ul>
 <h3><a name="options_input_style"></a>Input Style Options</h3>
 These options are used to accommodate the different input syntaxes and
-scribing styles.<br><br>
+scribing styles.<br>
+<br>
 -dashTopics<br>
 <div style="margin-left: 40px;">Indicate that dash lines are used to
 indicate that the next line is the
@@ -655,7 +672,8 @@ template.)</dd>
   <dt><br>
   </dt>
 </dl>
-<h3><a name="options_scribe_identification"></a>Scribe Identification Options</h3>
+<h3><a name="options_scribe_identification"></a>Scribe Identification
+Options</h3>
 <dl>
   <dt><br>
   </dt>
@@ -700,13 +718,13 @@ is used.</dd>
 <br>
 <h2><a name="one_time_commands"></a>Commands</h2>
 Commands are interspersed with other minuted text in your IRC log,
-except that each command must be on a line by itself.  Commands
-may be issued by anyone -- not only the scribe.  Syntax is shown 
-below by example, with italicized portions variable.   <br>
+except that each command must be on a line by itself. Commands
+may be issued by anyone -- not only the scribe. Syntax is shown below
+by example, with italicized portions variable. <br>
 <br>
-
 <h3><a name="correcting_mistakes"></a>Editing Commands</h3>
-These editing commands are usually the easiest way to correct simple mistakes
+These editing commands are usually the easiest way to correct simple
+mistakes
 or add clarifications.
 (Of course, they don't take effect until you run scribe.perl on
 your IRC log.)
@@ -776,7 +794,6 @@ LC71; on to LC82.</tt><br>
 <tt>&lt;Arthur&gt; ... Do we care about syntax?</tt><br>
 </div>
 <br>
-
 <h3><a name="commands_general"></a>General Commands</h3>
 <big><code><span style="font-weight: bold;">Meeting: <span
  style="font-style: italic;">Baking Club</span></span></code></big><br
@@ -864,8 +881,8 @@ http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36<br>
 </div>
 <br>
 <span style="font-weight: bold;"><big style="font-weight: bold;"><code></code></big></span><big><code
- style="font-weight: bold;">ScribeOptions: <span
- style="font-style: italic;">-tidy -dashTopics</span></code></big><br>
+ style="font-weight: bold;"><a name="command_scribeoptions"></a>ScribeOptions:
+<span style="font-style: italic;">-tidy -dashTopics</span></code></big><br>
 Specify options inline, as if they had been written on the command line
 like: <br>
 <div style="margin-left: 40px;">perl scribe.perl -tidy -dashTopics<br>
@@ -878,45 +895,54 @@ minutes, such as:<br>
 <div style="margin-left: 40px;">&lt;a name="foo"&gt;<br>
 </div>
 <br>
-
 <h2><a name="editing_the_log"></a>Editing the Log</h2>
-In addition to the "realtime" <a href="#correcting_mistakes">editing commands</a> above, you may manually edit your
+In addition to the "realtime" <a href="#correcting_mistakes">editing
+commands</a> above, you may manually edit your
 IRC log with a text editor (by mimicking the log format) before running
-scribe.perl.  This is most useful for commands that have a broad effect on
-the generated HTML.  
-For most log formats (except HTML), you can leave off the timestamps on
+scribe.perl. This is most useful for commands that have a broad effect
+on
+the generated HTML. For most log formats (except HTML), you can leave
+off the timestamps on
 lines that you insert.<br>
 <br>
 Here is an example snippet of an IRC log
 in which the commands "<code>ScribeNick: tw</code>" and
-"<code>Topic: Fire Alarms</code>" are have been inserted using a text editor.
+"<code>Topic: Fire Alarms</code>" are have been inserted using a text
+editor.
 <blockquote>
-<pre>
-20:11:21 &lt;tw&gt; Scribe: TedWilliams
-&lt;tw&gt; ScribeNick: tw
-20:11:34 &lt;tw&gt; Topic: Printers
-20:11:49 &lt;tw&gt; alan: Printers are working now
-&lt;tw&gt; Topic: Fire Alarms
-20:12:27 &lt;tw&gt; ralph: Fire marshall assured us that the system is working.
-</pre>
+  <pre>20:11:21 &lt;tw&gt; Scribe: TedWilliams<br>&lt;tw&gt; ScribeNick: tw<br>20:11:34 &lt;tw&gt; Topic: Printers<br>20:11:49 &lt;tw&gt; alan: Printers are working now<br>&lt;tw&gt; Topic: Fire Alarms<br>20:12:27 &lt;tw&gt; ralph: Fire marshall assured us that the system is working.<br></pre>
 </blockquote>
-(Note that the IRC name <code>&lt;scribe&gt;</code> <i>is</i> required, 
-though for most commands it does not matter what IRC name is specified.)
+(Note that the IRC name <code>&lt;scribe&gt;</code> <i>is</i>
+required, though for most commands it does not matter what IRC name is
+specified.)
 <br>
-
 <h2><a name="input_formats"></a>Input Formats<br>
 </h2>
-Several log formats are accepted.&nbsp; Scribe.perl guesses which
+Several log formats are accepted, and are described below:<br>
+<ul>
+  <li><a href="#RRSAgent_Text_Format">RRSAgent_Text_Format</a></li>
+  <li><a href="#RRSAgent_HTML_Format">RRSAgent_HTML_Format</a></li>
+  <li><a href="#RRSAgent_Visible_HTML_Text_Paste_Format">RRSAgent_Visible_HTML</a><a
+ href="#RRSAgent_Visible_HTML_Text_Paste_Format">_Text_Paste_Format</a></li>
+  <li><a href="#Mirc_Text_Format">Mirc_Text_Format</a></li>
+  <li><a href="#Mirc_Timestamped_Log_Format">Mirc_Timestamped_Log_Format</a></li>
+  <li><a href="#XChat_Timestamped_Log_Format">XChat_Timestamped_Log_Format</a></li>
+  <li><a href="#Irssi_ISO8601_Log_Text_Format">Irssi_ISO8601_Log_Text_Format</a></li>
+  <li><a href="#Yahoo_IM_Format">Yahoo_IM_Format</a></li>
+  <li><a href="#Plain_Text_Format">Plain_Text_Format</a></li>
+</ul>
+Scribe.perl guesses which
 format you have used by seeing which format best matches the
 input.&nbsp; If necessary, you can specify the input format explicitly
 using the -inputFormat option and specifying the name of the format
-below, such as "-inputFormat RRSAgent_Text_Format".&nbsp; The names of
-the formats below are actually the perl function names used in the
+such as "-inputFormat RRSAgent_Text_Format".&nbsp; The names of
+the formats are actually the perl function names used in the
 code.&nbsp; If you wish to use a log format that is not listed, please
 email an example to dbooth@w3.org so that I can consider adding support
 for it.<br>
 <br>
-<h3>RRSAgent_Text_Format -- <span style="color: rgb(51, 204, 0);">RECOMMENDED</span><br>
+<h3><a name="RRSAgent_Text_Format"></a>RRSAgent_Text_Format -- <span
+ style="color: rgb(51, 204, 0);">RECOMMENDED</span><br>
 </h3>
 The plain text format (*.txt) produced by RRSAgent.&nbsp; Hint: add
 ".txt"
@@ -926,12 +952,12 @@ ignored (except in guessing the input format), so you can safely edit
 the log and add lines without having to fake timestamps.&nbsp; <a
  href="http://www.w3.org/2003/03/03-ws-desc-irc.txt">Example:</a><br>
 <pre><code>20:41:27 &lt;dbooth&gt; Mike: Feature X would benefit users.<br></code><code>20:41:37 &lt;dbooth&gt; </code><code>... and implementation would be easy.<br></code><code></code><code>20:41:47 &lt;ericn&gt; I agree.<br></code></pre>
-<h3>RRSAgent_HTML_Format</h3>
+<h3><a name="RRSAgent_HTML_Format"></a>RRSAgent_HTML_Format</h3>
 The HTML format (*.html) produced by RRSAgent.&nbsp; This is the raw
 HTML code.&nbsp; <a
  href="http://www.w3.org/2003/03/03-ws-desc-irc.html">Example:</a><br>
 <pre><code>&lt;dt id="T20-41-27"&gt;20:41:27 [</code><code>dbooth</code><code>]&lt;/dt&gt;&lt;dd&gt;</code><code>Mike: Feature X would benefit users.</code><code> &lt;/dd&gt;<br>&lt;</code><code>dt id="T20-41-37"&gt;20:41:37 [dbooth]&lt;/dt&gt;&lt;dd&gt;</code><code>... and implementation would be easy.</code><code> &lt;/dd&gt;<br></code><code>&lt;dt id="T20-41-37"&gt;20:41:47 [</code><code>ericn</code><code>]&lt;/dt&gt;&lt;dd&gt;</code><code>I agree</code><code>. &lt;/dd&gt;<br></code></pre>
-<h3>RRSAgent_Visible_HTML_Text_Paste_Format<br>
+<h3><a name="RRSAgent_Visible_HTML_Text_Paste_Format"></a>RRSAgent_Visible_HTML_Text_Paste_Format<br>
 </h3>
 This is for the format that is visible in the browser when RRSAgent's
 HTML is displayed.&nbsp; I.e., when you display the *.html log in a
@@ -940,25 +966,25 @@ and then copy and paste the text from the browser window, only the
 displayed text is copied -- not the raw HTML tags.&nbsp; <a
  href="http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0002/ExampleFormat-RRSAgent_Visible_HTML_Text_Paste_Format.txt">Example:</a><br>
 <pre><code>20:41:27 [</code><code>dbooth</code><code>]<br>     </code><code>Mike: Feature X would benefit users.</code><code><br>20:41:37 [dbooth]<br>     </code><code>... and implementation would be easy</code><code>.<br></code><code>20:41:47 [</code><code>ericn</code><code>]<br>     I agree.</code><code><br></code></pre>
-<h3>Mirc_Text_Format</h3>
+<h3><a name="Mirc_Text_Format"></a>Mirc_Text_Format</h3>
 The format produced by mIRC when you do Buffer--&gt;Save As.&nbsp;
 Example:<br>
 <pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;ericn&gt; I agree.<br></code></pre>
-<h3>Mirc_Timestamped_Log_Format</h3>
+<h3><a name="Mirc_Timestamped_Log_Format"></a>Mirc_Timestamped_Log_Format</h3>
 Timestamped log format produced by mIRC.&nbsp; Example:<br>
 <pre><code>[19:35] &lt;Zakim&gt; Steven should now be muted<br>[19:36] &lt;ph&gt; http://lists.w3.org/Archives/Member/w3c-html-cg/2004JanMar/0038.html<br>[19:36] * Zakim hears Steven's hand up<br>[19:36] * Zakim sees Steven on the speaker queue<br></code></pre>
-<h3>XChat_Timestamped_Log_Format</h3>
+<h3><a name="XChat_Timestamped_Log_Format"></a>XChat_Timestamped_Log_Format</h3>
 Timestamped log format produced by X-Chat.&nbsp; <a
  href="http://lists.w3.org/Archives/Public/www-archive/2005Feb/0026.html">Example</a>:<br>
 <pre id="body">**** BEGIN LOGGING AT Mon Feb 14 11:02:06 2005<br><br>Feb 14 11:02:06 --&gt;	You are now talking on &amp;arch<br>Feb 14 11:02:06 ---	Topic for &amp;arch is W3C Architecture Mardi Gras Meeting<br>Feb 14 11:02:06 ---	Topic for &amp;arch set by plh at Tue Feb  8 13:43:31 2005<br>Feb 14 11:02:11 &lt;Zakim&gt;	ok, plh; the call is being made<br>Feb 14 11:02:18 &lt;Zakim&gt;	WS_Team()11:00AM has now started<br>Feb 14 11:02:19 &lt;Zakim&gt;	+Plh<br>Feb 14 11:02:23 &lt;larryk&gt;	This is an on-the-record comment<br>Feb 14 11:02:26 *	Yves This is an off-the-record comment<br>**** ENDING LOGGING AT Mon Feb 14 10:22:09 2005<br></pre>
-<h3>Irssi_ISO8601_Log_Text_Format</h3>
+<h3><a name="Irssi_ISO8601_Log_Text_Format"></a>Irssi_ISO8601_Log_Text_Format</h3>
 The format produced by Irssi logging with Hugo's suggested timestamp
 prefixes.&nbsp; Example:<br>
 <pre><code></code>2003-12-18T15:27:21-0500 &lt;dbooth&gt; <code>M</code><code>ike: Feature X would benefit users</code><code>.</code><br>2003-12-18T15:27:36-0500 &lt;dbooth&gt; <code>... and implementation would be easy</code><code></code><code></code>.<br>2003-12-18T15:27:36-0500 &lt;ericn&gt; I agree.<br><code></code></pre>
-<h3>Yahoo_IM_Format</h3>
+<h3><a name="Yahoo_IM_Format"></a>Yahoo_IM_Format</h3>
 The format produced when you save a Yahoo IM session.&nbsp; Example:<br>
 <pre><code>dbooth: </code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br>dbooth: </code><code>... and implementation would be easy</code><code></code><code>.<br>ericn: I agree.<br></code></pre>
-<h3>Plain Text Format<br>
+<h3><a name="Plain_Text_Format"></a>Plain_Text_Format<br>
 </h3>
 Line-oriented plain text format.&nbsp; This format is intended for
 occasions
