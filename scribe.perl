@@ -126,6 +126,7 @@ my $postTopicHTML = "</h3>";
 
 # Other globals
 my $debug = 0;
+my $debugActions = 1;
 my $namePattern = '([\\w]([\\w\\d\\-\\.]*))';
 # warn "namePattern: $namePattern\n";
 
@@ -149,7 +150,7 @@ my $commandsPattern = &MakePattern(keys %commands);
 # will be the order in which they are listed in the resulting minutes.
 my @ucActionStatuses = qw(
         NEW
-        PENDING IN_PROGRESS IN_PROCESS NEEDS_ACTION
+        PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING
         UNKNOWN
         DONE COMPLETED FINISHED
         DROPPED RETIRED CANCELLED CANCELED WITHDRAWN);
@@ -636,6 +637,7 @@ my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 ######### ACTION Item Processing
 # First put all action items into a common format, to make them easier to process.
 my @lines = split(/\n/, $all);
+my %debugTypesSeen = ();
 for (my $i=0; $i<(@lines-1); $i++)
 	{
 	# First move the status out from in front of ACTION,
@@ -654,12 +656,12 @@ for (my $i=0; $i<(@lines-1); $i++)
 			#	[PENDING] [NEW] ACTION: whatever
 			($writer2, $type2, $value2, $rest2, undef) = &ParseLine("<scribe> $rest2");
 			}
-		# $debugTypesSeen{$type}++;
-		# warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugTypesSeen{$type} < 3;
+		$debugTypesSeen{$type}++;
+		warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugActions && $debugTypesSeen{$type} < 3;
 		if ($type eq "STATUS" && $type2 eq "COMMAND" && &LC($value2) eq "action")
 			{
 			$lines[$i] = "<$writer\> ACTION: \[$value\] $rest2";
-			# warn "MOVED: $lines[$i]\n";
+			warn "MOVED: $lines[$i]\n" if $debugActions;
 			}
 		}
 
@@ -675,18 +677,28 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# for actions.
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
 		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
-		# $debugTypesSeen{$type}++;
-		# warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugTypesSeen{$type} < 3;
+		$debugTypesSeen{$type}++;
+		warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugActions && $debugTypesSeen{$type} < 3;
 		if ($type eq "COMMAND" && &LC($value) eq "action"
 			&& &LC($writer2) eq &LC($writer)
-			&& ($type2 eq "STATUS" || $type2 eq "CONTINUATION"))
+			&& ($type2 eq "CONTINUATION"))
 			{
-			my $cont = "\[$value2\] $rest2"; # if type2 eq STATUS
-			$cont = $rest2 if $type2 eq "CONTINUATION";
+			$lines[$i] = "";
+			$lines[$i+1] = "<$writer\> ACTION: $rest $rest2";
+			warn "JOINED ACTION CONTINUATION: " . $lines[$i+1] . "\n" if $debugActions;
+			}
+		#### Commented out this branch, since I think it is handled
+		#### below anyway.
+		elsif (0 && $type eq "COMMAND" && &LC($value) eq "action"
+			&& &LC($writer2) eq &LC($writer)
+			&& ($type2 eq "STATUS"))
+			{
+			my $cont = "\[$value2\] $rest2"; 
 			$lines[$i] = "";
 			$lines[$i+1] = "<$writer\> ACTION: $rest $cont";
-			# warn "JOINED: " . $lines[$i+1] . "\n";
+			warn "JOINED: " . $lines[$i+1] . "\n" if $debugActions;
 			}
+
 		}
 
 	if (1)
@@ -708,7 +720,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 				{
 				$lines[$i] = "<$writer\> ACTION: $rest \[$value2\]";
 				$lines[$i+1] = "";
-				# warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n";
+				warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n" if $debugActions;
 				}
 			else
 				{
@@ -724,7 +736,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 							{
 							$lines[$i] = "<$writer\> ACTION: $rest \[$value2\]";
 							$lines[$j] = "";
-							# warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n";
+							warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n" if $debugActions;
 							}
 						last;
 						}
@@ -751,7 +763,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 			my $recorded = $1;
 			$lines[$i] = "";
 			$lines[$i+1] = "<$writer\> ACTION: $rest \[$recorded\]";
-			# warn "JOINED RECORDED: " . $lines[$i+1] . "\n";
+			warn "JOINED RECORDED: " . $lines[$i+1] . "\n" if $debugActions;
 			}
 		}
 	}
@@ -778,7 +790,7 @@ for (my $i = 0; $i <= $#rrsagentLines; $i++) {
 	next unless (m/\<RRSAgent\> ACTION\: (.*)$/);
 	my $action = "$1";
 	$rrsagentActions{$action} = "";	# Unknown status (will default to NEW)
-	# warn "RRSAgent ACTION: $action\n";
+	warn "RRSAgent ACTION: $action\n" if $debugActions;
 }
 
 # Now grab actions the old way (not the RRSAgent lines).
@@ -788,7 +800,7 @@ foreach my $line (split(/\n/,  $all))
 	next if $line =~ m/^\<RRSAgent\>/i;
 	next if $line !~ m/\A\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)\s*\Z/i;
 	my $action = $1;
-	# warn "OTHER ACTION: $action\n";
+	warn "OTHER ACTION: $action\n" if $debugActions;
 	$otherActions{$action} = "";
 	}
 
@@ -798,8 +810,10 @@ if ($trustRRSAgent) {
 	if (((keys %rrsagentActions) == 0) && ((keys %otherActions) > 0)) 
 		{ warn "\nWARNING: No RRSAgent-recorded actions found, but 'ACTION:'s appear in the text.\nSUGGESTED REMEDY: Try running WITHOUT the -trustRRSAgent option\n\n"; }
 	%rawActions = %rrsagentActions;
+	warn "Using RRSAgent ACTIONS\n" if $debugActions;
 } else {
 	%rawActions = %otherActions;
+	warn "Using OTHER ACTIONS\n" if $debugActions;
 }
 
 my %statusPatterns = ();	# Maps from a status to its regex.
@@ -817,6 +831,7 @@ foreach my $s (@actionStatuses)
 
 # Now clean up each action item and parse out its status and URL.
 my %actions = ();
+warn "Cleaning up each action and parsing status and URL...\n" if $debugActions;
 foreach my $action ((keys %rawActions))
 	{
 	my $a = $action;
@@ -831,8 +846,8 @@ foreach my $action ((keys %rawActions))
 	# but precedence to the URL that was recorded first.
 	CHANGE: while ($a ne $olda)
 		{
-		# warn "OLD a: $olda\n";
-		# warn "NEW a: $a\n\n";
+		warn "OLD a: $olda\n" if $debugActions;
+		warn "NEW a: $a\n\n" if $debugActions;
 		$olda = $a;
 		$a = &Trim($a);
 		next CHANGE if $a =~ s/\s*\[\d+\]?\s*\Z//;	# Delete action numbers: [4] [4
@@ -859,7 +874,7 @@ foreach my $action ((keys %rawActions))
 			if ($a =~ s/[\*\(\[\-\=\s\:\;]+($p)[\*\)\]\-\=\s]*\Z//i)
 				{
 				$status = $s if !$status;
-				# warn "status: $status\n";
+				warn "status: $status\n" if $debugActions;
 				next CHANGE;
 				}
 			}
@@ -870,7 +885,7 @@ foreach my $action ((keys %rawActions))
 			if ($a =~ s/\A[\*\(\[\-\=\s]*($p)[\*\)\]\-\=\s\:\;]+//i)
 				{
 				$status = $s if !$status;
-				# warn "status: $status\n";
+				warn "status: $status\n" if $debugActions;
 				next CHANGE;
 				}
 			}
@@ -878,16 +893,17 @@ foreach my $action ((keys %rawActions))
 	# Put the URL back on the end
 	$a .= " [recorded in $url]" if $url;
 	$status = "NEW" if !$status;
-	# warn "FINAL: [$status] $a\n\n";
+	warn "FINAL: [$status] $a\n\n" if $debugActions;
 	$actions{$a} = $status;
 	}
 
 # Get a list of people who have current action items:
 my %actionPeople = ();
+warn "Getting list of action people...\n" if $debugActions;
 foreach my $key ((keys %actions))
 	{
 	my $a = &LC($key);
-	# warn "action:$a:\n";
+	warn "action:$a:\n" if $debugActions;
 	# Skip completed action items.  Check the status.
 	die if !exists($actions{$key});
 	my $lcs = &LC($actions{$key});
@@ -937,7 +953,8 @@ warn "People with action items: ",join(" ", sort keys %actionPeople), "\n";
 
 # Format the resulting action items.
 # Iterate through the @actionStatuses in order to group them by status.
-# warn "ACTIONS:\n";
+warn "Formatting the resulting action items....\n" if $debugActions;
+warn "ACTIONS:\n" if $debugActions;
 # my $actionTemplate = "<strong>[\$status]</strong> <strong>ACTION:</strong> \$action <br />\n";
 my $actionTemplate = "[\$status] ACTION: \$action\n";
 my @formattedActionLines = ();
@@ -961,6 +978,7 @@ foreach my $status (@actionStatuses)
 	}
 # There shouldn't be any more kinds of actions, but if there are, format them.
 # $actions{'FAKE ACTION TEXT'} = 'OTHER_STATUS';	# Test
+warn "Formatting remaining action items....\n" if $debugActions;
 foreach my $status (sort values %actions)
 	{
 	my $n = 0;
@@ -982,6 +1000,7 @@ foreach my $status (sort values %actions)
 	}
 
 # Try to break lines over 76 chars:
+warn "Breaking lines over 76 chars....\n" if $debugActions;
 @formattedActionLines = map { &BreakLine($_) } @formattedActionLines
 	if $breakActions;
 # Convert the @formattedActionLines to HTML.
@@ -992,9 +1011,11 @@ foreach my $status (sort values %actions)
 
 my $formattedActions = join("", @formattedActionLines);
 # Make links from URLs in actions:
+warn "Making links in actions....\n" if $debugActions;
 $formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
 
 # Highlight ACTION items:
+warn "Highlighting actions....\n" if $debugActions;
 $formattedActions =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/ig;
 # Highlight in-line ACTION status:
 foreach my $status (@actionStatuses)
@@ -1002,6 +1023,7 @@ foreach my $status (@actionStatuses)
 	my $ucStatus = $actionStatuses{$status};
 	$formattedActions =~ s/\[$status\]/<strong>[$ucStatus]<\/strong>/ig;
 	}
+warn "Done formatting actions!\n" if $debugActions;
 
 $all = &IgnoreGarbage($all);
 
