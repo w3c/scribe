@@ -417,6 +417,7 @@ while($restartForEmbeddedOptions)
 	# function and the function address.
 	my %inputFormats = (
 		# functionName, functionAddress,
+		"XChat_Timestamped_Log_Format", \&XChat_Timestamped_Log_Format,
 		"RRSAgent_Text_Format", \&RRSAgent_Text_Format, 
 		"RRSAgent_HTML_Format", \&RRSAgent_HTML_Format, 
 		"RRSAgent_Visible_HTML_Text_Paste_Format", \&RRSAgent_Visible_HTML_Text_Paste_Format,
@@ -467,7 +468,7 @@ while($restartForEmbeddedOptions)
 	else	{
 		&Warn("Guessing input format: $bestName (score $bestScoreString)\n\n");
 		&Die("ERROR: Could not guess input format.\n") if $bestScore == 0;
-		&Warn("\nWARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\n\n")
+		&Warn("\nWARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\nPlease email an example of your input log format to dbooth\@w3.org\nso that I can consider adding support for your log format.\n\n")
 			if $bestScore < 0.7;
 		$all = $bestAll;
 		}
@@ -2742,6 +2743,75 @@ $all = join("\n", @loggedLines) . "\n";
 # Artificially downgrade the score, so that Normalized_Format will win
 # if the format is already normalized
 $score = $score * 0.99;
+return($score, $all);
+}
+
+##################################################################
+########################## XChat_Timestamped_Log_Format #########################
+##################################################################
+# Format from saving MIRC buffer.
+sub XChat_Timestamped_Log_Format
+{
+die if @_ != 1;
+my ($all) = @_;
+# Count the number of recognized lines
+my @lines = split(/\n/, $all);
+my $nLines = scalar(@lines);	# Total number of lines
+my $n = 0;		# Number of recognized lines (matching this format)
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# Count lines that look reasonable
+# **** BEGIN LOGGING AT Mon Feb 14 08:37:02 2005
+# Feb 14 08:37:02 -->     You are now talking on &arch
+# Feb 14 08:37:02 ---     Topic for &arch is W3C Architecture Mardi Gras Meeting
+# **** ENDING LOGGING AT Mon Feb 14 10:22:09 2005
+# Feb 14 11:02:23 <dbooth>        This is an on-the-record comment
+# Feb 14 11:02:26 *       Yves This is an off-the-record comment
+my @loggedLines = ();
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d)'; # 3 parens
+my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+@months == 12 || die;
+my $monthsPattern = &MakePattern(@months);
+foreach my $line (@lines)
+	{
+	if (&Trim($line) eq "") { $n++; $line = ""; }
+	# **** BEGIN LOGGING AT Mon Feb 14 08:37:02 2005
+	elsif ($line =~ m/\A\*\*\*\* BEGIN LOGGING AT /i) { $n++; $line = ""; }
+	# **** ENDING LOGGING AT Mon Feb 14 10:22:09 2005
+	elsif ($line =~ m/\A\*\*\*\* ENDING LOGGING AT /i) { $n++; $line = ""; }
+	# Feb 14 08:37:02 -->     You are now talking on &arch
+	# Feb 14 08:37:02 ---     Topic for &arch is W3C Architecture Mardi Gras Meeting
+	# Feb 14 11:02:23 <dbooth>        This is an on-the-record comment
+	# Feb 14 11:02:26 *       Yves This is an off-the-record comment
+	elsif ($line =~ m/\A($monthsPattern)\s+\d+\s+\d+\:\d+\:\d+\s+/i) 
+		{
+		my $rest = $'; # All but the timestamp
+		# Feb 14 08:37:02 -->     You are now talking on &arch
+		# Feb 14 08:37:02 ---     Topic for &arch is W3C Architecture Mardi Gras Meeting
+		if ($rest =~ m/\A\-\-/) { $n++; $line = ""; }
+		# Feb 14 11:02:23 <dbooth>        This is an on-the-record comment
+		elsif ($rest =~ m/\A\<$namePattern\>/i) 
+			# &Trim() because the log includes extra spaces/tabs
+			# after the <dbooth> in order to line up the text.
+			# This means that without more sophisticated analysis
+			# and processing here, space indentation will not
+			# be recognized as indicating continuation lines.
+			{ 
+			my $name = $&; # <dbooth>
+			my $statement = &Trim($');
+			$n++; 
+			$line = "$name $statement"; 
+			}
+		# Feb 14 11:02:26 *       Yves This is an off-the-record comment
+		elsif ($rest =~ m/\A\*/) { $n++; $line = ""; }
+		else { $line = &Trim($rest); } # Unrecognized line. Remove timestamp
+		}
+	else {} # Unrecognized line.  Retain as is.
+	# warn "LINE: $line\n";
+	push(@loggedLines, $line) if $line =~ m/\S/; # non-blank lines
+	}
+my $score = $n / $nLines;
+# warn "XChat_Timestamped_Log_Format n: $n nLines: $nLines score: $score\n";
+$all = join("\n", @loggedLines) . "\n";
 return($score, $all);
 }
 
