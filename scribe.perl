@@ -141,6 +141,7 @@ my @ucActionStatusListReferences =
 	(
         [qw( NEW )],
         [qw( PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING )],
+        [qw( POSTPONED )],
         [qw( UNKNOWN )],
         [qw( DONE COMPLETED FINISHED )],
         [qw( DROPPED RETIRED CANCELLED CANCELED WITHDRAWN )],
