@@ -95,6 +95,8 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #	<dbooth> Chair: Jonathan
 # Identify the meeting itself:
 #	<dbooth> Meeting: Weekly Baking Club Meeting
+# Identify the agenda:
+#	<hugo> Agenda: http://www.example.com/myagenda
 # Fix the meeting date (default is auto set from IRC log name or today if 
 # there is no "Date:" line):
 #	<dbooth> Date: 05 Dec 2002
@@ -483,6 +485,18 @@ else 	{
 	warn "\nWARNING: No meeting title found!
 You should specify the meeting title like this:
 <scribe> Meeting: Weekly Baking Club Meeting\n\n";
+	}
+
+# Grab agenda URL:
+my $agendaLocation;
+if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/[^ ]+)\n/\n/i)
+	{ $agendaLocation = $4;
+	  warn "Agenda: $agendaLocation\n";
+      }
+else 	{ 
+	warn "\nWARNING: No agenda location found!
+You should specify the meeting title like this:
+<scribe> Agenda: http://www.example.com/agenda.html\n\n";
 	}
 
 # Grab Previous meeting URL:
@@ -954,7 +968,12 @@ if ($logURL eq "SV_MEETING_IRC_URL")
 $formattedLogURL = "" if $logURL =~ m/\ANone\Z/i;
 $result =~ s/SV_FORMATTED_IRC_URL/$formattedLogURL/g;
 $result =~ s/SV_MEETING_IRC_URL/$logURL/g;
-	
+
+my $formattedAgendaLocation = '';
+if ($agendaLocation) {
+    $formattedAgendaLocation = "<p><a href='$agendaLocation'>Agenda</a></p>\n";
+}
+$result =~ s/SV_FORMATTED_AGENDA_LINK/$formattedAgendaLocation/g;
 
 print $result;
 exit 0;
@@ -1888,6 +1907,8 @@ height="48" width="72"></a>
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
+SV_FORMATTED_AGENDA_LINK
+
 <!-- Old:
 <p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
 -->
@@ -1980,6 +2001,8 @@ height="48" width="72"></a>
 
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
+
+SV_FORMATTED_AGENDA_LINK
 
 <!-- Old:
 <p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
@@ -2075,6 +2098,8 @@ height="48" width="72"></a>
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
+SV_FORMATTED_AGENDA_LINK
+
 <!-- Old:
 <p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
 -->
@@ -2169,6 +2194,8 @@ SV_MEETING_YEAR</a></p>
 
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
+
+SV_FORMATTED_AGENDA_LINK
 
 <!-- Old:
 <p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
