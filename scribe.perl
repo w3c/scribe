@@ -38,9 +38,15 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # 1. Set up regression testing, so that we can better test future versions.
 #
-# 2. Allow action status to be picked up on the next line even if there 
-# is other stuff on the same line.  (But not if the next line is another
-# action item!)
+# 1.1. Add a "Subtopic: ..." command.
+#
+# 2. Add a warning if a command word appears at the beginning of a line
+# but is not followed by a colon.  Ditto for action status word followed
+# by any other words (except an action command) on the same line.
+# The easiest way to do this may be to have ParseLine return an extra
+# value that is a warning string that the caller can issue.  (ParseLine
+# should not issue the warning directly, because it is called multiple
+# times on the same input text during lookahead.)
 #
 # 3. Handle weird chars in nick name: <maxf``>
 # See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
@@ -2866,6 +2872,7 @@ my ($all, $namePattern, $logURL) = @_;
 my @days = qw(Sun Mon Tue Wed Thu Fri Sat); 
 @days == 7 || die;
 my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+my @lcMonths = map {tr/A-Z/a-z/; s/\A(...).*\Z/$1/; $_} @months; # Lower case, length 3
 @months == 12 || die;
 my %monthNumbers = map {($months[$_], $_+1)} (0 .. 11);
 # warn "GetDate monthNumbers: ",join(" ",%monthNumbers),"\n";
@@ -2878,17 +2885,21 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	# this without net access, so I couldn't get one.
 	my $d = &Trim($4);
 	warn "Found Date: $d\n";
-	my @words = split(/\s+/, $d);
+	my @words = split(/[^0-9a-zA-Z]+/, $d);
 	die "ERROR: Date not understood: $d\n" if @words != 3;
-	my ($mday, $tmon, $year) = @words;
-	exists($monthNumbers{$tmon}) || die;
+	my $correctFormat = "Date command/format should be like \"Date: 31 Jan 2004\"";
+	my ($mday, $TMon, $year) = @words;
+	my $tmon = $TMon;	# Lower case, truncated version
+	$tmon =~ tr/A-Z/a-z/;
+	$tmon =~ s/\A(...).*\Z/$1/; # Truncate to length 3
+	exists($monthNumbers{$tmon}) || die "ERROR: Could not parse date.  Unknown month name \"$TMon\": $d\nFormat should be like \"Date: 31 Jan 2004\"\n";
 	my $mon = $monthNumbers{$tmon};
-	($mon > 0 && $mon < 13) || die;
-	($mday > 0 && $mday < 32) || die;
-	($year > 2000 && $year < 2100) || die;
+	($mon > 0 && $mon < 13) || die; # Internal error.
+	($mday > 0 && $mday < 32) || die "ERROR: Bad day of month (should be >0 && <32) \"$mday\": $d\n$correctFormat\n";
+	($year > 2000 && $year < 2100) || die "ERROR: Bad year (should be >0 && <32) \"$year\": $d\n$correctFormat\n";
 	my $day0 = sprintf("%0d", $mday);
 	my $mon0 = sprintf("%0d", $mon);
-	@date = ($day0, $mon0, $year, $tmon);
+	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	}
 # Figure out date from IRC log name:
 elsif ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/i)
