@@ -184,6 +184,7 @@ my $minScribeLines = 40;	# Min lines to be guessed as scribe.
 my $dashTopics = 0;		# Treat "---" as starting a new topic
 my $runTidy = 0;		# Pipe the output through "tidy -c"
 my $preferredContinuation = " "; # Either "... " or " ".
+
 my @args = ();
 my $template = &DefaultTemplate();
 my $scribeDefaultOptions = 'SCRIBEOPTIONS';
@@ -412,13 +413,57 @@ if ($useZakimTopics)
 		}
 	}
 
+# See if the $dashTopics option should be used.  That option causes
+# dash lines to indicate the start of a new topic, such as:
+#	<plh> ---
+#	<plh> Move to Stata Center
+#	<plh> Alan: What is the status of the Stata move?
+# which will be converted to the following if $dashTopics is used: 
+#	<plh> Topic: Move to Stata Center
+#	<plh> Alan: What is the status of the Stata move?
+# First see how many "Topic:" lines we have:
+my @topicLines = grep 
+	{
+	my ($writer, $type, $value, $rest, undef) = &ParseLine($_);
+	$type eq "COMMAND" && $value eq "Topic" && $rest ne "";
+	} split(/\n/, $all);
+# Now see how many we'd get if we used the $dashTopics option:
 my ($allDashTopics, $nDashTopics) = &ConvertDashTopics($all);
+# Now decide what to do.  There are three variables, which we can treat
+# as booleans (0 or non-0) for the purpose of covering all cases:
+#	$dashTopics
+#	$nDashTopics
+#	@topicLines
+# For completeness, we'll just enumerate the 8 cases:
+if (0) {}
+elsif ((!$dashTopics) && (!$nDashTopics) && (!@topicLines))
+	{ warn "\nWARNING: No \"Topic:\" lines found.\n\n"; }
+elsif ((!$dashTopics) && (!$nDashTopics) && ( @topicLines))
+	{ }
+elsif ((!$dashTopics) && ( $nDashTopics) && (!@topicLines))
+	{ 
+	warn "\nWARNING: No \"Topic:\" lines found, but dash separators were found.  \nDefaulting to -dashTopics option.\n\n"; 
+	$dashTopics = 1;
+	}
+elsif ((!$dashTopics) && ( $nDashTopics) && ( @topicLines))
+	{ 
+	warn "\nWARNING: Dash separator lines found.  If you intended them to mark\nthe start of a new topic, you need the -dashTopics option.\nFor example:\n        <Philippe> ---\n        <Philippe> Review of Action Items\n\n";
+	}
+elsif (( $dashTopics) && (!$nDashTopics) && (!@topicLines))
+	{ warn "\nWARNING: No \"Topic:\" lines found.\n\n"; }
+elsif (( $dashTopics) && (!$nDashTopics) && ( @topicLines))
+	{ 
+	warn "\nWARNING: -dashTopics option used, but no separator lines found.\nFor example:\n        <Philippe> ---\n        <Philippe> Review of Action Items\n\n";
+	}
+elsif (( $dashTopics) && ( $nDashTopics) && (!@topicLines))
+	{ }
+elsif (( $dashTopics) && ( $nDashTopics) && ( @topicLines))
+	{ }
+else { die "Internal logic error "; }
+# Finally, apply the $dashTopics option if enabled.
 if ($dashTopics)
 	{
 	$all = $allDashTopics;
-	}
-else	{
-	$nDashTopics==0 || warn "\nWARNING: Dash separator lines found.  If you intended them to mark\nthe start of a new topic, you need the -dashTopics option.\nFor example:\n        <Philippe> ---\n        <Philippe> Review of Action Items\n\n";
 	}
 
 if ($normalizeOnly)
