@@ -2,6 +2,7 @@
 
 # Generate minutes in HTML from a text IRC Log.
 # Author: David Booth <dbooth@w3.org> 
+# This is: http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # $Revision$ of $Date$ by $Author$
 #
 # Take a raw W3C IRC log, tidy it up a bit, and put it into HTML
@@ -1132,8 +1133,8 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
   </a> 
   -->
   <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
-  David Booth <br />
-  <a href="mailto:dbooth@w3.org">dbooth@w3.org</a><br>
+  Minutes formatted by David Booth's perl script: 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
   $Date$ 
 </address>
 </body>
@@ -1230,8 +1231,8 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
   </a> 
   -->
   <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
-  David Booth <br />
-  <a href="mailto:dbooth@w3.org">dbooth@w3.org</a><br>
+  Minutes formatted by David Booth's perl script: 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
   $Date$ 
 </address>
 </body>
@@ -1329,8 +1330,8 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
   </a> 
   -->
   <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
-  David Booth <br />
-  <a href="mailto:dbooth@w3.org">dbooth@w3.org</a><br>
+  Minutes formatted by David Booth's perl script: 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
   $Date$ 
 </address>
 </body>
@@ -1429,8 +1430,8 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
   </a> 
   -->
   <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
-  David Booth <br />
-  <a href="mailto:dbooth@w3.org">dbooth@w3.org</a><br>
+  Minutes formatted by David Booth's perl script: 
+  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
   $Date$ 
 </address>
 </body>
@@ -1439,6 +1440,5 @@ MITTemplate-EOF
 ;
 return $template;
 }
-
 
 
