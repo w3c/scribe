@@ -106,9 +106,9 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # Formatting:
 # my $preSpeakerHTML = "<strong>";
 # my $postSpeakerHTML = "</strong> <br />";
-my $preSpeakerHTML = "<cite class='phone'>";
+my $preSpeakerHTML = "<cite>";
 my $postSpeakerHTML = "</cite>";
-my $preIRCSpeakerHTML = "<cite class='irc'>";
+my $preIRCSpeakerHTML = "<cite>";
 my $postIRCSpeakerHTML = "</cite>";
 my $prePhoneParagraphHTML = "<p class='phone'>";
 my $postPhoneParagraphHTML = "</p>";
