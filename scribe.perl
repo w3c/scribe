@@ -140,11 +140,12 @@ my $commandsPattern = &MakePattern(keys %commands);
 # See also http://www.w3.org/2001/sw/Europe/200401/actions/
 # Note that these are ordered: The order in which they are listed here
 # will be the order in which they are listed in the resulting minutes.
-my @ucActionStatuses = qw(NEW 
-	PENDING IN_PROGRESS IN_PROCESS NEEDS_ACTION
-	UNKNOWN 
-	COMPLETED DONE FINISHED
-	DROPPED RETIRED CANCELLED CANCELED WITHDRAWN);
+my @ucActionStatuses = qw(
+        NEW
+        PENDING IN_PROGRESS IN_PROCESS NEEDS_ACTION
+        UNKNOWN
+        DONE COMPLETED FINISHED
+        DROPPED RETIRED CANCELLED CANCELED WITHDRAWN);
 # Generate spelling variations and lower case:
 my @actionStatuses = &Uniq(&WordVariations(map {&LC($_)} @ucActionStatuses));
 # Map to preferred spelling:
