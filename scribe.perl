@@ -30,6 +30,12 @@ use strict;
 # http://www.w3.org/2004/11/04-ws-desc-minutes.htm#item06
 # The relevant code below may be around line 3581.
 #
+# 0.1 Summarize RESOLUTIONS at the end.
+#
+# 0.2 Have each ACTION item generate a pointer to URL where it was generated.
+#
+# 0.3 Make a default Topic, same as Meeting title, if there aren't any.
+#
 # 1. integration between scribe.perl and mit-2 minutes extractor
 #
 # 1.0. Add a -log option to indicate the IRC log location.
@@ -209,7 +215,7 @@ my @rooms = qw(MIT308 SophiaSofa DISA Fujitsu);
 # stopList are non-people.
 my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
-	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
+	Scribe 00AM 00PM P IRC Topics DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
 	AGREED Date queue no one in XachBot got it WARNING upcoming);
 # @stopList = (@stopList, @rooms);
@@ -236,7 +242,7 @@ my $normalizeOnly = 0;		# Output only the normlized input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $scribeOnly = 0;		# Only select scribe lines
 my $trustRRSAgent = 0;		# Trust RRSAgent?
-my $breakActions = 1;		# Break long action lines?
+my $breakActions = 0;		# Break long action lines?
 my $implicitContinuations = 0;	# Option: -implicitContinuations
 my @scribeNames = ();		# Example: -scribe dbooth
 				# Or: -scribe "David_Booth"
@@ -775,6 +781,7 @@ $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC([\s_]*)Log))\s*\:\s
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
+######### ACTION processing
 ######### ACTION Item Processing
 # First put all action items into a common format, to make them easier to process.
 my @lines = split(/\n/, $all);
@@ -800,6 +807,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 			{
 			my $actionee = $1;
 			my $task = $';
+			$task =~ s/\Ato //;	# Prevent duplicate "to"
 			# warn "Found new action syntax: actionee: $actionee task: $task\n";
 			$lines[$i] = "<$writer> ACTION: $actionee to $task";
 			# warn "Normalized: $lines[$i]\n";
@@ -1929,6 +1937,26 @@ return(@new);
 }
 
 ###################################################################
+####################### Equal #######################
+###################################################################
+# Compare two lists for equality.
+# Items are compared as strings.
+# Lists must be given as references: if (&Equal(\@a, \@b)) { ... }
+sub Equal
+{
+@_ == 2 || die;
+my ($aRef, $bRef) = @_;
+my @a = @{$aRef};
+my @b = @{$bRef};
+return undef if scalar(@a) != scalar(@b);  # Unequal lengths?
+for (my $i=0; $i<@a; $i++)
+	{
+	return undef if $a[$i] ne $b[$i];
+	}
+return 1;
+}
+
+###################################################################
 ####################### CaseInsensitiveUniq #######################
 ###################################################################
 # Return one copy of each thing in the given list.
@@ -2213,7 +2241,13 @@ foreach my $line (@allLines)
 		@present = sort keys %seen;
 		}
 	else	{
-		&Warn("\nWARNING: Replacing previous $keyword list. (Old list: " . join(", ",@present) . ")\nUse '$keyword\+ ... ' if you meant to add people without replacing the list,\nsuch as: <dbooth> $keyword\+ " . join(', ', @p) . "\n\n") if @present && $isAlreadyDefined;
+		# Skip warning if new list is superset of old list
+		my @tOldPlusNew = &Uniq(sort (@present, @p));
+		my @tNew = &Uniq(sort @p);
+		if (!&Equal(\@tOldPlusNew, \@tNew))
+			{
+			&Warn("\nWARNING: Replacing previous $keyword list. (Old list: " . join(", ",@present) . ")\nUse '$keyword\+ ... ' if you meant to add people without replacing the list,\nsuch as: <dbooth> $keyword\+ " . join(', ', @p) . "\n\n") if @present && $isAlreadyDefined;
+			}
 		@present = @p;
 		$isAlreadyDefined = 1;
 		}
@@ -3220,7 +3254,7 @@ my @rooms = qw(MIT308 MIT531 Stata531 SophiaSofa);
 
 my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
-	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
+	Scribe 00AM 00PM P IRC Topics DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
 	AGREED Date queue no one in XachBot got it WARNING Present Agenda RESOLUTION);
 @stopList = (@stopList, @rooms);
@@ -3390,14 +3424,14 @@ return &PublicTemplate();
 sub SampleInput
 {
 my $sampleInput = <<'SampleInput-EOF'
-<dbooth> Scribe: dbooth
+<dbooth> Scribe: David Booth
+<dbooth> ScribeNick: dbooth
 <dbooth> Chair: Jonathan
 <dbooth> Meeting: Weekly Baking Club Meeting
 <hugo> Agenda: http//www.example.com/agendas/2002-12-05-agenda.html
 <dbooth> Date: 05 Dec 2002
 <dbooth> Topic: Review of Action Items
 <Philippe> PENDING ACTION: Barbara to bake 3 pies 
-<Philippe> ----
 <Philippe> DONE ACTION: David to make ice cream 
 <Philippe> ACTION: David to make frosting -- DONE
 <Philippe> ACTION: David to make candles  *DONE*
