@@ -153,6 +153,10 @@ my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 
 my @args = ();
 my $template = &DefaultTemplate();
+my $scribeDefaultOptions = 'SCRIBEOPTIONS';
+if ($ENV{$scribeDefaultOptions}) {
+    push (@ARGV, split(' ', $ENV{$scribeDefaultOptions}));
+}
 while (@ARGV)
 	{
 	my $a = shift @ARGV;
