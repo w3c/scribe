@@ -9,24 +9,21 @@
 </head>
 <body>
 <h1>Scribe.perl - Generate Meeting Minutes from an IRC Log</h1>
-<span style="font-style: italic;">See the <a
- href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">the
-scribe.perl source code</a> or ask me if this documentation isn't
-enough.&nbsp; Also,
-please feel free to make improvements to this document and the source
+<span style="font-style: italic;">Please feel free to make improvements
+to this document and the source
 code and check them into CVS.&nbsp; Thanks!&nbsp; -- dbooth</span><br>
 <h2>Abstract</h2>
 <a href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">Scribe.perl</a>
-is a crude perl script written by David Booth for generating meeting
+is a perl script for generating meeting
 minutes from an IRC, IM
-or other log that has been written to follow some simple minuting
-conventions.&nbsp; <a
- href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">Download
-scribe.perl</a>.&nbsp; It reads standard input and writes to standard
-output:<br>
-<pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> &lt; <span
- style="font-style: italic;">log.txt</span>  &gt; <span
- style="font-style: italic;">minutes.html</span></code></pre>
+or other log file that follows some simple minuting
+conventions.&nbsp; It is easy to use and requires no
+installation.&nbsp; It was primarily designed for use in and around
+W3C, but can also be used in other environments.&nbsp; (For use in
+other environments, see the <a href="#input_formats">Input Formats</a>
+section and the <a href="#templateOption">-template</a> and <a
+ href="#plainOption">-plain</a> options.)<br>
+<pre><code><span style="font-style: italic;"></span></code></pre>
 <h2>Table of Contents</h2>
 <div style="margin-left: 40px;"><a href="#Quick_Start_Guide"
  style="font-weight: bold;">Quick Start
@@ -35,18 +32,25 @@ Guide</a><br>
  href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#Pros_and_Cons_of_Using_Scribe.perl">Pros
 and Cons of Using
 Scribe.perl</a><br>
-<a href="#Environment_Variables">Environment Variables</a><br>
+<a href="#running">Running scribe.perl</a><br>
 <a href="#options">Options<br>
 </a><a href="#one_time_commands">Commands<br>
 </a><a href="#correcting_mistakes">Correcting Mistakes While Scribing</a><br>
 <a href="#input_formats">Input Formats</a><br>
+<a
+ href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#Environment_Variables">Environment
+Variables</a><br>
 </div>
 <br>
 <h2><a name="Quick_Start_Guide"></a>Quick Start Guide<br>
 </h2>
-Step 1:&nbsp; Invite <a href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a>
-and <a href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a>
-(skip this step if you're not using W3C's IRC):<br>
+<span style="font-weight: bold;">Step 1:&nbsp; Invite </span><a
+ style="font-weight: bold;" href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a><span
+ style="font-weight: bold;">
+and </span><a style="font-weight: bold;"
+ href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a><span
+ style="font-weight: bold;">
+(skip this step if you're not using W3C's IRC):</span><br>
 <table cellpadding="2" cellspacing="2" border="1"
  style="text-align: left; width: 100%;">
   <tbody>
@@ -87,8 +91,8 @@ teleconference calendar</a><br>
   </tbody>
 </table>
 <br>
-Step 2: Start
-the meeting:
+<span style="font-weight: bold;">Step 2: Start
+the meeting:</span>
 <table cellpadding="2" cellspacing="2" border="1"
  style="text-align: left; width: 100%;">
   <tbody>
@@ -110,7 +114,8 @@ the meeting:
 Booth</code>
 is the name of the scribe as it should appear in the generated
 minutes.&nbsp; The ScribeNick will be used instead if Scribe is not
-specified.&nbsp; To handle <span style="font-weight: bold;">multiple
+specified.&nbsp; <span style="font-weight: bold;">If there are
+multiple
 scribes:</span> Issue this command whenever the scribe name changes.<br>
       </td>
     </tr>
@@ -123,8 +128,10 @@ is the IRC nickname of the scribe.&nbsp; The ScribeNick will be guessed
 if neither Scribe nor ScribeNick are specified.&nbsp; HINT: Do <span
  style="text-decoration: underline;">not</span>
 change
-your IRC nickname to "scribe".&nbsp; To handle <span
- style="font-weight: bold;">multiple scribes:</span> Issue this command
+your IRC nickname to "scribe".&nbsp; <span style="font-weight: bold;">If
+there are multiple
+scribes</span><span style="font-weight: bold;">:</span> Issue this
+command
 whenever the scribe nickname changes. </td>
     </tr>
     <tr>
@@ -149,7 +156,7 @@ who chaired<br>
   </tbody>
 </table>
 <br>
-Step 3: Record meeting notes:<br>
+<span style="font-weight: bold;">Step 3: Take notes in IRC:</span><br>
 <table cellpadding="2" cellspacing="2" border="1"
  style="text-align: left; width: 100%;">
   <tbody>
@@ -280,7 +287,7 @@ document).</span></td>
   </tbody>
 </table>
 <br>
-Step 4: Finish the meeting:<br>
+<span style="font-weight: bold;">Step 4: Finish the meeting:</span><br>
 <table cellpadding="2" cellspacing="2" border="1"
  style="text-align: left; width: 100%;">
   <tbody>
@@ -294,35 +301,49 @@ Step 4: Finish the meeting:<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top; white-space: nowrap;"><code><span
- style="font-weight: bold;">zakim, bye</span><br>
-      </code></td>
-      <td style="vertical-align: top; font-style: italic;">Dismiss
+      <td style="vertical-align: top;"><span style="font-weight: bold;"><code><span
+ style="font-weight: bold;">zakim, bye</span></code></span></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;"></span><span
+ style="font-style: italic;">Dismiss
 zakim bot, which will generate a list of attendees.&nbsp; Use "Present:
-..." (described below) if you aren't using zakim bot.<br>
-      </td>
+..." (described below) instead if you aren't using zakim bot.</span></td>
     </tr>
     <tr>
-      <td style="vertical-align: top; white-space: nowrap;"><code><span
- style="font-weight: bold;">rrsagent, where am i?</span></code></td>
-      <td style="vertical-align: top; font-style: italic;">Determine
-log location.&nbsp; Scribe.perl will look for this, but you'll need it
-also below.<br>
-      </td>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">rrsagent, draft minutes</span></code></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;"></span><span
+ style="font-style: italic;">Tell <a
+ href="http://www.w3.org/2002/03/RRSAgent#minutes">RRSAgent</a><a
+ href="http://www.w3.org/2002/03/RRSAgent#minutes"> to generate minutes</a>
+from the log as written so far.&nbsp; Note the location of the
+generated minutes.&nbsp; </span><span style="font-style: italic;"><span
+ style="font-style: italic;">Skip this step if you are not using
+RRSAgent.</span><br style="font-style: italic;">
+      <span style="font-style: italic;"></span></span></td>
     </tr>
     <tr>
-      <td style="vertical-align: top; white-space: nowrap;"><code><span
+      <td style="vertical-align: top;"><code><span
  style="font-weight: bold;">rrsagent, bye</span></code></td>
       <td style="vertical-align: top; font-style: italic;">Dismiss
-rrsagent, which will also generate a list of action items that will be
-preferred if you use the -trustRRSAgent option.&nbsp; (Otherwise the
-action items will be taken from whereever they were first typed.)<br>
+RRSAgent (if used).<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-style: italic;">(Download
+and edit the generated minutes)</span></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">If
+you're using RRSAgent, then just edit the generated minutes and you are
+done.&nbsp; </span><br>
       </td>
     </tr>
   </tbody>
 </table>
 <br>
-Step 5: Generate the minutes:<br>
+(Continue to Step 5 if you wish to run scribe.perl manually or if you
+are not using RRSAgent.)<br>
+<br>
+<span style="font-weight: bold;">Step 5: </span><span
+ style="font-weight: bold;">Generate minutes:</span><br>
 <table cellpadding="2" cellspacing="2" border="1"
  style="text-align: left; width: 100%;">
   <tbody>
@@ -340,8 +361,13 @@ a copy of the IRC log, such as<br>
       </span><span style="font-style: italic;">http://www.w3.org/2002/04/05-arch-irc.txt)</span><br>
       </td>
       <td style="vertical-align: top;"><span style="font-style: italic;">(Hint:
-Strip #fragid and add .txt to the URL that rrsagent reported above when
-you asked "rrsagent, where am i?".) </span></td>
+If RRSAgent wrote the minutes to </span><span
+ style="font-style: italic;"><span style="font-style: italic;">http://...foo-<span
+ style="font-weight: bold;">minutes</span>, then the IRC log will be at
+      </span></span><span style="font-style: italic;"><span
+ style="font-style: italic;"><span style="font-style: italic;">http://...foo-<span
+ style="font-weight: bold;">irc.txt</span></span></span></span><span
+ style="font-style: italic;">.) </span></td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><span style="font-style: italic;">(<a
@@ -377,6 +403,7 @@ Option 1 is best if you forgot to indicate who is scribe ("Scribe:
     </tr>
   </tbody>
 </table>
+<span style="font-weight: bold;"></span><br>
 <br>
 <h2><a name="Pros_and_Cons_of_Using_Scribe.perl"></a>Pros and Cons of
 Using Scribe.perl</h2>
@@ -397,18 +424,22 @@ own template using the <code>-template</code> option. <br>
   <li>You still need to do some manual clean-up.</li>
   <li>It doesn't recognize all minuting conventions.&nbsp; (Suggestion:
 Learn its conventions, they're simple.)</li>
-  <li>At the moment it generates invalid HTML.&nbsp; (Arrgh!)&nbsp; But
-you can easily correct this using the <code>-tidy</code> option (if
-you have HTML tidy installed).</li>
   <li>The code is a mess.&nbsp; (Sorry!)</li>
 </ul>
-<pre><code></code><code></code></pre>
-<h2><a name="Environment_Variables"></a>Environment Variables</h2>
-The <code>SCRIBEOPTIONS</code> environment variable holds the
-default options that one wants to use.&nbsp; It is not required. &nbsp;
-Example for a Bourne-style shell:
-<pre>export SCRIBEOPTIONS="-trustRRSAgent"</pre>
+<h2><a name="running"></a>Running scribe.perl</h2>
+Scribe.perl reads standard input and writes to standard
+output:<br>
+<pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> &lt; <span
+ style="font-style: italic;">log.txt</span>  &gt; <span
+ style="font-style: italic;">minutes.html<br></span></code><code><span
+ style="font-style: italic;"></span></code></pre>
+It can also be <a href="http://www.w3.org/2002/03/RRSAgent#minutes">invoked
+by RRSAgent</a> from IRC (provided you're using RRSAgent):<br>
+<pre>rrsagent, draft minutes</pre>
+<pre><code><span style="font-style: italic;"></span></code></pre>
 <h2><a name="options"></a>Options</h2>
+These options are used to accommodate the different input syntaxes and
+scribing styles.<br>
 <span style="font-style: italic;"></span>
 <h3><span style="font-style: italic;"></span>Input Style Options</h3>
 -dashTopics<br>
@@ -464,6 +495,7 @@ be guessed.<br>
   </dt>
 </dl>
 <h3>Output Format Options</h3>
+These options control the output format.<br>
 <br>
 -tidy<br>
 <div style="margin-left: 40px;">Pipe the output through "tidy
@@ -534,26 +566,29 @@ RRSAgent commands.</dd>
   </dt>
 </dl>
 <h3>Template Options</h3>
-<dl>
-  <dt>Scribe.perl uses templates for generating the formatted
+Scribe.perl uses templates for generating the formatted
 output.&nbsp; There are a few built in, but you can specify your own if
 you wish.<br>
+<br>
+<dl>
+  <dt><a name="plainOption"></a>-plain<br>
   </dt>
-  <dt><br>
-  </dt>
+  <dd>Use the built-in plain (non-W3C) template. </dd>
   <dt>-public</dt>
   <dd>(DEFAULT) Use the built-in W3C template that is styled for public
 access. </dd>
-  <dt><br>
-  </dt>
   <dt>-member</dt>
-  <dd>Use the built-in template that is styled for W3C member-only
+  <dd>Use the built-in W3C template that is styled for W3C member-only
 access.<br>
+    <br>
   </dd>
   <dt>-team</dt>
-  <dd>Use the built-in template that is styled for W3C team-only access.</dd>
+  <dd>Use the built-in W3C template that is styled for W3C team-only
+access.<br>
+    <br>
+  </dd>
   <dt>-mit</dt>
-  <dd>Use the built-in template that is styled for W3C MIT site
+  <dd>Use the built-in W3C template that is styled for W3C MIT site
 meetings.&nbsp;&nbsp; After scribe.perl generates your HTML, <span
  style="font-weight: bold;">you
 still have to manually insert&nbsp; the&nbsp; "Two Minutes"
@@ -562,7 +597,8 @@ reports</span>.&nbsp; Use the <a
 Minutes CGI Script</a> to generate them.</dd>
   <dt><br>
   </dt>
-  <dt>-template <span style="font-style: italic;">templateFile.html</span></dt>
+  <dt><a name="templateOption"></a>-template <span
+ style="font-style: italic;">templateFile.html</span></dt>
   <dd>Use <span style="font-style: italic;">templateFile.html</span>
 as the template for generating the minutes.<br>
     <br>
@@ -588,10 +624,7 @@ scribe's nickname, as if specified by the -scribeNick option (below).</dd>
   </dt>
   <dt>-scribeNick <span style="font-style: italic;">nickName</span></dt>
   <dd>Indicate the IRC nickname of the scribe, which is used to figure
-out which lines were written by the scribe. The <span
- style="font-style: italic;">nickName</span> will <span
- style="text-decoration: underline;">not</span> appear in the generated
-minutes.</dd>
+out which lines were written by the scribe.&nbsp;</dd>
   <dt> <br>
   </dt>
   <dt><br>
@@ -766,6 +799,11 @@ occasions
 when the scribe doesn't have access to IRC, and simply takes notes in a
 text editor.&nbsp; Example:<br>
 <pre><code></code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br></code><code>... and implementation would be easy</code><code></code><code>.<br>Eric agrees.</code></pre>
+<h2><a name="Environment_Variables"></a>Environment Variables</h2>
+The <code>SCRIBEOPTIONS</code> environment variable holds the
+default options that one wants to use.&nbsp; It is not required. &nbsp;
+Example for a Bourne-style shell:
+<pre>export SCRIBEOPTIONS="-trustRRSAgent"<br></pre>
 <br>
 <br>
 <hr>
