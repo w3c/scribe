@@ -10,7 +10,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # Author: David Booth <dbooth@w3.org> 
 #
-# Take a raw W3C IRC log, tidy it up a bit, and put it into HTML
+# Take a raw W3C IRC log, clean it up a bit, and put it into HTML
 # to create meeting minutes.  Reads stdin, writes stdout.
 # Several input formats are accepted (see below).
 # Input must follow certain conventions (see below).
@@ -30,6 +30,13 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #	-scribeOnly		Only keep scribe statements.  (Otherwise
 #				everyone's statements are kept.)
 #
+#	-normalize		Just output the normalized input, without
+#				formatting into HTML.  The purpose of this
+#				is to allow you to edit the normalized log
+#				(which is often easier than editing the raw
+#				low) and then use it as input to generate
+#				the HTML formatted minutes.
+#
 #	-template tfile		Use tfile as the template file for
 #				generating the HTML.  Without this option,
 #				the program will default to an embedded
@@ -45,20 +52,26 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 #	-member			Use a template that is formatted 
 #				for W3C member-only access.
-#				(Search for "sub PublicTemplate" below.)
+#				(Search for "sub MemberTemplate" below.)
 #
 #	-team			Use a template that is formatted
 #				for W3C team-only access.
-#				(Search for "sub PublicTemplate" below.)
+#				(Search for "sub TeamTemplate" below.)
 #
 #	-mit			Use a template that is formatted for
 #				W3C MIT style.
-#				(Search for "sub PublicTemplate" below.)
+#				(Search for "sub MITTemplate" below.)
 #
 #	-trustRRSAgent		Take the action items from what RRSAgent says,
 #				("<RRSAgent> I see 9 open action items...")
 #				rather than directly from what an individual
 #				wrote ("<dbooth> ACTION: ...").
+#
+#	-breakActions		Break long action lines into multiple lines.
+#				The purpose of this is to indent the
+#				continuation lines, such that when they are
+#				later copied and pasted, the continuation
+#				lines can be recognized and rejoined.
 #
 #
 # The best way to use this program is:
@@ -70,6 +83,9 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #	5. Go back to step 2 to make modifications, and repeat.
 #	   Once the output looks good enough, then . . .
 #	6. Manually edit the resulting HTML for any remaining fixes.
+#
+# It's a good idea to run the output through "tidy -c".
+# (See http://www.w3.org/People/Raggett/tidy/ .)
 #
 # SCRIBE CONVENTIONS:
 # This program expects certain conventions in the IRC log as follows.
@@ -156,20 +172,27 @@ my $postParagraphHTML = "</p>";
 my $preTopicHTML = "<h3";
 my $postTopicHTML = "</h3>";
 
+# Other globals
+my $namePattern = '([\\w]([\\w\\d\\-]*))';
+# warn "namePattern: $namePattern\n";
+
 # Get options/args
 my $all = "";			# Input
+my $normalizeOnly = 0;		# Output only the normlized input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
 my $scribeOnly = 0;		# Only select scribe lines
 my $trustRRSAgent = 0;		# Trust RRSAgent?
+my $breakActions = 1;		# Break long action lines?
 
-@ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
 my @args = ();
 my $template = &DefaultTemplate();
 while (@ARGV)
 	{
 	my $a = shift @ARGV;
 	if (0) {}
+	elsif ($a eq "-normalize") 
+		{ $normalizeOnly = 1; }
 	elsif ($a eq "-sampleInput") 
 		{ print STDOUT &SampleInput(); exit 0; }
 	elsif ($a eq "-sampleOutput") 
@@ -180,6 +203,10 @@ while (@ARGV)
 		{ $scribeOnly = 1; }
 	elsif ($a eq "-canon") 
 		{ $canonicalizeNames = 1; }
+	elsif ($a eq "-noBreakActions") 
+	        { $breakActions = 0; }
+	elsif ($a eq "-breakActions") 
+	        { $breakActions = 1; }
 	elsif ($a eq "-trustRRSAgent") 
 	        { $trustRRSAgent = 1; }
 	elsif ($a eq "-teamSynonyms") 
@@ -212,6 +239,7 @@ while (@ARGV)
 		{ push(@args, $a); }
 	}
 @ARGV = @args;
+@ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
 
 # Get input:
 $all =  join("",<>) if !$all;
@@ -266,6 +294,7 @@ while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 	my $old = $1;
 	my $new = $2;
 	my $global = $5;
+	$global = "" if !defined($global);
 	my $pre = $`;
 	my $match = $&;
 	my $post = $';
@@ -279,12 +308,11 @@ while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 	if (($global  && $pre =~ s/$oldp/$new/g)
 	|| ((!$global) && $pre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/))
 		{
-		warn "SUBSTITUTION: s/$told/$tnew/\n";
-		warn "(global substitution)\n" if $global;
+		warn "Succeeded: s/$told/$tnew/$global\n";
 		$all = $pre . "\n" . $post;
 		}
 	else	{
-		warn "s/$told/$tnew/  FAILED\n";
+		warn "WARNING: FAILED: s/$told/$tnew/$global\n";
 		$match =~ s/\A\s+//;
 		$match =~ s/\s+\Z//;
 		$all = $pre . "\n[Auto substitution failed:] " . $match . "\n" . $post;
@@ -302,19 +330,19 @@ if ($canonicalizeNames)
 	$all =~ s/(\w+)\-iMac\b/$1/ig;
 	}
 
+if ($normalizeOnly)
+	{
+	my $t = join("\n", grep {m/\A\</;} split(/\n/, $all)) . "\n";
+	print "$t\n";
+	exit 0;
+	}
+
 # Determine scribe name if possible:
-$scribeName = $3 if $all =~ s/\s+scribe\s+((today\s+)?)is\s+([\w\-]+)//i;
-$scribeName = $1 if $all =~ s/\s+scribe\s*\:\s*([\w\-]+)//i;
-$scribeName = $1 if $all =~ s/\s([\w\-]+)\s+is\s+scribe//i;
-$scribeName = $1 if $all =~ s/\s([\w\-]+)\s+is\s+scribing//i;
-$scribeName = $1 if $all =~ s/\<([^\>\ ]+)\>\s*I\s+am\s+scribe\s+.*//i;
-$scribeName = $1 if $all =~ s/\<([^\>\ ]+)\>\s*I\s+will\s+scribe\s+.*//i;
-$scribeName = $1 if $all =~ s/\<([^\>\ ]+)\>\s*I\s+am\s+scribing.*//i;
+# $scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*([\w\-]+).*?\n/\n/i;
+$scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)s*\n/\n/i;
 warn "Scribe: $scribeName\n";
 
 # Get attendee list, and canonicalize names within the document:
-my $namePattern = '([\\w]([\\w\\d\\-]*))';
-# warn "namePattern: $namePattern\n";
 my @uniqNames = ();
 my $allNameRefsRef;
 ($all, $scribeName, $allNameRefsRef, @uniqNames) = &GetNames($all, $scribeName);
@@ -326,9 +354,6 @@ push(@allNames,"Scribe");
 my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
 my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # warn "speakerPattern: $speakerPattern\n";
-
-# Escape &
-$all =~ s/\&/\&amp\;/g;
 
 # Canonicalize Scribe continuation lines so that the speaker's name is on every line:
 #	<Scribe> SusanW: We had a mtg on July 16.
@@ -480,8 +505,8 @@ You should specify the meeting chair like this:
 my $logURL = "SV_MEETING_IRC_URL";
 # <RRSAgent>   recorded in http://www.w3.org/2002/04/05-arch-irc#T15-46-50
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(http\:([^\s\#]+))/i;
-$logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.*)\n/\n/i;
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
+$logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.*)\n/\n/i;
 
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
@@ -489,13 +514,14 @@ my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 ######### ACTION Item Processing
 # These are the reconized action statuses.  Each status should be a
 # single word, so use underscores if you have a multi-word status.
-my @actionStatuses = qw(NEW PENDING IN_PROGRESS DONE DROPPED UNKNOWN);
+my @actionStatuses = qw(NEW PENDING IN_PROGRESS DONE DROPPED RETIRED UNKNOWN);
 my %statusPatterns = ();	# Maps from a status to its regex.
 foreach my $s (@actionStatuses)
 	{
 	die if $s !~ m/[a-zA-Z\_]/; # Canonical status, only letters/underscore
 	my $p = quotemeta($s);
-	# Allow the user to write space or dash instead of underscore.
+	# For multi-word status,
+	# allow the user to write space or dash instead of underscore.
 	# Accept as equivalent: IN_PROGRESS, IN PROGRESS, IN-PROGRESS 
 	$p =~ s/\_/\[\\-\\_\\s\]\+/g; # Make _ into a pattern: [\_\-\s]+
 	# warn "s: $s p: $p\n";
@@ -680,100 +706,67 @@ foreach my $a ((keys %actions))
 	}
 warn "People with action items: ",join(" ", keys %actionPeople), "\n";
 
-# Format the resulting action items:
+# Format the resulting action items.
+# Iterate through the @actionStatuses in order to group them by status.
 # warn "ACTIONS:\n";
-# my $actionTemplate = "<strong>ACTION:</strong> \$action <strong>[\$status]</strong> <br />\n";
-my $actionTemplate = "<strong>[\$status]</strong> <strong>ACTION:</strong> \$action <br />\n";
-my $formattedActions = "";
+# my $actionTemplate = "<strong>[\$status]</strong> <strong>ACTION:</strong> \$action <br />\n";
+my $actionTemplate = "[\$status] ACTION: \$action\n";
+my @formattedActionLines = ();
 foreach my $status (@actionStatuses)
 	{
+	my $n = 0;
 	foreach my $action (keys %actions)
 		{
 		next if $actions{$action} ne $status;
 		my $s = $actionTemplate;
 		$s =~ s/\$action/$action/;
 		$s =~ s/\$status/$status/;
-		$formattedActions .= $s;
+		push(@formattedActionLines, $s);
+		$n++;
 		delete($actions{$action});
 		}
-	$formattedActions .= "<br />\n\n";
-	}
-foreach my $status (qw(DONE DROPPED))
-	{
-	foreach my $action (keys %actions)
-		{
-		next if $actions{$action} ne $status;
-		# Don't need to do anything for the done or dropped actions.
-		delete($actions{$action});
-		}
+	push(@formattedActionLines, "\n") if $n>0;
 	}
 # There shouldn't be any more kinds of actions, but if there are, format them.
 # $actions{'FAKE ACTION TEXT'} = 'OTHER_STATUS';	# Test
 foreach my $status (sort values %actions)
 	{
+	my $n = 0;
 	foreach my $action (keys %actions)
 		{
 		next if $actions{$action} ne $status;
 		my $s = $actionTemplate;
 		$s =~ s/\$action/$action/;
 		$s =~ s/\$status/$status/;
-		$formattedActions .= $s;
+		push(@formattedActionLines, $s);
+		$n++;
 		delete($actions{$action});
 		}
-	$formattedActions .= "<br />\n\n";
+	push(@formattedActionLines, "\n") if $n>0;
 	}
-# Make links:
+
+# Try to break lines over 76 chars:
+@formattedActionLines = map { &BreakLine($_) } @formattedActionLines
+	if $breakActions;
+# Convert the @formattedActionLines to HTML.
+# Add HTML line break to the end of each line:
+@formattedActionLines = map { s/\n/ <br \/>\n/; $_ } @formattedActionLines;
+# Change initial space (for continuation lines) to &nbsp;
+@formattedActionLines = map { s/\A /\&nbsp\;/; $_ } @formattedActionLines;
+
+my $formattedActions = join("", @formattedActionLines);
+# Make links from URLs in actions:
 $formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/g;
 
-# Ignore off-record lines and other lines that should not be minuted.
-my @lines = split(/\n/, $all);
-my $nLines = scalar(@lines);
-warn "Lines found: $nLines\n";
-my @scribeLines = ();
-foreach my $line (@lines)
+# Highlight ACTION items:
+$formattedActions =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/g;
+# Highlight in-line ACTION status:
+foreach my $status (@actionStatuses)
 	{
-	# Ignore /me lines
-	next if $line =~ m/\A\s*\*/;
-	# Select only <speaker> lines
-	next if $line !~ m/\A\<$namePattern\>/i;
-	# Ignore empty lines
-	next if $line =~ m/\A\<$namePattern\>\s*\Z/i;
-	# Ignore join/leave lines:
-	next if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
-	next if $line =~ m/\A\s*\<(Scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
-	# Ignore topic change lines:
-	# <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
-	next if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
-	# Ignore zakim lines
-	next if $line =~ m/\A\<Zakim\>/i;
-	next if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
-	next if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
-	next if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
-	next if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
-	next if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
-	next if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
-	next if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
-	# Ignore RRSAgent lines
-	next if $line =~ m/\A\<RRSAgent\>/i;
-	next if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
-	# Remove off the record comments:
-	next if $line =~ m/\A\<$namePattern\>\s*\[\s*off\s*\]/i;
-	# Select only <scribe> lines?
-	next if $scribeOnly && $line !~ m/\A\<Scribe\>/i;
-	# warn "KEPT: $line\n";
-	push(@scribeLines, $line);
+	$formattedActions =~ s/\[$status\]/<strong>[$status]<\/strong>/g;
 	}
-my $nScribeLines = scalar(@scribeLines);
-warn "Minuted lines found: $nScribeLines\n";
-@lines = @scribeLines;
 
-# Verify that we axed all join/leave lines:
-{
-my $all = "\n" . join("\n", @lines) . "\n";
-my @matches = ($all =~ m/.*has joined.*\n/g);
-warn "WARNING: Possible join/leave lines remaining: \n\t" . join("\t", @matches)
- 	if @matches;
-}
+$all = &IgnoreGarbage($all);
 
 # Convert from:
 #	<Scribe> DanC: something
@@ -791,13 +784,20 @@ warn "WARNING: Possible join/leave lines remaining: \n\t" . join("\t", @matches)
 #	DanC: something
 #	----------------------------------------
 #	<Scribe> Whatever
-
 my $prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
 my $prevPattern = quotemeta($prevSpeaker);
+my @lines = split(/\n/, $all);
 foreach my $line (@lines)
 	{
 	# warn "$line";
-	if ($line =~ m/\A\<$namePattern\>\s*Topic\s*\:/i )
+	if (0) {}
+	# Ignore empty lines
+	elsif ($line =~ m/\A\s*\Z/)
+		{
+		next;
+		}
+	# Topic: ...
+	elsif ($line =~ m/\A\<$namePattern\>\s*Topic\s*\:/i )
 		{
 		# New topic.
 		# Force the speaker name to be repeated next time
@@ -845,18 +845,22 @@ foreach my $line (@lines)
 		$prevPattern = quotemeta($prevSpeaker);
 		}
 	else	{
-		die "DIED FROM UNKNOWN LINE FORMAT: $line\n";
+		die "DIED FROM UNKNOWN LINE FORMAT: $line\n$all\n";
 		}
 	}
 
 $all = join("\n", @lines);
 $all = "\n" . $all . "\n";	# Easier pattern matching
 
+
+######################### HTML ##########################
+# From now on, $all is in HTML!!!!!
 ##############  Escape < > as &lt; &gt; ################
-# From now on, we're treating the text as HTML.
 # Escape < and >:
+$all =~ s/\&/\&amp\;/g;
 $all =~ s/\</\&lt\;/g;
 $all =~ s/\>/\&gt\;/g;
+# $all =~ s/\"/\&quot\;/g;
 
 # Highlight in-line ACTION items:
 @allLines = split(/\n/, $all);
@@ -866,6 +870,12 @@ for (my $i=0; $i<@allLines; $i++)
 	$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/;
 	}
 $all = "\n" . join("\n", @allLines) . "\n";
+
+# Highlight in-line ACTION status:
+foreach my $status (@actionStatuses)
+	{
+	$all =~ s/\[\s*$status\s*\]/<strong>[$status]<\/strong>/g;
+	}
 
 # Format topic titles (i.e., collect agenda):
 my %agenda = ();
@@ -948,6 +958,101 @@ $result =~ s/SV_MEETING_IRC_URL/$logURL/g;
 
 print $result;
 exit 0;
+
+#################################################################
+################# IgnoreGarbage #################
+#################################################################
+sub IgnoreGarbage
+{
+@_ == 1 || die;
+my ($all) = @_;
+# Ignore off-record lines and other lines that should not be minuted.
+my @lines = split(/\n/, $all);
+my $nLines = scalar(@lines);
+warn "Lines found: $nLines\n";
+my @scribeLines = ();
+foreach my $line (@lines)
+	{
+	# Ignore /me lines
+	next if $line =~ m/\A\s*\*/;
+	# Select only <speaker> lines
+	next if $line !~ m/\A\<$namePattern\>/i;
+	# Ignore empty lines
+	next if $line =~ m/\A\<$namePattern\>\s*\Z/i;
+	# Ignore join/leave lines:
+	next if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
+	next if $line =~ m/\A\s*\<(Scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
+	# Ignore topic change lines:
+	# <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
+	next if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
+	# Ignore zakim lines
+	next if $line =~ m/\A\<Zakim\>/i;
+	next if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
+	next if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
+	next if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
+	next if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
+	next if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
+	next if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
+	next if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
+	# Ignore RRSAgent lines
+	next if $line =~ m/\A\<RRSAgent\>/i;
+	next if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
+	# Remove off the record comments:
+	next if $line =~ m/\A\<$namePattern\>\s*\[\s*off\s*\]/i;
+	# Select only <scribe> lines?
+	next if $scribeOnly && $line !~ m/\A\<Scribe\>/i;
+	# warn "KEPT: $line\n";
+	push(@scribeLines, $line);
+	}
+my $nScribeLines = scalar(@scribeLines);
+warn "Minuted lines found: $nScribeLines\n";
+$all = "\n" . join("\n", @scribeLines) . "\n";
+
+# Verify that we axed all join/leave lines:
+my @matches = ($all =~ m/.*has joined.*\n/g);
+warn "WARNING: Possible join/leave lines remaining: \n\t" . join("\t", @matches)
+ 	if @matches;
+return $all;
+}
+
+#################################################################
+########################## BreakLine ###########################
+#################################################################
+# Try to break lines longer than $maxLineLength chars.
+# Continuation lines are indented by a space.
+# Input line should end with a newline;
+# resulting lines will end with newlines.
+# Lines are only broken at spaces.  Long words are never broken.
+# Hence, the resulting line length may exceed the given $maxLineLength
+# if there is a word that is longer than $maxLineLength (such as
+# a URL).
+sub BreakLine
+{
+@_ == 1 || @_ == 2 || die;
+my ($line, $maxLineLength) = @_;
+$maxLineLength = 76 if !defined($maxLineLength);
+die if $line !~ m/\n\Z/;
+my @result = ();
+my $newLine = "";
+my $nextWord = "";
+while (1)
+	{
+	$newLine .= $nextWord;		# Append to $newLine
+	last if ($line !~ s/\A\s*\S+//);	# Grab next word
+	$nextWord = $&;
+	if (length($newLine) > 0
+	  && length($newLine) + length($nextWord) > $maxLineLength)
+		{
+		$newLine .= "\n";
+		push(@result, $newLine);
+		$newLine = " ";
+		}
+	}
+$newLine .= "\n";
+push(@result, $newLine);
+return(@result);
+}
+
 
 ##################################################################
 ########################## NormalizerMircTxt #########################
@@ -1040,9 +1145,10 @@ return($score, $all);
 ##################################################################
 ########################## NormalizerRRSAgentHTMLText #########################
 ##################################################################
-# This is for the format that is displayed in the browser from HTML.
-# I.e., when you display the HTML in a browser, and then copy and paste
-# the text from the browser window.
+# This is for the format that is visible in the browser when RRSAgent's HTML
+# is displayed.  I.e., when you view the (HTML) document in a browser, and 
+# then copy and paste the text from the browser window, it discards
+# the HTML code and copies only the displayed text.
 sub NormalizerRRSAgentHTMLText
 {
 die if @_ != 1;
@@ -1226,6 +1332,250 @@ return @date;
 }
 
 
+
+##################################################################
+###################### GetPresentOnPhone ######################
+##################################################################
+# Look for people in IRC log.
+sub GetPresentOnPhone
+{
+@_ == 1 || die;
+my($all) = @_;
+
+# Some important data/constants:
+my @rooms = qw(MIT308 SophiaSofa DISA Fujitsu);
+
+my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
+	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
+	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
+	yes no abstain Consensus Participants Question RESOLVED strategy
+	AGREED Date queue no one in XachBot got it WARNING);
+@stopList = (@stopList, @rooms);
+@stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
+my %stopList = map {($_,$_)} @stopList;
+
+my %synonyms = ();
+%synonyms = qw(
+	alan-home	Alan
+	amymtg		Amy
+	caribou		Carine
+        Chaals		Charles
+        chaalsGVA	Charles
+        chaalsNCE	Charles
+	Dave		DaveRaggett
+	DaveR		DaveRaggett
+	DaveRagget	DaveRaggett
+	dbooth		dbooth
+	David		dbooth
+	DB		dbooth
+	DavidB		dbooth
+        danbri		DanBri
+	danc_		DanC
+	danc		DanC
+	dand		DanielD
+	EM		EricM
+	Eric		EricM
+	ericP-WA	EricP
+	ericP-air	EricP
+	ger		Gerald
+	HT		Henry
+	HH		Hugo
+	hugo		Hugo
+	ivan		Ivan
+	janSeaTac	Janet
+	karl		Karl
+	reagle-tu	JosephR
+	reagleMIT	JosephR
+	Joseph		JosephR
+	judy		Judy
+	MaxF		MaxF
+	MCF		Marie-Claire
+	MC		Marie-Claire
+	marie		Marie-Claire
+	mari		Marisol
+	MSM		MichaelSM
+	MSMbot		MichaelSM
+	Michael		MichaelSM
+	MJDuesrst	Martin
+	olivier		Olivier
+	plh		Philippe
+	plh-sjc		Philippe
+	Ralph		RalphS
+	rigo		Rigo
+	sandro		Sandro
+	sim		Simon
+	simHOME		Simon
+	Hernandez	Simon
+	SB		Steve
+	SusanL		SusanLesch
+	Ted		Ted
+	Tim		TimBL
+	VQ		VincentQ
+	) if $useTeamSynonyms;
+foreach my $n (values %synonyms)
+	{
+	$synonyms{$n} = $n;	# Make TimBL --> TimBL
+	}
+
+# Easier pattern matching:
+$all = "\n" . $all . "\n";
+
+# Now start collecting names.
+my %names =  ();
+my $t; # Temp
+
+# 	  ...something.html Simon's two minutes
+$t = $all;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# warn "namePattern: $namePattern\n";
+while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /)
+	{
+	my $n = $1;
+	$names{$n} = $n;
+	}
+
+#	<dbooth> MC: I have integrated most of the coments i received 
+$t = $all;
+while($t =~ s/\n\<((\w|\-)+)\>(\ +)((\w|\-)+)\:/\n/i)
+	{
+	my $n = $4;
+	next if exists($names{$n});
+	# warn "Matched #	<dbooth> $n" . ": ...\n";
+	$names{$n} = $n;
+	}
+# warn "names: ",join(" ",keys %names),"\n";
+
+#	<Steven> Hello 
+$t = $all;
+while($t =~ s/\n\<((\w|\-)+)\>/\n/)
+	{
+	my $n = $1;
+	next if exists($names{$n});
+	# warn "Matched #	<$n>\n";
+	$names{$n} = $n;
+	# warn "Found name: $n\n";
+	}
+
+#	Zakim sees 4 items remaining on the agenda
+$t = $all;
+while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
+	{
+	my $match = $&;
+	$match =~ s/\A\s+//;
+	$match =~ s/\s+\Z//;
+	# warn "DELETED: $match\n";
+	}
+
+#	<Zakim> I see no one on the speaker queue
+#	<Zakim> I see Hugo, Yves, Philippe on the speaker queue
+#	<Zakim> I see MIT308, Ivan, Marie-Claire, Steven, Janet, EricM
+#	<Zakim> On the phone I see Joseph, m3mSEA, MIT308, Marja
+#	<Zakim> On IRC I see Nobu, SusanL, RRSAgent, ht, Ian, ericP
+#	<Zakim> ... simonMIT, XachBot
+#	<Zakim> I see MIT308, Ivan, Marie-Claire, Steven, Janet, EricM
+#	<Zakim> MIT308 has Martin, Ted, Ralph, Alan, EricP, Vivien
+#	<Zakim> +Carine, Yves, Hugo; got it
+#
+# Delete "on the speaker queue" from the ends of the lines,
+# to prevent those words being mistaken for names.
+while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/)
+        {
+        warn "Deleted 'on the speaker queue'\n";
+        }
+# Collect names
+while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/)
+	{
+	my $list = $9;
+	$list =~ s/\A\s+//;
+	$list =~ s/\s+\Z//;
+	my @names = split(/[^\w\-]+/, $list);
+	@names = map {s/\A\s+//; s/\s+\Z//; $_} @names;
+	@names = grep {$_} @names;
+	# warn "Matched #       <Zakim> I see: @names\n";
+	foreach my $n (@names)
+		{
+		next if exists($names{$n});
+		$names{$n} = $n;
+		}
+	}
+
+# Make the keys all lower case, so that they'll match:
+%synonyms = map {my $oldn = $_; tr/A-Z/a-z/; ($_, $synonyms{$oldn})} keys %synonyms;
+%names = map {my $oldn = $_; tr/A-Z/a-z/; ($_, $names{$oldn})} keys %names;
+# warn "Lower case name keys:\n";
+foreach my $n (sort keys %names)
+	{
+	# warn "	$n	$names{$n}\n";
+	}
+
+# Map synonyms to standardize spellings and expand abbreviations.
+%names = map 	{
+		exists($synonyms{$_}) 
+			? ($_, $synonyms{$_}) 
+			: ($_, $names{$_})
+		} keys %names;
+# At this point different keys may map to the same value.
+# warn "After applying synonyms:\n";
+foreach my $n (keys %names)
+	{
+	# warn "	$n	$names{$n}\n";
+	}
+
+# Eliminate non-names
+foreach my $n (keys %names)
+	{
+	# Filter out names in stopList
+	if (exists($stopList{$n})) { delete $names{$n}; }
+	# Filter out names less than two chars in length:
+	elsif (length($n) < 2) { delete $names{$n}; }
+	# Filter out names not starting with a letter
+	elsif ($names{$n} !~ m/\A[a-zA-Z]/) { delete $names{$n}; }
+	}
+
+# Make a list of unique names for the attendee list:
+my %uniqNames = ();
+foreach my $n (values %names)
+	{
+	$uniqNames{$n} = $n;
+	}
+
+# Make a list of all names seen (all variations) in lower case:
+my %allNames = ();
+foreach my $n (%names, %synonyms)
+	{
+	my $name = $n;
+	$name =~ tr/A-Z/a-z/;
+	$allNames{$name} = $name;
+	}
+@allNames = sort keys %allNames;
+# warn "allNames: @allNames\n";
+my @allNameRefs = map { \$_ } @allNames;
+
+# Canonicalize the names in the IRC:
+my $expandedIRC = $all;
+my $nExpanded = 0;
+foreach my $n (keys %synonyms)
+	{
+	next if !$canonicalizeNames;
+	my $v = $synonyms{$n};
+	next if $v eq $n;
+	my $qn = quotemeta($n);
+	if ($expandedIRC =~ s/([^\w\-])($qn)([^\w\-])/$1$v$3/ig)
+		{
+		$nExpanded++;
+		# warn "============ START ============\n";
+		# warn "	$expandedIRC\n";
+		# warn "============ STOP ============\n";
+		}
+	}
+# warn "nExpanded: $nExpanded\n";
+
+my $lcScribe = $scribe;
+$lcScribe =~ tr/A-Z/a-z/;
+$scribe = $synonyms{$lcScribe} if exists($synonyms{$lcScribe});
+my @sortedUniqNames = sort values %uniqNames;
+return($expandedIRC, $scribe, \@allNameRefs, @sortedUniqNames);
+}
 
 ##################################################################
 ###################### GetNames ######################
@@ -1559,7 +1909,7 @@ SV_FORMATTED_IRC_URL
 	SV_MEETING_AGENDA
 	</ol>
   </li>
-  <li><a href="#newActions">Summary of Action Items</a></li>
+  <li><a href="#ActionSummary">Summary of Action Items</a></li>
 </ul>
 <hr>
 
@@ -1581,7 +1931,7 @@ SV_AGENDA_BODIES
 -->
 
 
-<h2><a name="newActions">Summary of Action Items</a></h2>
+<h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- Action Items -->
 SV_ACTION_ITEMS
 
@@ -1652,7 +2002,7 @@ SV_FORMATTED_IRC_URL
 	SV_MEETING_AGENDA
 	</ol>
   </li>
-  <li><a href="#newActions">Summary of Action Items</a></li>
+  <li><a href="#ActionSummary">Summary of Action Items</a></li>
 </ul>
 <hr>
 
@@ -1674,11 +2024,7 @@ SV_AGENDA_BODIES
 -->
 
 
-<h2><a name="newActions">Summary of Action Items</a></h2>
-<!-- Done Action Items -->
-SV_DONE_ACTION_ITEMS
-<!-- Pending Action Items -->
-SV_PENDING_ACTION_ITEMS
+<h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- New Action Items -->
 SV_ACTION_ITEMS
 
@@ -1750,7 +2096,7 @@ SV_FORMATTED_IRC_URL
 	SV_MEETING_AGENDA
 	</ol>
   </li>
-  <li><a href="#newActions">Summary of Action Items</a></li>
+  <li><a href="#ActionSummary">Summary of Action Items</a></li>
 </ul>
 <hr>
 
@@ -1772,11 +2118,7 @@ SV_AGENDA_BODIES
 -->
 
 
-<h2><a name="newActions">Summary of Action Items</a></h2>
-<!-- Done Action Items -->
-SV_DONE_ACTION_ITEMS
-<!-- Pending Action Items -->
-SV_PENDING_ACTION_ITEMS
+<h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- New Action Items -->
 SV_ACTION_ITEMS
 
@@ -1849,7 +2191,7 @@ SV_FORMATTED_IRC_URL
 	SV_MEETING_AGENDA
 	</ol>
   </li>
-  <li><a href="#newActions">Summary of Action Items</a></li>
+  <li><a href="#ActionSummary">Summary of Action Items</a></li>
 </ul>
 <hr>
 
@@ -1871,12 +2213,8 @@ SV_AGENDA_BODIES
 -->
 
 
-<h2><a name="newActions">Summary of Action Items</a></h2>
-<!-- Done Action Items -->
-SV_DONE_ACTION_ITEMS
-<!-- Pending Action Items -->
-SV_PENDING_ACTION_ITEMS
-<!-- New Action Items -->
+<h2><a name="ActionSummary">Summary of Action Items</a></h2>
+<!-- Action Items -->
 SV_ACTION_ITEMS
 
 <hr>
