@@ -439,7 +439,7 @@ $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
 
 # Grab and remove date from $all
-my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
+my ($all, $day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
 my %doneActions = ();
 my %pendingActions = ();
@@ -1038,7 +1038,7 @@ else
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	}
 # warn "GetDate Returning date info: @date\n";
-return @date;
+return ($all, @date);
 }
 
 
