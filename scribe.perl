@@ -179,6 +179,18 @@ my $namePattern = '[\\w\\d\\_\\-\\.\\`\\\'\\+]+';
 # if ($line =~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
 # warn "namePattern: $namePattern\n";
 
+# URL pattern from http://www.stylusstudio.com/xmldev/200108/post60960.html 
+# my $anyUriPattern = '(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)?/{0,2}[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?';
+# $anyUriPattern is too general for our use.   We want to recognize 
+# only http:// or https:// absolute URLs.
+# 3 parens:
+# my $urlPattern = '(http(s?)://[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)?';
+# The above $urlPattern is not matching correctly in this context, because
+# HTML special chars & has already been escaped when MakeLinks is called.
+# This is a result of the brain-dead way we are currently converting text
+# to HTML.
+my $urlPattern = '(http(s?)://([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)(#([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)?';
+
 # These are the recognized commands.  Each command should be a
 # single word, so use underscores if you have a multi-word command.
 #### TODO: I don't think we need both "IRC Log" and "IRCLog",
@@ -741,8 +753,8 @@ if (!$minutesURL)
 
 # Find and format action items
 my $formattedActions;
-($all, $formattedActions) = &ProcessActions($all);
-# die "Returned from ProcessActions\n";
+($all, $formattedActions) = &GetActions($all);
+# die "Returned from GetActions\n";
 
 # Highlight ACTION items:
 warn "Highlighting actions....\n" if $debugActions;
@@ -943,6 +955,60 @@ foreach my $item (sort keys %agenda)
 	$agenda .= '<li><a href="#' . $item . '">' . $agenda{$item} . "</a></li>\n";
 	}
 
+#### Experimenting with a different line processing model:
+if (0)
+	{
+	my $done = "";
+	while ($all =~ s/\A(.*)(\n?)//)		# Grab next line
+		{
+		my $line = $1;
+		# Strip off writer (if any):
+		my $writer = "";
+		$writer = $1 if $line =~ s/\A\<($namePattern)\>\s?//;
+		# Ignore empty lines:
+		next if $line =~ m/\A\s*\Z/;
+		my @lineProcessorRefs = ();
+		foreach my $lineProcessorRef (@lineProcessorRefs)
+			{
+			my $deltaDone = "";
+			($deltaDone, $line, $all) = &$lineProcessorRef($writer, $line, $all);
+			defined($all) || die;
+			$done .= $deltaDone;
+			last if $line eq "";
+			}
+		}
+	# Then put $done into $template, etc.
+	# **** stopped here***
+	}
+
+#### Another experiment
+if (0)
+	{
+	my $writer;
+	for (my $i=0; $i<@lines; $i++)
+		{
+		my ($nextWriter, $nextRest) = &WriterRest($lines[$i]);
+		next if $nextWriter ne $writer;
+		}
+	}
+
+
+# my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair 
+# 	Present Regrets Agenda 
+# 	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION);
+sub CommandMeeting
+{
+@_ == 3 || die;
+my ($writer, $line, $all) = @_;
+($line =~ m/\A\s{0,4}Meeting\s{0,2}:\s*(.*)\s*\Z/i)
+	|| return("", $line, $all);
+my $t = &Trim($1);
+if ($t eq "") { &Warn("WARNING: Empty \"Meeting: title\" command with empty title\n"); }
+# else { $globalMeetingTitle = $t; }
+else { $title = $t; }
+return("", "", $all);
+}
+
 ### @@@ Fix IRC/Phone distinctionxc
 # Break into paragraphs:
 # my $phoneParagraphHTMLTemplate = "$prePhoneParagraphHTML\n\$paragraph\n$postPhoneParagraphHTML";
@@ -1090,7 +1156,6 @@ my ($all) = @_;
 # Perform s/old/new/ substitutions.
 # 5/11/04: dbooth changed this to be first to last, because that's
 # what users expect.
-my $magicFailedString = "FaIlEd_suBstiTutIon";
 my $done = "";
 $all = "\n$all\n"; # Ensure easy pattern matching
 # while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*))\n/i)
@@ -1109,6 +1174,7 @@ while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
 	"$pre$match\n" eq $wholeMatch || die; # Guard
 	$rest =~ s/\s+\Z//;	# Trim trailing spaces
 	# s/old/new/ command?
+	# warn "DEBUG ProcessEdits: match: $match who: $who cmd: $cmd delimiter: $delimiter delimP: $delimP rest: $rest\n";
 	if ($cmd eq "s" && $rest =~ m/\A(($notDelimP)+)$delimP(($notDelimP)*)($delimP([gG]?))?\Z/)
 		{
 		my $old = $1;
@@ -1122,14 +1188,18 @@ while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
 		$told = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
 		my $tnew = $new;
 		$tnew = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
-		my $succeeded = 0;
 		# my $tall = $pre . "\n" . $post;
 		# s/old/new/g  replaces globally from this point backward
 		my $allPre = $done . $pre;
 		my $tPost = $post;
 		my $singleAllPre = $allPre;
+		# Precompute the results of substitutions, then select the
+		# right results depending on the options specified.
+		# Global substitution from this point back:
 		my $allPreMatched = ($allPre =~ s/$oldp/$new/g);
+		# Global substitution from this point forward:
 		my $tPostMatched =  ($tPost =~ s/$oldp/$new/g);
+		# Single, most recent substitution:
 		my $singleAllPreMatched = ($singleAllPre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/);
 		# warn "a t s: $allPreMatched $tPostMatched $singleAllPreMatched\n";
 		# if (($global eq "g")  && $allPre =~ s/$oldp/$new/g)
@@ -1160,15 +1230,7 @@ while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
 			$all = "\n" . $post;
 			}
 		else	{
-			# &Warn("FAILED: s/$told/$tnew/$global\n");
 			&Warn("FAILED: s$delimiter$told$delimiter$tnew$delimiter$global\n");
-			# $match = &Trim($match);
-			# $all = $pre . "\n<inserted> [FAILED substitution: " . $match . " ]\n" . $post;
-			# Prevent the substitution from being attempted in an 
-			# endless loop.
-			# Change: s/foo/fum/
-			# to: magicFailedString:s/foo/fum/
-			# $all = $pre . "\n$who $magicFailedString\:s/$old/$new/$global\n" . $post;
 			$done .= $pre . $match; # Does not end with \n
 			$all = "\n$post";
 			}
@@ -1182,13 +1244,12 @@ while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
 		my $donePre = $done . $pre;
 		$newLine =~ s/$delimP\Z//;	# Remove any trailing /
 		my $locationPattern = quotemeta($locationString);
-		# warn "Found match: $match\n";
 		my $told = $locationString;
 		$told = $& . "...(truncated)...." if ($locationString =~ m/\A.*\n/);
 		my $tnew = $newLine;
 		$tnew = $& . "...(truncated)...." if ($newLine =~ m/\A.*\n/);
-		my $succeeded = 0;
-		if ($donePre =~ m/\A((.|\n)*\n)((.*)($locationPattern)(.*))(\n((.|\n)*?))\Z/)
+		# warn "DEBUG locationString: $locationString locationPattern: $locationPattern newLine: $newLine\n";
+		if ($donePre =~ m/\A((.|\n)*\n)((.*)($locationPattern)(.*))((\n((.|\n)*?))?)\Z/)
 			{
 			my $preLines = $1;	# Ends with \n
 			my $postLines = $7;	# Starts with \n
@@ -1199,13 +1260,8 @@ while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
 			$all = "\n$post";
 			}
 		else	{
+			# die "DEBUG locationString: $locationString locationPattern: $locationPattern newLine: $newLine donePre: $donePre\n";
 			&Warn("FAILED: i$delimiter$told$delimiter$tnew\n");
-			# $match = &Trim($match);
-			# Prevent the insertion from being attempted in an 
-			# endless loop.
-			# Change: i/foo/fum/
-			# to: magicFailedString:i/foo/fum/
-			# $all = $pre . "\n$who $magicFailedString\:i/$locationString/$newLine\n" . $post;
 			$done .= $pre . $match; # Does not end with \n
 			$all = "\n$post";
 			}
@@ -1218,8 +1274,6 @@ while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
 		&Warn("WARNING: Bad $cmd$delimiter$delimiter$delimiter command: $cmd$delimiter$rest\n");
 		}
 	}
-# Reinstate failed substitutions:
-# $all =~ s/$magicFailedString\://g;
 $all = $done . $all;
 # print $all;
 # die;
@@ -1228,12 +1282,12 @@ return($all);
 
 
 #######################################################################
-###################### ProcessActions #################################
+###################### GetActions #################################
 #######################################################################
 ######### Action processing
 ######### ACTION processing
 ######### ACTION Item Processing
-sub ProcessActions
+sub GetActions
 {
 @_ == 1 || die;
 my ($all) = @_;
@@ -1707,7 +1761,7 @@ warn "Making links in actions....\n" if $debugActions;
 $formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
 
 return( $all, $formattedActions );
-} # End of ProcessActions
+} # End of GetActions
 
 
 ############################################################################
@@ -1738,17 +1792,6 @@ sub New_MakeLinks
 {
 @_ == 1 || die;
 my ($all) = @_;
-# URL pattern from http://www.stylusstudio.com/xmldev/200108/post60960.html 
-# my $anyUriPattern = '(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)?/{0,2}[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?';
-# $anyUriPattern is too general for our use.   We want to recognize 
-# only http:// or https:// absolute URLs.
-# 3 parens:
-# my $urlPattern = '(http(s?)://[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)?';
-# The above $urlPattern is not matching correctly in this context, because
-# HTML special chars & has already been escaped when MakeLinks is called.
-# This is a result of the brain-dead way we are currently converting text
-# to HTML.
-my $urlPattern = '(http(s?)://([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)(#([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)?';
 # Test input: test-data/22-tag*
 #*** stopped here ***  UNFINISHED
 # ************
