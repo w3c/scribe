@@ -185,8 +185,13 @@ while (@ARGV)
 		{ $inputFormat = shift @ARGV; }
 	elsif ($a eq "-scribe" || $a eq "-scribeName") 
 		{ $scribeName = shift @ARGV; }
+	elsif ($a eq "-help" || $a eq "-h") 
+		{ die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; }
 	elsif ($a =~ m/\A\-/)
-		{ die "ERROR: Unknown option: $a\n"; }
+		{ 
+		warn "ERROR: Unknown option: $a\n"; 
+		die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; 
+		}
 	else	
 		{ push(@args, $a); }
 	}
@@ -1272,6 +1277,7 @@ foreach my $line (@lines)
 	{
 	# Ignore /me lines
 	next if $line =~ m/\A\s*\*/;
+	next if $line =~ m/\A\<$namePattern\>(\s?)(\s?)(\s?)\*/i;
 	# Select only <speaker> lines
 	next if $line !~ m/\A\<$namePattern\>/i;
 	# Ignore empty lines
@@ -1308,7 +1314,7 @@ $all = "\n" . join("\n", @scribeLines) . "\n";
 
 # Verify that we axed all join/leave lines:
 my @matches = ($all =~ m/.*has joined.*\n/g);
-warn "\nWARNING: Possible join/leave lines remaining: \n\t" . join("\t", @matches) . "\n\n"
+warn "\nWARNING: Possible internal error: join/leave lines remaining: \n\t" . join("\t", @matches) . "\n\n"
  	if @matches;
 return $all;
 }
@@ -1477,13 +1483,19 @@ die if @_ != 1;
 my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
 foreach my $line (@lines)
 	{
 	# <dt id="T14-35-34">14:35:34 [dbooth]</dt><dd>Gudge: why not sufficient?</dd>
-	$n++ if $line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/;
-	# warn "LINE: $line\n";
+	if ($line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/)
+		{
+		$n++;
+		# warn "MATCHED: $line\n";
+		}
+	else 	{ 
+		# warn "NO match: $line\n"; 
+		}
 	}
 $all = "\n" . join("\n", @lines) . "\n";
 # warn "RRSAgent_HTML_Format n matches: $n\n";
@@ -1508,34 +1520,51 @@ sub RRSAgent_Visible_HTML_Text_Paste_Format
 {
 die if @_ != 1;
 my ($all) = @_;
+my @lines = split(/\n/, $all);
+my $nLines = scalar(@lines);
 my $n = 0;
 my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
 my $done = "";
-while($all =~ s/\A((.*\n)(.*\n))//)	# Grab next two lines
+# while($all =~ s/\A((.*\n)(.*\n))//)	# Grab next two lines
+my $i = 0;
+while ($i < (@lines-1))
 	{
-	my $linePair = $1;
-	my $line1 = $2;
-	my $line2 = $3;
+	# my $linePair = $1;
+	my $line1 = &Trim($lines[$i]);
+	my $line2 = &Trim($lines[$i+1]);
 	# This format uses line pairs:
 	# 	14:43:30 [Arthur]
 	# 	If it's abstract, it goes into portType 
-	if ($linePair =~ s/\A($timePattern)\s+\[($namePattern)\][\ \t]*\n/\<$6\> /)
+	# if ($linePair =~ s/\A($timePattern)\s+\[($namePattern)\][\ \t]*\n/\<$6\> /)
+	my $name = "";
+	if ($line1 =~ m/\A($timePattern)\s+\[($namePattern)\]\Z/
+		&& ($name = $6)	# Assignment!  Save that value!
+		&& $line2 !~ m/\A($timePattern)\s+\[($namePattern)\]/)
 		{
-		$n++;
-		# warn "LINE: $line\n";
-		$done .= $linePair;
+		# warn "MATCH: name: $name line2: $line2\n";
+		$done .= "<$name> $line2\n";
+		$n += 2;
+		$i++;
+		}
+	elsif ($line1 eq ""
+		|| $line1 eq "Timestamps are in UTC."
+		|| $line1 =~ m/\AIRC log of /) 
+		{ 
+		# warn "IGNORING: line: $lines[$i]\n";
+		$n++; 
 		}
 	else	{
-		$done .= $line1;
-		$all = $line2 . $all;
+		# warn "NO match: line: $lines[$i]\n";
+		$done .= $lines[$i] . "\n";
 		}
+	$i++;
 	}
-$done .= $all;
+$done .= $lines[$i] . "\n" if $i < @lines; # Remaining line
 $all = $done;
 # warn "RRSAgent_Visible_HTML_Text_Paste_Format n matches: $n\n";
-my @lines = split(/\n/, $all);
-my $score = $n / @lines;
+my $score = $n / $nLines;
+# die "Score: $score n: $n nLines: $nLines\n";
 return($score, $all);
 }
 
