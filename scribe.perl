@@ -11,11 +11,16 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # Generate minutes in HTML from a text IRC/chat Log.
 #
 # Author: David Booth <dbooth@w3.org> 
+# License: GPL
 #
 # Take a raw W3C IRC log, clean it up a bit, and put it into HTML
 # to create meeting minutes.  Reads stdin, writes stdout.
 # Several input formats are accepted (see below).
 # Input must follow certain conventions (see below).
+#
+# CONTRIBUTIONS
+# 	Please make improvements to this program!  Check them into CVS (or
+# 	email them to me) and notify me know by email.  Thanks!
 #
 # USAGE: 
 #	perl scribe.perl [options] ircLogFile.txt > minutesFile.htm
@@ -160,10 +165,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 1. Add a normalizer function for the format from hugo's log in
-# http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
-#
-# 2. Auto recognize the scribing format.  For example:
+# 1. Auto recognize the scribing format.  For example:
 #		<dbooth> Frank: Four score and seven
 #		<dbooth> years ago, our fathers
 #		<dbooth> brought forth ...
@@ -176,14 +178,20 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #		<dbooth>  years ago, our fathers
 #		<dbooth>  brought forth ...
 #
+# 5. Auto-guess the scribe, based on who wrote the most.  (May need
+# 2o ignore something pasted in all at once.  No, just let it guess wrong.)
+# Generate warning if scribe name is "scribe".
+#
 # 3. Recognize "next agendum" instead of "Topic:..."
 #
 # 4. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
 # so that all formatting info is in the template.
 #
-# 5. Auto-guess the scribe, based on who wrote the most.  (May need
-# to ignore something pasted in all at once.  No, just let it guess wrong.)
-# Generate warning if scribe name is "scribe".
+# 5. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
+# excuses itself
+#
+# 6. Add a normalizer function for the format from hugo's log in
+# http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
 #
 
 ######################################################################
@@ -341,8 +349,21 @@ while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 	my $tnew = $new;
 	$tnew = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
 	my $succeeded = 0;
-	if (($global  && $pre =~ s/$oldp/$new/g)
-	|| ((!$global) && $pre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/))
+	my $tall = $pre . "\n" . $post;
+	# s/old/new/g  replaces globally from this point backward
+	if (($global eq "g")  && $pre =~ s/$oldp/$new/g)
+		{
+		warn "Succeeded: s/$told/$tnew/$global\n";
+		$all = $pre . "\n" . $post;
+		}
+	# s/old/new/G  replaces globally, both forward and backward
+	elsif (($global eq "G")  && $tall =~ s/$oldp/$new/g)
+		{ 
+		warn "Succeeded: s/$told/$tnew/$global\n";
+		$all = $tall;
+		}
+	# s/old/new/  replaces most recent occurrance of old with new
+	elsif ((!$global) && $pre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/)
 		{
 		warn "Succeeded: s/$told/$tnew/$global\n";
 		$all = $pre . "\n" . $post;
@@ -351,7 +372,7 @@ while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 		warn "WARNING: FAILED: s/$told/$tnew/$global\n";
 		$match =~ s/\A\s+//;
 		$match =~ s/\s+\Z//;
-		$all = $pre . "\n[Auto substitution failed:] " . $match . "\n" . $post;
+		$all = $pre . "\n[scribe.perl auto substitution failed:] " . $match . "\n" . $post;
 		}
 	warn "WARNING: Multiline substitution!!! (Is this correct?)\n" if $tnew ne $new || $told ne $old;
 	}
@@ -790,7 +811,7 @@ my @formattedActionLines = ();
 foreach my $status (@actionStatuses)
 	{
 	my $n = 0;
-	foreach my $action (keys %actions)
+	foreach my $action (sort keys %actions)
 		{
 		next if $actions{$action} ne $status;
 		my $s = $actionTemplate;
@@ -807,7 +828,7 @@ foreach my $status (@actionStatuses)
 foreach my $status (sort values %actions)
 	{
 	my $n = 0;
-	foreach my $action (keys %actions)
+	foreach my $action (sort keys %actions)
 		{
 		next if $actions{$action} ne $status;
 		my $s = $actionTemplate;
@@ -896,13 +917,17 @@ foreach my $line (@lines)
 	elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)\s*/ ... /i) 
 		{
 		}
-	elsif ($line =~ s/\A\<Scribe\>\s*($speakerPattern\:)\s*/$1 /i )
+	# BUG: The \s* before the ":" in the pattern below doesn't work right,
+	# because the ":" is stored as part of $prevSpeaker, so it
+	# won't match right the next time "<dbooth> joe : whatever" is
+	# encountered.
+	elsif ($line =~ s/\A\<Scribe\>\s*(($speakerPattern)\:)\s*/$1 /i )
 		{
 		# New speaker
 		$prevSpeaker = "$1";
 		$prevPattern = quotemeta($prevSpeaker);
 		}
-	elsif ($line =~ m/\A$prevPattern\s*.*\bACTION\:/i)
+	elsif ($line =~ m/\A$prevPattern\s*.*\bACTION\s*\:/i)
 		{
 		}
 	elsif ($line =~ s/\A$prevPattern\s*/ ... /i)
@@ -913,6 +938,7 @@ foreach my $line (@lines)
 		# Scribe speaks
 		$prevSpeaker = $1;
 		$prevPattern = quotemeta($prevSpeaker);
+		# die "line: $line\n" if $line =~ m/Closing/;
 		}
 	elsif ($line =~ m/\A(\<$namePattern\>)/i)
 		{
