@@ -28,41 +28,20 @@ output:<br>
  style="font-style: italic;">log.txt</span>  &gt; <span
  style="font-style: italic;">minutes.html</span></code></pre>
 <h2>Table of Contents</h2>
-<div style="margin-left: 40px;"><a
- href="#Pros_and_Cons_of_Using_Scribe.perl">Pros and Cons of Using
-Scribe.perl</a><br>
-<a href="#Quick_Start_Guide" style="font-weight: bold;">Quick Start
+<div style="margin-left: 40px;"><a href="#Quick_Start_Guide"
+ style="font-weight: bold;">Quick Start
 Guide</a><br>
+<a
+ href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#Pros_and_Cons_of_Using_Scribe.perl">Pros
+and Cons of Using
+Scribe.perl</a><br>
 <a href="#Environment_Variables">Environment Variables</a><br>
 <a href="#options">Options<br>
 </a><a href="#one_time_commands">Commands<br>
 </a><a href="#correcting_mistakes">Correcting Mistakes While Scribing</a><br>
 <a href="#input_formats">Input Formats</a><br>
 </div>
-<h2><a name="Pros_and_Cons_of_Using_Scribe.perl"></a>Pros and Cons of
-Using Scribe.perl</h2>
-<span style="font-weight: bold;">Pros</span>:<br>
-<ul>
-  <li>It's free, it's open source, and it usually works.</li>
-  <li>It runs anywhere that perl is installed.&nbsp; (I hope!&nbsp;
-Please let me know if it doesn't.)</li>
-  <li>Easy to use.&nbsp; It uses conventions that are used in many W3C
-working groups.</li>
-  <li>It recognizes several input and log formats.</li>
-  <li>If you don't like the format it generates, you can supply your
-own template using the <code>-template</code> option. <br>
-  </li>
-</ul>
-<span style="font-weight: bold;">Cons</span>:<br>
-<ul>
-  <li>You still need to do some manual clean-up.</li>
-  <li>It doesn't recognize all minuting conventions.&nbsp; (Suggestion:
-Learn its conventions, they're simple.)</li>
-  <li>At the moment it generates invalid HTML.&nbsp; (Arrgh!)&nbsp; But
-you can easily correct this using the <code>-tidy</code> option (if
-you have HTML tidy installed).</li>
-  <li>The code is a mess.&nbsp; (Sorry!)</li>
-</ul>
+<br>
 <h2><a name="Quick_Start_Guide"></a>Quick Start Guide<br>
 </h2>
 Step 1:&nbsp; Invite <a href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a>
@@ -201,8 +180,8 @@ the -useZakimTopics option below.)<br>
  style="font-style: italic;">Mike</span><span style="font-weight: bold;">:</span>
       <span style="font-style: italic;">Feature X is great</span></code><br>
       </td>
-      <td style="vertical-align: top; font-style: italic;"><span
- style="font-family: monospace;">Record what Mike said</span>.&nbsp;
+      <td style="vertical-align: top; font-style: italic;">Record what <span
+ style="font-family: monospace;">Mike</span> said.&nbsp;
 NOTE: Speaker's name must <span style="text-decoration: underline;">not</span>
 contain spaces! </td>
     </tr>
@@ -212,10 +191,13 @@ contain spaces! </td>
  style="font-style: italic;">and easy to implement.</span></code><br>
       </td>
       <td style="vertical-align: top; font-style: italic;"><span
- style="font-family: monospace;">Mike's statement continues.&nbsp;
-(NOTE: Do not use blank space indentation to indicate continuation
+ style="font-family: monospace;">Mike</span>'s statement
+continues.&nbsp;
+(NOTE: Do not use blank space indentation alone to indicate
+continuation
 lines.&nbsp; That syntax was previously permitted, but was found to be
-too error prone, particularly when text was pasted.)</span> </td>
+too error prone -- particularly when text was pasted -- so it is no
+longer supported.) </td>
     </tr>
     <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code><span
@@ -394,6 +376,30 @@ Option 1 is best if you forgot to indicate who is scribe ("Scribe:
   </tbody>
 </table>
 <br>
+<h2><a name="Pros_and_Cons_of_Using_Scribe.perl"></a>Pros and Cons of
+Using Scribe.perl</h2>
+<span style="font-weight: bold;">Pros</span>:<br>
+<ul>
+  <li>It's free, it's open source, and it usually works.</li>
+  <li>It runs anywhere that perl is installed.&nbsp; (I hope!&nbsp;
+Please let me know if it doesn't.)</li>
+  <li>Easy to use.&nbsp; It uses conventions that are used in many W3C
+working groups.</li>
+  <li>It recognizes several input and log formats.</li>
+  <li>If you don't like the format it generates, you can supply your
+own template using the <code>-template</code> option. <br>
+  </li>
+</ul>
+<span style="font-weight: bold;">Cons</span>:<br>
+<ul>
+  <li>You still need to do some manual clean-up.</li>
+  <li>It doesn't recognize all minuting conventions.&nbsp; (Suggestion:
+Learn its conventions, they're simple.)</li>
+  <li>At the moment it generates invalid HTML.&nbsp; (Arrgh!)&nbsp; But
+you can easily correct this using the <code>-tidy</code> option (if
+you have HTML tidy installed).</li>
+  <li>The code is a mess.&nbsp; (Sorry!)</li>
+</ul>
 <pre><code></code><code></code></pre>
 <h2><a name="Environment_Variables"></a>Environment Variables</h2>
 The <code>SCRIBEOPTIONS</code> environment variable holds the
@@ -435,11 +441,7 @@ continuation lines like
 this:<br>
 </div>
 <pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br></code></pre>
-<div style="margin-left: 40px;">instead of this (note the leading
-spaces):<br>
-</div>
-<pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt;  for all good men and women<br>&lt;dbooth&gt;  to come to the aid of their party.<br></code></pre>
-<div style="margin-left: 40px;">or this:<br>
+<div style="margin-left: 40px;">instead of this:<br>
 </div>
 <pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; ... for all good men and women<br>&lt;dbooth&gt; ... to come to the aid of their party.<br></code></pre>
 <div style="margin-left: 40px;">The <b style="font-weight: bold;">implicit
@@ -477,7 +479,7 @@ be guessed.<br>
   <dd>Specify the name of the scribe, as it should appear in the
 generated minutes. If <span style="font-style: italic;">Name</span>
 appears in the input as an IRC nickname, it will also be taken as the
-scribe's nickname, as if specified by the -scribeNick option (below).</dd>
+scribe's nickname, as if specified by the -scribeNick option (below)</dd>
   <dt><br>
   </dt>
   <dt><br>
@@ -525,12 +527,13 @@ template.)<br>
     <br>
   </dd>
   <dt><a name="trustRRSAgent_option"></a>-trustRRSAgent</dt>
-  <dd>Take the action items from what RRSAgent says, ("<code>&lt;RRSAgent&gt;
-I see 9 open action items...</code>") rather than directly from the
+  <dd>Take the action items from what RRSAgent says when it is
+dismissed ("<code>&lt;RRSAgent&gt;
+I see 9 open action items...</code>"), rather than from the original
 text that
 was written in IRC when the action was recorded ("<code>&lt;dbooth&gt;
-ACTION: ...</code>").&nbsp; <br>
-This option has pros and cons.&nbsp; <span style="font-weight: bold;"><br>
+ACTION: ...</code>").&nbsp;&nbsp; This option has pros and cons: <span
+ style="font-weight: bold;"><br>
     <br>
 Pros:</span>
 (1) It enables scribe.perl to add "[recorded in http://...]" to action
@@ -676,11 +679,13 @@ code.)<br>
 The plain text format (*.txt) produced by RRSAgent.&nbsp; Hint: add
 ".txt"
 to the RRSAgent log URL to get the text version:
-http://www.w3.org/2002/11/07-ws-arch-irc.txt<br>
+http://www.w3.org/2002/11/07-ws-arch-irc.txt .&nbsp; <a
+ href="http://www.w3.org/2003/03/03-ws-desc-irc.txt">Example:</a><br>
 <pre><code>20:41:27 &lt;dbooth&gt; Mike: Feature X would benefit users.<br></code><code>20:41:37 &lt;dbooth&gt; </code><code>... and implementation would be easy.<br></code><code></code><code>20:41:47 &lt;ericn&gt; I agree.<br></code></pre>
 <h3>RRSAgent_HTML_Format</h3>
 The HTML format (*.html) produced by RRSAgent.&nbsp; This is the raw
-HTML code.<br>
+HTML code.&nbsp; <a
+ href="http://www.w3.org/2003/03/03-ws-desc-irc.html">Example:</a><br>
 <pre><code>&lt;dt id="T20-41-27"&gt;20:41:27 [</code><code>dbooth</code><code>]&lt;/dt&gt;&lt;dd&gt;</code><code>Mike: Feature X would benefit users.</code><code> &lt;/dd&gt;<br>&lt;</code><code>dt id="T20-41-37"&gt;20:41:37 [dbooth]&lt;/dt&gt;&lt;dd&gt;</code><code>... and implementation would be easy.</code><code> &lt;/dd&gt;<br></code><code>&lt;dt id="T20-41-37"&gt;20:41:47 [</code><code>ericn</code><code>]&lt;/dt&gt;&lt;dd&gt;</code><code>I agree</code><code>. &lt;/dd&gt;<br></code></pre>
 <h3>RRSAgent_Visible_HTML_Text_Paste_Format<br>
 </h3>
@@ -688,27 +693,29 @@ This is for the format that is visible in the browser when RRSAgent's
 HTML is displayed.&nbsp; I.e., when you display the *.html log in a
 browser,
 and then copy and paste the text from the browser window, only the
-displayed text is copied -- not the raw HTML tags.<br>
+displayed text is copied -- not the raw HTML tags.&nbsp; <a
+ href="http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0002/ExampleFormat-RRSAgent_Visible_HTML_Text_Paste_Format.txt">Example:</a><br>
 <pre><code>20:41:27 [</code><code>dbooth</code><code>]<br>     </code><code>Mike: Feature X would benefit users.</code><code><br>20:41:37 [dbooth]<br>     </code><code>... and implementation would be easy</code><code>.<br></code><code>20:41:47 [</code><code>ericn</code><code>]<br>     I agree.</code><code><br></code></pre>
 <h3>Mirc_Text_Format</h3>
-The format produced by mIRC when you do Buffer--&gt;Save As.<br>
+The format produced by mIRC when you do Buffer--&gt;Save As.&nbsp;
+Example:<br>
 <pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;ericn&gt; I agree.<br></code></pre>
 <h3>Mirc_Timestamped_Log_Format</h3>
-Timestamped log format produced by mIRC.<br>
+Timestamped log format produced by mIRC.&nbsp; Example:<br>
 <pre><code>[19:35] &lt;Zakim&gt; Steven should now be muted<br>[19:36] &lt;ph&gt; http://lists.w3.org/Archives/Member/w3c-html-cg/2004JanMar/0038.html<br>[19:36] * Zakim hears Steven's hand up<br>[19:36] * Zakim sees Steven on the speaker queue</code><code><br></code></pre>
 <h3>Irssi_ISO8601_Log_Text_Format</h3>
 The format produced by Irssi logging with Hugo's suggested timestamp
-prefixes.<br>
+prefixes.&nbsp; Example:<br>
 <pre><code></code>2003-12-18T15:27:21-0500 &lt;dbooth&gt; <code>M</code><code>ike: Feature X would benefit users</code><code>.</code><br>2003-12-18T15:27:36-0500 &lt;dbooth&gt; <code>... and implementation would be easy</code><code></code><code></code>.<br>2003-12-18T15:27:36-0500 &lt;ericn&gt; I agree.<br><code></code></pre>
 <h3>Yahoo_IM_Format</h3>
-The format produced when you save a Yahoo IM session.<br>
+The format produced when you save a Yahoo IM session.&nbsp; Example:<br>
 <pre><code>dbooth: </code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br>dbooth: </code><code>... and implementation would be easy</code><code></code><code>.<br>ericn: I agree.<br></code></pre>
 <h3>Plain Text Format<br>
 </h3>
 Line-oriented plain text format.&nbsp; This format is intended for
 occasions
 when the scribe doesn't have access to IRC, and simply takes notes in a
-text editor.<br>
+text editor.&nbsp; Example:<br>
 <pre><code></code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br></code><code>... and implementation would be easy</code><code></code><code>.<br>Eric agrees.</code></pre>
 <br>
 <br>
