@@ -25,6 +25,30 @@ use strict;
 ######################################################################
 # FEATURE WISH LIST / BUG LIST:
 #
+# 00000. Working on pre/postParagraph formatting.  See nesting problem
+# in file:///home/dbooth/w3c/DEV/2002/scribe/test-data/minimal-mit.htm
+# First step is to convert to using $phoneParagraphHTMLTemplate.
+#
+# 0000. BUG: MakeLinks does not work correctly on URLs that contain & because
+# it is already escaped into &amp;.  Try test-data/22-tag*
+#
+# 000. Guess template option (such as -mit) from lines like the following.
+# Also guess meeting title from channel name or meeting name?
+# 19:28:02 <RRSAgent> RRSAgent has joined &mit
+# 19:28:05 <Zakim> Zakim has joined &mit
+# 19:28:14 <RalphS> Meeting: MIT Site
+# 19:29:06 <ted> ted has joined &mit
+# 19:29:34 <Zakim> Team_MIT(site)2:30PM has now started
+# 19:29:36 <Zakim> +MIT531
+# 19:29:44 <RalphS> zakim, mit531 has Alan, Simon, Ralph
+# 19:29:44 <Zakim> +Alan, Simon, Ralph; got it
+# 19:30:23 <Alan> Alan has joined &mit
+# 19:31:10 <Liam> Liam has joined &mit
+#
+# Also define $defaultMeetingTitle from zakim conference name.
+#
+# 00. Permit s|old|new| substitutions, so that URLs can be inserted.
+#
 # 00. Fix formatting processing to prevent generating invalid HTML.
 # This would also be a good step toward processing one line at a time,
 # and toward making the formatting be fully template-based.
@@ -138,10 +162,11 @@ $versionMessage =~ s/\$//g; # Prevent CVS from remunging the version in minutes
 # my $postSpeakerHTML = "</strong> <br />";
 my $preSpeakerHTML = "<cite>";
 my $postSpeakerHTML = "</cite>";
-my $preIRCSpeakerHTML = "<cite>";
-my $postIRCSpeakerHTML = "</cite>";
+my $preWriterHTML = "<cite>";
+my $postWriterHTML = "</cite>";
 my $prePhoneParagraphHTML = "<p class='phone'>";
 my $postPhoneParagraphHTML = "</p>";
+my $phoneParagraphHTMLTemplate = "$prePhoneParagraphHTML\n\$paragraph\n$postPhoneParagraphHTML";
 my $preIRCParagraphHTML = "<p class='irc'>";
 my $postIRCParagraphHTML = "</p>";
 my $preResolutionHTML = "<strong class='resolution'>";
@@ -153,7 +178,8 @@ my $postTopicHTML = "</h3>";
 # Other globals
 my $debug = 1;
 my $debugActions = 0;
-my $namePattern = '([\\w]([\\w\\d\\-\\.]*))';
+my $namePattern = '[\\w\\d\\_\\-\\.\\`\\\'\\+]+';
+# if ($line =~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
 # warn "namePattern: $namePattern\n";
 
 # These are the recognized commands.  Each command should be a
@@ -484,104 +510,9 @@ while($restartForEmbeddedOptions)
 		$all = $bestAll;
 		}
 
-	# Perform s/old/new/ substitutions.
-	# 5/11/04: dbooth changed this to be first to last, because that's
-	# what users expect.
-	my $magicFailedString = "FaIlEd_suBstiTutIon";
-	while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n)/i)
-		{
-		my $who = $4;
-		my $old = $5;
-		my $new = $6;
-		my $global = $9;
-		$global = "" if !defined($global);
-		my $pre = $1;
-		my $match = $3;
-		my $post = $';
-		my $oldp = quotemeta($old);
-		# warn "Found match: $match\n";
-		my $told = $old;
-		$told = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
-		my $tnew = $new;
-		$tnew = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
-		my $succeeded = 0;
-		my $tall = $pre . "\n" . $post;
-		# s/old/new/g  replaces globally from this point backward
-		if (($global eq "g")  && $pre =~ s/$oldp/$new/g)
-			{
-			&Warn("Succeeded: s/$told/$tnew/$global\n");
-			$all = $pre . "\n" . $post;
-			}
-		# s/old/new/G  replaces globally, both forward and backward
-		elsif (($global eq "G")  && $tall =~ s/$oldp/$new/g)
-			{ 
-			&Warn("Succeeded: s/$told/$tnew/$global\n");
-			$all = $tall;
-			}
-		# s/old/new/  replaces most recent occurrance of old with new
-		elsif ((!$global) && $pre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/)
-			{
-			&Warn("Succeeded: s/$told/$tnew/$global\n");
-			$all = $pre . "\n" . $post;
-			}
-		else	{
-			&Warn("\nWARNING: FAILED: s/$told/$tnew/$global\n\n");
-			$match = &Trim($match);
-			# $all = $pre . "\n<scribe> [FAILED substitution: " . $match . " ]\n" . $post;
-			# Prevent the substitution from being attempted in an 
-			# endless loop.
-			# Change: s/foo/fum/
-			# to: magicFailedString/foo/fum/
-			$all = $pre . "\n$who $magicFailedString/$old/$new/$global\n" . $post;
-			}
-		&Warn("\nWARNING: Multiline substitution!!! (Is this correct?)\n\n") if $tnew ne $new || $told ne $old;
-		}
-	# Reinstate failed substitutions:
-	$all =~ s/$magicFailedString/s/g;
-
-	# Perform i/locationString/newLine/ insertions.
-	# This inserts a new line before the line containing the most
-	# recent locationString.
-	while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*i\/([^\/]+)\/(.*)\n)/)
-		{
-		my $who = $4;
-		my $locationString = $5; # Where to insert the new line
-		my $newLine = $6;	# Line to be inserted
-		my $pre = $1;		# Has no \n at end
-		my $match = $3;		# Has \n at beginning and end
-		my $post = $';		# Has no \n at beginning
-		$newLine =~ s/\/\Z//;	# Remove any trailing /
-		my $locationPattern = quotemeta($locationString);
-		# warn "Found match: $match\n";
-		my $told = $locationString;
-		$told = $& . "...(truncated)...." if ($locationString =~ m/\A.*\n/);
-		my $tnew = $newLine;
-		$tnew = $& . "...(truncated)...." if ($newLine =~ m/\A.*\n/);
-		my $succeeded = 0;
-		my $tall = $pre . "\n" . $post;
-		if ($pre =~ m/\A((.|\n)*\n)((.*)($locationPattern)(.*))(\n((.|\n)*?))\Z/)
-			{
-			my $preLines = $1;	# Ends with \n
-			my $postLines = $7;	# Starts with \n
-			my $matchingLine = $3; 	# Has no \n
-			&Warn("Succeeded: i/$told/$tnew\n");
-			$all = $preLines . "<inserted> $newLine\n$matchingLine" . $postLines . "\n" . $post;
-			}
-		else	{
-			&Warn("\nWARNING: FAILED: i/$told/$tnew/\n\n");
-			$match = &Trim($match);
-			# Prevent the insertion from being attempted in an 
-			# endless loop.
-			# Change: i/foo/fum/
-			# to: magicFailedString/foo/fum/
-			$all = $pre . "\n$who $magicFailedString/$locationString/$newLine\n" . $post;
-			}
-		&Warn("\nWARNING: Multiline i// insertion!!! (Is this correct?)\n\n") if $tnew ne $newLine || $told ne $locationString;
-		}
-	# Reinstate failed insertion:
-	$all =~ s/$magicFailedString/i/g;
-	# print $all;
-	# die;
+	# Preprocess to perform s/old/new/ substitutions
+	# and i/where/line/ insertions.
+	$all = &ProcessEdits($all);
 
 	# Look for embedded options, and restart if we find some.
 	# (Except we do NOT re-read the input.  We keep $all as is.)
@@ -594,7 +525,7 @@ while($restartForEmbeddedOptions)
 		}
 	if ($restartForEmbeddedOptions)
 		{
-		&Warn("FOUND embedded ScribeOptions: $embeddedScribeOptions\n*** RESTARTING DUE TO EMBEDDED OPTIONS ***\n\n");
+		&Warn("Found embedded ScribeOptions: $embeddedScribeOptions\n\n*** RESTARTING DUE TO EMBEDDED OPTIONS ***\n\n");
 		# Prevent input from being re-normalized:
 		push(@SAVE_ARGV, ("-inputFormat", "Normalized_Format"));
 		}
@@ -632,9 +563,9 @@ if ($useZakimTopics)
 	# Treat zakim statements like:
 	#	<Zakim> agendum 2. "UTF16 PR issue" taken up [from MSMscribe]
 	# as equivalent to:
-	#	<scribe> Topic: UTF16 PR issue
+	#	<inserted> Topic: UTF16 PR issue
 	$all = "\n$all\n";
-	while ($all =~ s/\n\<Zakim\>\s*agendum\s*\d+\.\s*\"(.+)\"\s*taken up\s*((\[from (.*?)\])?)\s*\n/\n\<scribe\> Topic\: $1\n/i)
+	while ($all =~ s/\n\<Zakim\>\s*agendum\s*\d+\.\s*\"(.+)\"\s*taken up\s*((\[from (.*?)\])?)\s*\n/\n\<inserted\> Topic\: $1\n/i)
 		{
 		# warn "Zakim Topic: $1\n";
 		}
@@ -753,7 +684,7 @@ my @regrets = ();	# People who sent regrets
 # Grab meeting name:
 my $title = "";
 if ($all =~ s/\n\<$namePattern\>\s*(Meeting)\s*\:\s*(.*)\n/\n/i)
-	{ $title = $4; }
+	{ $title = $2; }
 else 	{ 
 	&Warn("\nWARNING: No meeting title found!
 You should specify the meeting title like this:
@@ -763,7 +694,7 @@ You should specify the meeting title like this:
 # Grab agenda URL:
 my $agendaLocation;
 if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/\S+)\n/\n/i)
-	{ $agendaLocation = $4;
+	{ $agendaLocation = $2;
 	  &Warn("Agenda: $agendaLocation\n");
       }
 else 	{ 
@@ -778,12 +709,12 @@ If you wish, you may specify the agenda like this:
 # Grab Previous meeting URL:
 my $previousURL = "SV_PREVIOUS_MEETING_URL";
 if ($all =~ s/\n\<$namePattern\>\s*(Previous[ _\-]*Meeting)\s*\:\s*(.*)\n/\n/i)
-	{ $previousURL = $4; }
+	{ $previousURL = $2; }
 
 # Grab Chair:
 my $chair = "SV_MEETING_CHAIR";
 if ($all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i)
-	{ $chair = $5; }
+	{ $chair = $3; }
 else 	{ 
 	&Warn("\nWARNING: No meeting chair found!
 You should specify the meeting chair like this:
@@ -794,7 +725,7 @@ You should specify the meeting chair like this:
 # we can figure out the date from the IRC log name.
 my $logURL = "";
 # <scribe> IRC: http://www.w3.org/2005/01/05-arch-irc
-$logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC([\s_]*)Log))\s*\:\s*(.*)\n/\n/i;
+$logURL = $4 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC([\s_]*)Log))\s*\:\s*(.*)\n/\n/i;
 # <RRSAgent>   recorded in http://www.w3.org/2002/04/05-arch-irc#T15-46-50
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(http\:([^\s\#]+))/i;
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
@@ -802,7 +733,7 @@ $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:
 $logURL = $4 if $all =~ m/\n\<(RRSAgent|Zakim)\>.*((\s+is)?\s+logging\s+to)\s+(http\:([^\s\#]+))/i;
 
 # Grab and remove date from $all
-my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
+my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $logURL);
 
 # Guess the $minutesURL?
 if (!$minutesURL)
@@ -811,9 +742,507 @@ if (!$minutesURL)
 	&Warn("Guessing minutes URL: $minutesURL\n") if $minutesURL;
 	}
 
+# Find and format action items
+my $formattedActions;
+($all, $formattedActions) = &ProcessActions($all);
+# die "Returned from ProcessActions\n";
+
+# Highlight ACTION items:
+warn "Highlighting actions....\n" if $debugActions;
+$formattedActions =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/ig;
+# Highlight in-line ACTION status:
+foreach my $status (@actionStatuses)
+	{
+	my $ucStatus = $actionStatuses{$status}; # Map to preferred spelling
+	$formattedActions =~ s/\[$status\]/<strong>[$ucStatus]<\/strong>/ig;
+	}
+warn "Done formatting actions!\n" if $debugActions;
+
+$all = &IgnoreGarbage($all);
+
+if ($implicitContinuations)
+	{
+	# warn "Scribing style: -implicitContinuations\n";
+	$all = &ExpandImplicitContinuations($all);
+	}
+else	{
+	# warn "Scribing style: -explicitContinuations\n";
+	if (&ProbablyUsesImplicitContinuations($all))
+		{
+		&Warn("\nWARNING: Input appears to use implicit continuation lines.\n");
+		&Warn("You may need the \"-implicitContinuations\" option.\n\n");
+		}
+	}
+
+if (0)
+{
+warn "############# TEST DATA ONLY #############\n";
+$all = '<scribe> dbooth: dbooth said 1
+<scribe>  dbooth said 2 # This should be continuation
+<hugo> Topic: New topic A
+<scribe> ... dbooth said 3 # This should be speaker david
+<scribe> dbooth: dbooth said 4 # This should be continuation
+<scribe> Topic: New topic B
+<scribe> ... dbooth said 5 # This should be UNKNOWN_SPEAKER
+';
+}
+# Remove <scribe> from scribe lines, and make lines with the same
+# use continuation lines.
+my $debugCurrentSpeaker = 0;
+my @lines = split(/\n/, $all);
+my $prevSpeaker = "UNKNOWN_SPEAKER"; # Most recent speaker minuted by scribe
+my $pleaseContinue = 0;
+for (my $i=0; $i<@lines; $i++)
+	{
+	die if !defined($lines[$i]);
+	my ($writer, $type, $value, $rest, $allButWriter) = &ParseLine($lines[$i]);
+	warn "\nprevSpeaker: $prevSpeaker pleaseContinue: $pleaseContinue line: $lines[$i]\n" if $debugCurrentSpeaker;
+	warn "writer: $writer, type: $type, value: $value, rest: $rest, allBut: $allButWriter\n" if $debugCurrentSpeaker;
+	# $type	is one of: COMMAND STATUS SPEAKER CONTINUATION PLAIN
+	if (&LC($writer) ne "scribe")
+		{
+		warn "writer NOT scribe\n" if $debugCurrentSpeaker;
+		$pleaseContinue = 0;
+		next;
+		}
+	# $writer is scribe
+	if ($type eq "COMMAND") 
+		{ 
+		warn "type is COMMAND\n" if $debugCurrentSpeaker;
+		$pleaseContinue = 0; 
+		$prevSpeaker = "UNKNOWN_SPEAKER";
+		}
+	elsif ($type eq "STATUS") 
+		{ 
+		warn "type is STATUS\n" if $debugCurrentSpeaker;
+		$pleaseContinue = 0; 
+		$prevSpeaker = "UNKNOWN_SPEAKER";
+		}
+	elsif ($type eq "PLAIN") 
+		{ 
+		warn "type is PLAIN\n" if $debugCurrentSpeaker;
+		$lines[$i] = "$rest"; # Eliminate <scribe>
+		$pleaseContinue = 0; 
+		$prevSpeaker = "scribe";
+		}
+	elsif ($type eq "SPEAKER")
+		{
+		warn "type is SPEAKER\n" if $debugCurrentSpeaker;
+		if ($pleaseContinue && &LC($value) eq &LC($prevSpeaker))
+			{
+			warn "  ... continuing\n" if $debugCurrentSpeaker;
+			# "... rest" or
+			# " rest"
+			$lines[$i] = $preferredContinuation . $rest;
+			}
+		else	{
+			warn "  Restating speaker\n" if $debugCurrentSpeaker;
+			# speaker: rest
+			$lines[$i] = "$value\: $rest";
+			}
+		$prevSpeaker = $value;
+		$pleaseContinue = 1;
+		}
+	elsif ($type eq "CONTINUATION")
+		{
+		warn "type is CONTINUATION\n" if $debugCurrentSpeaker;
+		if ($pleaseContinue)
+			{
+			warn "  ... continuing\n" if $debugCurrentSpeaker;
+			# "... rest" or
+			# " rest"
+			$lines[$i] = $preferredContinuation . $rest;
+			}
+		else	{
+			warn "  Restating speaker\n" if $debugCurrentSpeaker;
+			# speaker: rest
+			$lines[$i] = "$prevSpeaker\: $rest";
+			}
+		$pleaseContinue = 1;
+		}
+	else	{
+		&Warn("\nINTERNAL ERROR: Unknown line type: ($type) returned by ParseLine(...)\n\n");
+		}
+	}
+$all = "\n" . join("\n", @lines) . "\n";
+
+
+#### Experimental code (untested) commented out:
+if (0) 
+{
+# warn "all: $all\n";
+my ($newTemplate, %embeddedTemplates) = &GetEmbeddedTemplates($template);
+foreach my $n (keys %embeddedTemplates)
+	{
+	warn "=============== template $n =================\n";
+	warn $embeddedTemplates{$n} . "\n";
+	warn "==============================================\n";
+	}
+}
+
+
+######################### HTML ##########################
+# From now on, $all is HTML!!!!!
+##############  Escape < > as &lt; &gt; ################
+# Escape < and >:
+$all =~ s/\&/\&amp\;/g;
+$all =~ s/\</\&lt\;/g;
+$all =~ s/\>/\&gt\;/g;
+# $all =~ s/\"/\&quot\;/g;
+
+# Insert named anchors for ACTION item locations:
+my @allLines;
+if (1)
+	{
+	@allLines = split(/\n/, $all);
+	for (my $i=0; $i<@allLines; $i++)
+		{
+		# Looking for:
+		# 	<inserted> NamedAnchorHere: action01
+		# die if !defined($i);
+		# die if !defined(@allLines);
+		# die if !defined($allLines[$i]);
+		next if $allLines[$i] !~ m/\A\&lt\;[^ \t\<\>\&]+\&gt\;\s*NamedAnchorHere\:\s*(\S+)\s*\Z/i;
+		# Found one.  Convert it to a real named anchor.
+		my $actionID = $1;
+		# die if !defined($actionID);
+		$allLines[$i] = '<a name="' . $actionID . '"></a>';
+		}
+	$all = "\n" . join("\n", @allLines) . "\n";
+	}
+
+# Highlight in-line ACTION items:
+@allLines = split(/\n/, $all);
+for (my $i=0; $i<@allLines; $i++)
+	{
+	next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
+	$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/i;
+	}
+$all = "\n" . join("\n", @allLines) . "\n";
+
+# Highlight in-line ACTION status:
+foreach my $status (@actionStatuses)
+	{
+	my $ucStatus = $status;
+	$ucStatus =~ tr/a-z/A-Z/; # Make upper case but not preferred spelling
+	$all =~ s/\[\s*$status\s*\]/<strong>[$ucStatus]<\/strong>/ig;
+	}
+
+# Format topic titles (i.e., collect agenda):
+my %agenda = ();
+my $itemNum = "item01";
+while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTML id\=\"$itemNum\"\>$2$postTopicHTML\n/i)
+	{
+	$agenda{$itemNum} = $2;
+	$itemNum++;
+	}
+if (!scalar(keys %agenda)) 	# No "Topic:"s found?
+	{
+	&Warn("\nWARNING: No \"Topic: ...\" lines found!  \nResulting HTML may have an empty (invalid) <ol>...</ol>.\n\nExplanation: \"Topic: ...\" lines are used to indicate the start of \nnew discussion topics or agenda items, such as:\n<dbooth> Topic: Review of Amy's report\n\n");
+	}
+my $agenda = "";
+foreach my $item (sort keys %agenda)
+	{
+	$agenda .= '<li><a href="#' . $item . '">' . $agenda{$item} . "</a></li>\n";
+	}
+
+### @@@ Fix IRC/Phone distinctionxc
+# Break into paragraphs:
+# my $phoneParagraphHTMLTemplate = "$prePhoneParagraphHTML\n\$paragraph\n$postPhoneParagraphHTML";
+$all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\n$1\n$postPhoneParagraphHTML\n/g;
+if (0)
+	{
+	my $body = "";
+	my @lines = grep {m/\A(\<$namePattern\>)?\s*\S/} split(/\n/, $all);
+	for (my $i=0; $i<@lines; $i++)
+		{
+		my @parsedLine = &ParseLine($lines[$i]);
+		my ($writer, $type, $value, $rest, $allButWriter) = @parsedLine;
+		next if ($allButWriter eq ""); 	# Ignore empty lines
+		if ($type eq "COMMAND")
+			{
+			}
+		elsif ($type eq "STATUS")
+			{
+			}
+		elsif ($type eq "SPEAKER")
+			{
+			}
+		elsif ($type eq "CONTINUATION")
+			{
+			}
+		elsif ($type eq "PLAIN")
+			{
+			}
+		}
+	}
+
+# $all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\nFOO $1 FUM\n$postPhoneParagraphHTML\n/g;
+$all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\n$1\n$postIRCParagraphHTML\n/g;
+# $all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\nBAR $1 BAH\n$postIRCParagraphHTML\n/g;
+
+# Bold or <strong> speaker name:
+# Change "<speaker> ..." to "<b><speaker><b> ..."
+my $preUniq = "PreSpEaKerHTmL";
+my $postUniq = "PostSpEaKerHTmL";
+my $preIRCUniq = "PreIrCSpEaKerHTmL";
+my $postIRCUniq = "PostIrCSpEaKerHTmL";
+$all =~ s/\n(\&lt\;($namePattern)\&gt\;)\s*/\n\&lt\;$preIRCUniq$2$postIRCUniq\&gt\; /ig;
+# Change "speaker: ..." to "<b>speaker:<b> ..."
+$all =~ s/\n($speakerPattern)\:\s*/\n$preUniq$1\:$postUniq /ig;
+$all =~ s/$preUniq/$preSpeakerHTML/g;
+$all =~ s/$postUniq/$postSpeakerHTML/g;
+$all =~ s/$preIRCUniq/$preWriterHTML/g;
+$all =~ s/$postIRCUniq/$postWriterHTML/g;
+
+# Highlight resolutions
+$all =~ s/\n\s*(RESOLUTION|RESOLVED): (.*)/\n${preResolutionHTML}RESOLUTION: $2$postResolutionHTML/g;
+
+# Add <br /> before continuation lines:
+$all =~ s/\n(\ *\.)/ <br>\n$1/g;
+# Collapse multiple <br />s:
+$all =~ s/<br>((\s*<br>)+)/<br \/>/ig;
+# Standardize continuation lines:
+# $all =~ s/\n\s*\.+/\n\.\.\./g;
+# Make links:
+$all = &MakeLinks($all);
+
+# Put into template:
+# $all =~ s/\A\s*<\/p>//;
+# $all .= "\n<\/p>\n";
+my $presentAttendees = join(", ", @present);
+my $regrets = join(", ", @regrets);
+
+&Die("\nERROR: Empty minutes template\n\n") if !$template;
+my $result = $template;
+$result =~ s/SV_MEETING_DAY/$day0/g;
+$result =~ s/SV_MEETING_MONTH_ALPHA/$monthAlpha/g;
+$result =~ s/SV_MEETING_YEAR/$year/g;
+$result =~ s/SV_MEETING_MONTH_NUMERIC/$mon0/g;
+$result =~ s/SV_PREVIOUS_MEETING_URL/$previousURL/g;
+$result =~ s/SV_MEETING_CHAIR/$chair/g;
+my $scribeNames = join(", ", @scribeNames);
+$result =~ s/SV_MEETING_SCRIBE/$scribeNames/g;
+$result =~ s/SV_MEETING_AGENDA/$agenda/g;
+$result =~ s/SV_TEAM_PAGE_LOCATION/SV_TEAM_PAGE_LOCATION/g;
+
+$result =~ s/SV_REGRETS/$regrets/g;
+$result =~ s/SV_PRESENT_ATTENDEES/$presentAttendees/g;
+if ($result !~ s/SV_ACTION_ITEMS/$formattedActions/)
+	{
+	if ($result =~ s/SV_NEW_ACTION_ITEMS/$formattedActions/)
+		{ &Warn("\nWARNING: Template format has changed.  SV_NEW_ACTION_ITEMS should now be SV_ACTION_ITEMS\n\n"); }
+	else { &Warn("\nWARNING: SV_ACTION_ITEMS marker not found in template!\n\n"); } 
+	}
+$result =~ s/SV_AGENDA_BODIES/$all/;
+$result =~ s/SV_MEETING_TITLE/$title/g if $title;
+
+# Version
+$result =~ s/SCRIBEPERL_VERSION/$CVS_VERSION/;
+
+my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
+if (!$logURL)
+	{
+	&Warn("\nWARNING: IRC log location not specified!  (You can ignore this \nwarning if you do not want the generated minutes to contain \na link to the original IRC log.)\n\n");
+	$formattedLogURL = "";
+	}
+$formattedLogURL = "" if $logURL =~ m/\ANone\Z/i;
+$result =~ s/SV_FORMATTED_IRC_URL/$formattedLogURL/g;
+$result =~ s/SV_MEETING_IRC_URL/$logURL/g;
+
+my $formattedAgendaLocation = '';
+if ($agendaLocation) {
+    $formattedAgendaLocation = "<p><a href='$agendaLocation'>Agenda</a></p>\n";
+}
+$result =~ s/SV_FORMATTED_AGENDA_LINK/$formattedAgendaLocation/g;
+
+# Include DRAFT warning in minutes?
+my $draftWarningHTML = '<h1> - DRAFT - </h1>';
+$draftWarningHTML = '' if !$draft;
+($result =~ s/SV_DRAFT_WARNING/$draftWarningHTML/g) || &Warn("\nWARNING: SV_DRAFT_WARNING not found in template.\nYou can ignore this warning if your minutes template does not\nneed a '- DRAFT -' warning.\n\n"); 
+
+#### Output seems to be normally valid now.
+# &Warn("\nWARNING: There is currently a bug that causes this program to\ngenerate INVALID HTML!  You can correct it by piping the output \nthrough \"tidy -c\".   If you have tidy installed, you can use \nthe -tidy option to do so.  Otherwise, run the W3C validator to find \nand fix the error: http://validator.w3.org/\n\n");
+
+# Embed diagnostics in the generated minutes?
+my $diagnosticsHTML = "<hr />
+<h2>Scribe.perl diagnostic output</h2>
+[Delete this section before finalizing the minutes.] <br>
+<pre>\n" . &MakeLinks(&EscapeHTML($diagnostics)) . "\n</pre>
+[End of <a href=\"http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm\">scribe.perl</a> diagnostic output]\n";
+$diagnosticsHTML = '' if !$embedDiagnostics;
+($result =~ s/SV_DIAGNOSTICS/$diagnosticsHTML/g) || warn "\nWARNING: SV_DIAGNOSTICS not found in template.\nYou can ignore this warning if your minutes template does not\nneed to contain scribe.perl's diagnostic output.\n\n";
+
+# Done.
+print $result;
+
+exit 0;
+################### END OF MAIN ######################
+
+###############################################################
+##################### ProcessEdits ####################
+###############################################################
+# Preprocess to perform s/old/new/ substitutions
+# and i/where/line/ insertions.
+# This needs to be done as a global preprocessing step because it
+# affects earlier lines.
+sub ProcessEdits
+{
+@_ == 1 || die;
+my ($all) = @_;
+# Perform s/old/new/ substitutions.
+# 5/11/04: dbooth changed this to be first to last, because that's
+# what users expect.
+my $magicFailedString = "FaIlEd_suBstiTutIon";
+my $done = "";
+$all = "\n$all\n"; # Ensure easy pattern matching
+# while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*))\n/i)
+while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
+	{
+	my $pre = $1;
+	my $match = $3; # Begins with \n but none on the end
+	my $who = $4;
+	my $cmd = $5;
+	my $delimiter = $6;
+	my $delimP = quotemeta($delimiter);
+	my $rest = $7;
+	my $wholeMatch = $&; # The whole thing, including ending \n
+	my $post = $';
+	my $notDelimP = "[^$delimP]";
+	"$pre$match\n" eq $wholeMatch || die; # Guard
+	$rest =~ s/\s+\Z//;	# Trim trailing spaces
+	# s/old/new/ command?
+	if ($cmd eq "s" && $rest =~ m/\A(($notDelimP)+)$delimP(($notDelimP)*)($delimP([gG]?))?\Z/)
+		{
+		my $old = $1;
+		my $new = $3;
+		# &Warn("DEBUG NEW: $new\n");
+		my $global = $6;
+		$global = "" if !defined($global);
+		my $oldp = quotemeta($old);
+		# warn "Found match: $match\n";
+		my $told = $old;
+		$told = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
+		my $tnew = $new;
+		$tnew = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
+		my $succeeded = 0;
+		# my $tall = $pre . "\n" . $post;
+		# s/old/new/g  replaces globally from this point backward
+		my $allPre = $done . $pre;
+		my $tPost = $post;
+		my $singleAllPre = $allPre;
+		my $allPreMatched = ($allPre =~ s/$oldp/$new/g);
+		my $tPostMatched =  ($tPost =~ s/$oldp/$new/g);
+		my $singleAllPreMatched = ($singleAllPre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/);
+		# warn "a t s: $allPreMatched $tPostMatched $singleAllPreMatched\n";
+		# if (($global eq "g")  && $allPre =~ s/$oldp/$new/g)
+		if (($global eq "g")  && $allPreMatched)
+			{
+			&Warn("Succeeded: s$delimiter$told$delimiter$tnew$delimiter$global\n");
+			# $all = $pre . "\n" . $post;
+			$done = $allPre;
+			$all = "\n" . $post;
+			}
+		# s/old/new/G  replaces globally, both forward and backward
+		# elsif (($global eq "G")  && $tall =~ s/$oldp/$new/g)
+		# elsif (($global eq "G")  && (($allPre =~ s/$oldp/$new/g) || ($tPost =~ s/$oldp/$new/g)))
+		elsif (($global eq "G")  && ($allPreMatched || $tPostMatched))
+			{ 
+			&Warn("Succeeded: s$delimiter$told$delimiter$tnew$delimiter$global\n");
+			# $all = $tall;
+			$done = $allPre;
+			$all = "\n" . $tPost;
+			}
+		# s/old/new/  replaces most recent occurrance of old with new
+		# elsif ((!$global) && $allPre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/)
+		elsif ((!$global) && $singleAllPreMatched)
+			{
+			&Warn("Succeeded: s$delimiter$told$delimiter$tnew$delimiter$global\n");
+			# $all = $pre . "\n" . $post;
+			$done = $singleAllPre;
+			$all = "\n" . $post;
+			}
+		else	{
+			# &Warn("FAILED: s/$told/$tnew/$global\n");
+			&Warn("FAILED: s$delimiter$told$delimiter$tnew$delimiter$global\n");
+			# $match = &Trim($match);
+			# $all = $pre . "\n<inserted> [FAILED substitution: " . $match . " ]\n" . $post;
+			# Prevent the substitution from being attempted in an 
+			# endless loop.
+			# Change: s/foo/fum/
+			# to: magicFailedString:s/foo/fum/
+			# $all = $pre . "\n$who $magicFailedString\:s/$old/$new/$global\n" . $post;
+			$done .= $pre . $match; # Does not end with \n
+			$all = "\n$post";
+			}
+		&Warn("\nWARNING: Multiline substitution!!! (Is this correct?)\n\n") if $tnew ne $new || $told ne $old;
+		}
+	# while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*i\/([^\/]+)\/(.*))\n/)
+	elsif ($cmd eq "i" && $rest =~ m/\A(($notDelimP)+)$delimP(.*)\Z/)
+		{
+		my $locationString = $1; # Where to insert the new line
+		my $newLine = $3;	# Line to be inserted
+		my $donePre = $done . $pre;
+		$newLine =~ s/$delimP\Z//;	# Remove any trailing /
+		my $locationPattern = quotemeta($locationString);
+		# warn "Found match: $match\n";
+		my $told = $locationString;
+		$told = $& . "...(truncated)...." if ($locationString =~ m/\A.*\n/);
+		my $tnew = $newLine;
+		$tnew = $& . "...(truncated)...." if ($newLine =~ m/\A.*\n/);
+		my $succeeded = 0;
+		if ($donePre =~ m/\A((.|\n)*\n)((.*)($locationPattern)(.*))(\n((.|\n)*?))\Z/)
+			{
+			my $preLines = $1;	# Ends with \n
+			my $postLines = $7;	# Starts with \n
+			my $matchingLine = $3; 	# Has no \n
+			&Warn("Succeeded: i$delimiter$told$delimiter$tnew\n");
+			# $all = $preLines . "<inserted> $newLine\n$matchingLine" . $postLines . "\n" . $post;
+			$done = $preLines . "<inserted> $newLine\n$matchingLine" . $postLines;
+			$all = "\n$post";
+			}
+		else	{
+			&Warn("FAILED: i$delimiter$told$delimiter$tnew\n");
+			# $match = &Trim($match);
+			# Prevent the insertion from being attempted in an 
+			# endless loop.
+			# Change: i/foo/fum/
+			# to: magicFailedString:i/foo/fum/
+			# $all = $pre . "\n$who $magicFailedString\:i/$locationString/$newLine\n" . $post;
+			$done .= $pre . $match; # Does not end with \n
+			$all = "\n$post";
+			}
+		&Warn("\nWARNING: Multiline i// insertion!!! (Is this correct?)\n\n") if $tnew ne $newLine || $told ne $locationString;
+		}
+	else	{
+		# Not a logal s/// or i/// command.
+		$done .= $pre . $match; # Does not end with \n
+		$all = "\n$post";
+		&Warn("WARNING: Bad $cmd$delimiter$delimiter$delimiter command: $cmd$delimiter$rest\n");
+		}
+	}
+# Reinstate failed substitutions:
+# $all =~ s/$magicFailedString\://g;
+$all = $done . $all;
+# print $all;
+# die;
+return($all);
+} # End of ProcessEdits
+
+
+#######################################################################
+###################### ProcessActions #################################
+#######################################################################
 ######### Action processing
 ######### ACTION processing
 ######### ACTION Item Processing
+sub ProcessActions
+{
+@_ == 1 || die;
+my ($all) = @_;
+# Declared: @lines %debugTypesSeen %rrsagentActions @rrsagentLines 
+# %otherActions %rawActions %statusPatterns %actions %actionPeople 
+# $actionTemplate @formattedActionLines $formattedActions 
 # First put all action items into a common format, to make them easier to process.
 my @lines = split(/\n/, $all);
 my %debugTypesSeen = ();
@@ -1280,307 +1709,9 @@ my $formattedActions = join("", @formattedActionLines);
 warn "Making links in actions....\n" if $debugActions;
 $formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
 
-# Highlight ACTION items:
-warn "Highlighting actions....\n" if $debugActions;
-$formattedActions =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/ig;
-# Highlight in-line ACTION status:
-foreach my $status (@actionStatuses)
-	{
-	my $ucStatus = $actionStatuses{$status}; # Map to preferred spelling
-	$formattedActions =~ s/\[$status\]/<strong>[$ucStatus]<\/strong>/ig;
-	}
-warn "Done formatting actions!\n" if $debugActions;
+return( $all, $formattedActions );
+} # End of ProcessActions
 
-$all = &IgnoreGarbage($all);
-
-if ($implicitContinuations)
-	{
-	# warn "Scribing style: -implicitContinuations\n";
-	$all = &ExpandImplicitContinuations($all);
-	}
-else	{
-	# warn "Scribing style: -explicitContinuations\n";
-	if (&ProbablyUsesImplicitContinuations($all))
-		{
-		&Warn("\nWARNING: Input appears to use implicit continuation lines.\n");
-		&Warn("You may need the \"-implicitContinuations\" option.\n\n");
-		}
-	}
-
-
-
-if (0)
-{
-warn "############# TEST DATA ONLY #############\n";
-$all = '<scribe> dbooth: dbooth said 1
-<scribe>  dbooth said 2 # This should be continuation
-<hugo> Topic: New topic A
-<scribe> ... dbooth said 3 # This should be speaker david
-<scribe> dbooth: dbooth said 4 # This should be continuation
-<scribe> Topic: New topic B
-<scribe> ... dbooth said 5 # This should be UNKNOWN_SPEAKER
-';
-}
-my $debugCurrentSpeaker = 0;
-@lines = split(/\n/, $all);
-my $prevSpeaker = "UNKNOWN_SPEAKER"; # Most recent speaker minuted by scribe
-my $pleaseContinue = 0;
-for (my $i=0; $i<@lines; $i++)
-	{
-	die if !defined($lines[$i]);
-	my ($writer, $type, $value, $rest, $allButWriter) = &ParseLine($lines[$i]);
-	warn "\nprevSpeaker: $prevSpeaker pleaseContinue: $pleaseContinue line: $lines[$i]\n" if $debugCurrentSpeaker;
-	warn "writer: $writer, type: $type, value: $value, rest: $rest, allBut: $allButWriter\n" if $debugCurrentSpeaker;
-	# $type	is one of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
-	next if $type eq "";
-	if (&LC($writer) ne "scribe")
-		{
-		warn "writer NOT scribe\n" if $debugCurrentSpeaker;
-		$pleaseContinue = 0;
-		next;
-		}
-	# $writer is scribe
-	if ($type eq "COMMAND") 
-		{ 
-		warn "type is COMMAND\n" if $debugCurrentSpeaker;
-		$pleaseContinue = 0; 
-		$prevSpeaker = "UNKNOWN_SPEAKER";
-		}
-	elsif ($type eq "STATUS") 
-		{ 
-		warn "type is STATUS\n" if $debugCurrentSpeaker;
-		$pleaseContinue = 0; 
-		$prevSpeaker = "UNKNOWN_SPEAKER";
-		}
-	elsif ($type eq "PLAIN") 
-		{ 
-		warn "type is PLAIN\n" if $debugCurrentSpeaker;
-		$lines[$i] = "$rest"; # Eliminate <scribe>
-		$pleaseContinue = 0; 
-		$prevSpeaker = "scribe";
-		}
-	elsif ($type eq "SPEAKER")
-		{
-		warn "type is SPEAKER\n" if $debugCurrentSpeaker;
-		if ($pleaseContinue && &LC($value) eq &LC($prevSpeaker))
-			{
-			warn "  ... continuing\n" if $debugCurrentSpeaker;
-			# "... rest" or
-			# " rest"
-			$lines[$i] = $preferredContinuation . $rest;
-			}
-		else	{
-			warn "  Restating speaker\n" if $debugCurrentSpeaker;
-			# speaker: rest
-			$lines[$i] = "$value\: $rest";
-			}
-		$prevSpeaker = $value;
-		$pleaseContinue = 1;
-		}
-	elsif ($type eq "CONTINUATION")
-		{
-		warn "type is CONTINUATION\n" if $debugCurrentSpeaker;
-		if ($pleaseContinue)
-			{
-			warn "  ... continuing\n" if $debugCurrentSpeaker;
-			# "... rest" or
-			# " rest"
-			$lines[$i] = $preferredContinuation . $rest;
-			}
-		else	{
-			warn "  Restating speaker\n" if $debugCurrentSpeaker;
-			# speaker: rest
-			$lines[$i] = "$prevSpeaker\: $rest";
-			}
-		$pleaseContinue = 1;
-		}
-	else	{
-		&Warn("\nINTERNAL ERROR: Unknown line type: ($type) returned by ParseLine(...)\n\n");
-		}
-	}
-$all = "\n" . join("\n", @lines) . "\n";
-
-
-#### Experimental code (untested) commented out:
-if (0) 
-{
-# warn "all: $all\n";
-my ($newTemplate, %embeddedTemplates) = &GetEmbeddedTemplates($template);
-foreach my $n (keys %embeddedTemplates)
-	{
-	warn "=============== template $n =================\n";
-	warn $embeddedTemplates{$n} . "\n";
-	warn "==============================================\n";
-	}
-}
-
-
-######################### HTML ##########################
-# From now on, $all is in HTML!!!!!
-##############  Escape < > as &lt; &gt; ################
-# Escape < and >:
-$all =~ s/\&/\&amp\;/g;
-$all =~ s/\</\&lt\;/g;
-$all =~ s/\>/\&gt\;/g;
-# $all =~ s/\"/\&quot\;/g;
-
-# Insert named anchors for ACTION item locations:
-my @allLines;
-if (1)
-	{
-	@allLines = split(/\n/, $all);
-	for (my $i=0; $i<@allLines; $i++)
-		{
-		# Looking for:
-		# 	<inserted> NamedAnchorHere: action01
-		# die if !defined($i);
-		# die if !defined(@allLines);
-		# die if !defined($allLines[$i]);
-		next if $allLines[$i] !~ m/\A\&lt\;[^ \t\<\>\&]+\&gt\;\s*NamedAnchorHere\:\s*(\S+)\s*\Z/i;
-		# Found one.  Convert it to a real named anchor.
-		my $actionID = $1;
-		# die if !defined($actionID);
-		$allLines[$i] = '<a name="' . $actionID . '"></a>';
-		}
-	$all = "\n" . join("\n", @allLines) . "\n";
-	}
-
-# Highlight in-line ACTION items:
-@allLines = split(/\n/, $all);
-for (my $i=0; $i<@allLines; $i++)
-	{
-	next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
-	$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/i;
-	}
-$all = "\n" . join("\n", @allLines) . "\n";
-
-# Highlight in-line ACTION status:
-foreach my $status (@actionStatuses)
-	{
-	my $ucStatus = $status;
-	$ucStatus =~ tr/a-z/A-Z/; # Make upper case but not preferred spelling
-	$all =~ s/\[\s*$status\s*\]/<strong>[$ucStatus]<\/strong>/ig;
-	}
-
-# Format topic titles (i.e., collect agenda):
-my %agenda = ();
-my $itemNum = "item01";
-while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTML id\=\"$itemNum\"\>$4$postTopicHTML\n/i)
-	{
-	$agenda{$itemNum} = $4;
-	$itemNum++;
-	}
-if (!scalar(keys %agenda)) 	# No "Topic:"s found?
-	{
-	&Warn("\nWARNING: No \"Topic: ...\" lines found!  \nResulting HTML may have an empty (invalid) <ol>...</ol>.\n\nExplanation: \"Topic: ...\" lines are used to indicate the start of \nnew discussion topics or agenda items, such as:\n<dbooth> Topic: Review of Amy's report\n\n");
-	}
-my $agenda = "";
-foreach my $item (sort keys %agenda)
-	{
-	$agenda .= '<li><a href="#' . $item . '">' . $agenda{$item} . "</a></li>\n";
-	}
-### @@@ Fix IRC/Phone distinctionxc
-# Break into paragraphs:
-$all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\n$1\n$postPhoneParagraphHTML\n/g;
-$all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\n$1\n$postIRCParagraphHTML\n/g;
-
-# Bold or <strong> speaker name:
-# Change "<speaker> ..." to "<b><speaker><b> ..."
-my $preUniq = "PreSpEaKerHTmL";
-my $postUniq = "PostSpEaKerHTmL";
-my $preIRCUniq = "PreIrCSpEaKerHTmL";
-my $postIRCUniq = "PostIrCSpEaKerHTmL";
-$all =~ s/\n(\&lt\;($namePattern)\&gt\;)\s*/\n\&lt\;$preIRCUniq$2$postIRCUniq\&gt\; /ig;
-# Change "speaker: ..." to "<b>speaker:<b> ..."
-$all =~ s/\n($speakerPattern)\:\s*/\n$preUniq$1\:$postUniq /ig;
-$all =~ s/$preUniq/$preSpeakerHTML/g;
-$all =~ s/$postUniq/$postSpeakerHTML/g;
-$all =~ s/$preIRCUniq/$preIRCSpeakerHTML/g;
-$all =~ s/$postIRCUniq/$postIRCSpeakerHTML/g;
-
-# Highlight resolutions
-$all =~ s/\n\s*(RESOLUTION|RESOLVED): (.*)/\n${preResolutionHTML}RESOLUTION: $2$postResolutionHTML/g;
-
-# Add <br /> before continuation lines:
-$all =~ s/\n(\ *\.)/ <br>\n$1/g;
-# Collapse multiple <br />s:
-$all =~ s/<br>((\s*<br>)+)/<br \/>/ig;
-# Standardize continuation lines:
-# $all =~ s/\n\s*\.+/\n\.\.\./g;
-# Make links:
-$all = &MakeLinks($all);
-
-# Put into template:
-# $all =~ s/\A\s*<\/p>//;
-# $all .= "\n<\/p>\n";
-my $presentAttendees = join(", ", @present);
-my $regrets = join(", ", @regrets);
-
-&Die("\nERROR: Empty minutes template\n\n") if !$template;
-my $result = $template;
-$result =~ s/SV_MEETING_DAY/$day0/g;
-$result =~ s/SV_MEETING_MONTH_ALPHA/$monthAlpha/g;
-$result =~ s/SV_MEETING_YEAR/$year/g;
-$result =~ s/SV_MEETING_MONTH_NUMERIC/$mon0/g;
-$result =~ s/SV_PREVIOUS_MEETING_URL/$previousURL/g;
-$result =~ s/SV_MEETING_CHAIR/$chair/g;
-my $scribeNames = join(", ", @scribeNames);
-$result =~ s/SV_MEETING_SCRIBE/$scribeNames/g;
-$result =~ s/SV_MEETING_AGENDA/$agenda/g;
-$result =~ s/SV_TEAM_PAGE_LOCATION/SV_TEAM_PAGE_LOCATION/g;
-
-$result =~ s/SV_REGRETS/$regrets/g;
-$result =~ s/SV_PRESENT_ATTENDEES/$presentAttendees/g;
-if ($result !~ s/SV_ACTION_ITEMS/$formattedActions/)
-	{
-	if ($result =~ s/SV_NEW_ACTION_ITEMS/$formattedActions/)
-		{ &Warn("\nWARNING: Template format has changed.  SV_NEW_ACTION_ITEMS should now be SV_ACTION_ITEMS\n\n"); }
-	else { &Warn("\nWARNING: SV_ACTION_ITEMS marker not found in template!\n\n"); } 
-	}
-$result =~ s/SV_AGENDA_BODIES/$all/;
-$result =~ s/SV_MEETING_TITLE/$title/g if $title;
-
-# Version
-$result =~ s/SCRIBEPERL_VERSION/$CVS_VERSION/;
-
-my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
-if (!$logURL)
-	{
-	&Warn("\nWARNING: IRC log location not specified!  (You can ignore this \nwarning if you do not want the generated minutes to contain \na link to the original IRC log.)\n\n");
-	$formattedLogURL = "";
-	}
-$formattedLogURL = "" if $logURL =~ m/\ANone\Z/i;
-$result =~ s/SV_FORMATTED_IRC_URL/$formattedLogURL/g;
-$result =~ s/SV_MEETING_IRC_URL/$logURL/g;
-
-my $formattedAgendaLocation = '';
-if ($agendaLocation) {
-    $formattedAgendaLocation = "<p><a href='$agendaLocation'>Agenda</a></p>\n";
-}
-$result =~ s/SV_FORMATTED_AGENDA_LINK/$formattedAgendaLocation/g;
-
-# Include DRAFT warning in minutes?
-my $draftWarningHTML = '<h1> - DRAFT - </h1>';
-$draftWarningHTML = '' if !$draft;
-($result =~ s/SV_DRAFT_WARNING/$draftWarningHTML/g) || &Warn("\nWARNING: SV_DRAFT_WARNING not found in template.\nYou can ignore this warning if your minutes template does not\nneed a '- DRAFT -' warning.\n\n"); 
-
-#### Output seems to be normally valid now.
-# &Warn("\nWARNING: There is currently a bug that causes this program to\ngenerate INVALID HTML!  You can correct it by piping the output \nthrough \"tidy -c\".   If you have tidy installed, you can use \nthe -tidy option to do so.  Otherwise, run the W3C validator to find \nand fix the error: http://validator.w3.org/\n\n");
-
-# Embed diagnostics in the generated minutes?
-my $diagnosticsHTML = "<hr />
-<h2>Scribe.perl diagnostic output</h2>
-[Delete this section before finalizing the minutes.] <br>
-<pre>\n" . &MakeLinks(&EscapeHTML($diagnostics)) . "\n</pre>
-[End of <a href=\"http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm\">scribe.perl</a> diagnostic output]\n";
-$diagnosticsHTML = '' if !$embedDiagnostics;
-($result =~ s/SV_DIAGNOSTICS/$diagnosticsHTML/g) || warn "\nWARNING: SV_DIAGNOSTICS not found in template.\nYou can ignore this warning if your minutes template does not\nneed to contain scribe.perl's diagnostic output.\n\n";
-
-# Done.
-print $result;
-
-exit 0;
-################### END OF MAIN ######################
 
 ############################################################################
 ######################## GuessMinutesURL ##################################
@@ -1603,8 +1734,104 @@ return("");
 #########################################################
 ################### MakeLinks #####################
 #########################################################
-# Convert URLs into links.
+# Convert URLs into links.  This is called *after* HTML special symbols
+# have been escaped, such as <dbooth> to &lt;dbooth&gt;.
 # MakeURLs
+sub New_MakeLinks
+{
+@_ == 1 || die;
+my ($all) = @_;
+# URL pattern from http://www.stylusstudio.com/xmldev/200108/post60960.html 
+# my $anyUriPattern = '(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)?/{0,2}[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?';
+# $anyUriPattern is too general for our use.   We want to recognize 
+# only http:// or https:// absolute URLs.
+# 3 parens:
+# my $urlPattern = '(http(s?)://[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)?';
+# The above $urlPattern is not matching correctly in this context, because
+# HTML special chars & has already been escaped when MakeLinks is called.
+# This is a result of the brain-dead way we are currently converting text
+# to HTML.
+my $urlPattern = '(http(s?)://([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)(#([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)?';
+# Test input: test-data/22-tag*
+#*** stopped here ***  UNFINISHED
+# ************
+# Make links:
+my @lines = split(/\n/, $all);
+my $preWriterPattern = quotemeta($preWriterHTML);
+my $postWriterPattern = quotemeta($postWriterHTML);
+for (my $i=0; $i<@lines; $i++)
+	{
+	next if $lines[$i] !~ m/\-\&gt\;/; # debug
+	warn "URL LINE: $lines[$i]\n" if $lines[$i] =~ m/$urlPattern/;
+	# Check for Ralph's link text syntax.  Example:
+	# <RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
+	# would have already been escaped to one of:
+	# &lt;RalphS&gt; -&gt; http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
+	# &lt;<cite>RalphS</cite>&gt; -&gt; http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
+	# -&gt; http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
+	###### Big mess trying to match the <RalphS> part, so don't bother.
+	# if ($ralphLinks && $lines[$i] =~ m/\A(\&lt\;$preWriterPattern[^\&\<\>]+$postWriterPattern\&gt\;)(\s*)\-\>\s*(\<?)($urlPattern)(\>?)\s*(\S+)\s*\Z/)
+	# -&gt; http://www.w3.org/2005/02/07-tagmem-minutes.html minutes 7 Feb
+	# if ($ralphLinks && $lines[$i] =~ m/(\s)\-\&gt\;\s*((\&lt\;)?)($urlPattern)((\&gt\;)?)\s*(\S+)\s*\Z/)
+	if ($ralphLinks && $lines[$i] =~ m/()\-\&gt\;\s*((\&lt\;)?)($urlPattern)((\&gt\;)?)\s*(\S+)\s*\Z/)
+	# if ($ralphLinks && $lines[$i] =~ m/(\s)\-\&gt\;\s*(())($urlPattern)(())\s*(\S+)\s*\Z/)
+	# if ($ralphLinks && $lines[$i] =~ m/()\-\&gt\;\s*(())($urlPattern)(())\s*(\S+)\s*\Z/)
+	# if ($ralphLinks && $lines[$i] =~ m/()(())($urlPattern)(())()\Z/)
+		{
+		my $pre = $`;
+		my $spaces = $1;
+		my $url = $4;
+		my $title = $10;
+		warn "RalphLink spaces: $spaces url: $url title: $title\n";
+		$title = s/\A\"(.+)\"\Z/$1/;
+		$title = s/\A\'(.+)\'\Z/$1/;
+		my $newLine = "$pre$spaces<a href=\"$url\">$title</a>";
+		warn "   newLine: $newLine\n";
+		$lines[$i] = $newLine;
+		}
+	else	{
+		my $allLine = $lines[$i];
+		my $done = "";
+		while ($allLine =~ m/\A((.|\n)*?)($urlPattern)(.*?)\n/)
+			{
+			my $pre = $1;
+			my $url = $3;
+			# $urlPattern has 3 parens:
+			my $line = $7; # To end of line
+			die if !defined($line);
+			if ($debug || 1)
+				{
+				my $t = $pre;
+				$t =~ s/\A(.|\n)*\n//;
+				$line = "" if !defined($line);
+				warn "pre: $t url:$url line:$line|\n";
+				}
+			my $post = "\n" . $';
+			my $newpre = $pre;
+			# Any other URL
+			my $link = "<a href=\"$url\">$url</a>";
+			$done .= $pre . $link;
+			$allLine = $line . $post;
+			}
+		$done .= $all;
+		$allLine = $done;
+		$lines[$i] = $allLine;
+		}
+	}
+$all = join("\n", @lines);
+return($all);
+}
+
+#########################################################
+################### OLD_MakeLinks #####################
+#########################################################
+# Convert URLs into links.
+# OLD_MakeURLs
+# This is really messy, because it assumes that $all is has already
+# been &EscapeHTML()'d.  Thus, a link containing an & like
+#
+# appears as
+#
 sub MakeLinks
 {
 @_ == 1 || die;
@@ -1630,10 +1857,13 @@ while ($all =~ m/\A((.|\n)*?)($urlPattern)(.*?)\n/)
 	die if !defined($line);
 	my $post = "\n" . $';
 	my $newpre = $pre;
-	# my $t = $pre;
-	# $t =~ s/\A(.|\n)*\n//;
-	# $line = "" if !defined($line);
-	# warn "pre: $t url:$url line:$line|\n";
+	if (0 && $debug)
+		{
+		my $t = $pre;
+		$t =~ s/\A(.|\n)*\n//;
+		$line = "" if !defined($line);
+		warn "URL FOUND. pre: $t url:$url line:$line|\n";
+		}
 	# Check for Ralph's link text syntax.  Example:
 	# <RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
 	# would have already been escaped to:
@@ -1712,7 +1942,7 @@ exit 1;
 sub EscapeHTML
 {
 my $all = join("", @_);
-# Escape < and >:
+# Escape & < and >:
 $all =~ s/\&/\&amp\;/g;
 $all =~ s/\</\&lt\;/g;
 $all =~ s/\>/\&gt\;/g;
@@ -2155,13 +2385,12 @@ my $pattern =  join("|", map {quotemeta($_)} @words);
 return $pattern;
 }
 
-
 ###################################################################
 ####################### ParseLine #######################
 ###################################################################
 # Parse the line and return:
 #	$writer		E.g. dbooth from "<dbooth> ..."
-#	$type		One of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
+#	$type		One of: COMMAND STATUS SPEAKER CONTINUATION PLAIN
 #	$value		Either: the command; the speaker; the continuation
 #			pattern; the status; or empty (if $type is PLAIN).
 #			If $type is COMMAND, then $value is guaranteed
@@ -2169,7 +2398,6 @@ return $pattern;
 #			guaranteed upper case.  Otherwise, it may be mixed case.
 #	$rest		The rest of the line (no $writer or $value), &Trim()'ed
 #	$allButWriter	All but the <writer> part, &Trim()'ed.
-# (I.e., $type is "" if no writer.)
 sub ParseLine
 {
 @_ == 1 || die;
@@ -2177,17 +2405,14 @@ my ($line) = @_;
 die if !defined($line);
 my ($writer, $type, $value, $rest, $allButWriter) = ("", "", "", "", "");
 # Remove "<dbooth> " from the $line
-if ($line !~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
+if ($line =~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
 	{
-	# No <writer>.
-	$rest = &Trim($line);
-	$allButWriter = $rest;
-	return ($writer, $type, $value, $rest, $allButWriter);
+	$writer = $2;
 	}
 # "<dbooth> " has now been removed from the $line
-$writer = $2;
 $allButWriter = &Trim($line);
 # Action status?
+# This matches a line beginning with a status word.
 if ($line =~ m/\A\W*\b($actionStatusesPattern)\b\W*/i)
 	{
 	$type = "STATUS";
@@ -2249,6 +2474,41 @@ if (!$type)
 	}
 $rest = &Trim($rest);
 return ($writer, $type, $value, $rest, $allButWriter);
+}
+
+###################################################################
+####################### ParseChunk ################################
+###################################################################
+# Use ParseLine to parse the next chunk of input, which involves
+# skipping over blank lines and joining continuation lines.
+# Returns:
+#	$writer		E.g. dbooth from "<dbooth> ..."
+#	$type		One of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
+# 			(I.e., $type is "" if no writer.)
+#	$value		Either: the command; the speaker; the continuation
+#			pattern; the status; or empty (if $type is PLAIN).
+#			If $type is COMMAND, then $value is guaranteed
+#			lower case.  If $type is STATUS, then $value is
+#			guaranteed upper case.  Otherwise, it may be mixed case.
+#	$rest		The rest of the line (no $writer or $value), &Trim()'ed
+#	$allButWriter	All but the <writer> part, &Trim()'ed.
+sub ParseChunk
+{
+die; ########## UNFINISHED 
+@_ == 1 || die;
+my ($all) = @_;
+die if !defined($all);
+my ($writer, $type, $value, $rest, $allButWriter) = ("", "", "", "", "");
+while (1)
+	{
+	last if ($all !~ s/\A.*\n//);
+	my $line = $&;
+	chomp($line);
+	# **** stopped here **** 
+	($writer, $type, $value, $rest, $allButWriter) = &ParseLine($line);
+	next if $allButWriter eq "";
+	}
+return ("", "", "", "", ""); # EOF
 }
 
 ###################################################################
@@ -2613,7 +2873,8 @@ return 0;
 #################### IsIgnorableZakimLine ###############################
 #################################################################
 # Given a single line, returns 1 if it is a Zakim command
-# or response that should be ignored.
+# or response that should be ignored (i.e., not included in the
+# generated minutes).
 sub IsIgnorableZakimLine
 {
 @_ == 1 || die;
@@ -2625,10 +2886,11 @@ return 0 if $line =~ m/\A\<Zakim\>\s*\S+\, you wanted to /i;
 # Zakim lines to ignore
 return 1 if $line =~ m/\A\<Zakim\>/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*ag(g?)enda\s*\d*\s*[\+\-\=\?]/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*next\s+ag(g?)end(a|(um))\s*\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*close\s+ag(g?)end(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*open\s+ag(g?)end(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+ag(g?)end(a|(um))\s+\d+\Z/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*queue\s*[\+\-\=\?]/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
@@ -2720,7 +2982,7 @@ $all =~ s/\n\ \ //g;
 my @lines = split(/\n/, $all);
 my $nLines = scalar(@lines);
 my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 # First line may be empty
 if (@lines && &Trim($lines[0]) eq "")
 	{
@@ -2776,7 +3038,7 @@ my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $nLines = scalar(@lines);	# Total number of lines
 my $n = 0;		# Number of recognized lines (matching this format)
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 # Count lines that look reasonable
 # **** BEGIN LOGGING AT Mon Feb 14 08:37:02 2005
 # Feb 14 08:37:02 -->     You are now talking on &arch
@@ -2844,10 +3106,10 @@ my ($all) = @_;
 # Join continued lines:
 $all =~ s/\n\ \ //g;
 # Count the number of recognized lines
-my @lines = split(/\n/, $all);
+my @lines = grep {m/\S/} split(/\n/, $all); # Ignore empty lines
 my $nLines = scalar(@lines);
 my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 # First line may be empty
 if (@lines && &Trim($lines[0]) eq "")
 	{
@@ -2892,7 +3154,7 @@ foreach my $line (@lines)
 	if ($line =~ m/\ASession Close\:/i) { $n++; $line = ""; }
 	elsif ($line =~ m/\ASession Start\:/i) { $n++; $line = ""; }
 	elsif ($line =~ m/\ASession Ident\:/i) { $n++; $line = ""; }
-	# * unlogged comment (delete)
+	# * unlogged /me comment (delete)
 	elsif ($line =~ m/\A(\[$timePattern\]\s)\*/i) { $n++; $line = ""; }
 	# <ericn> Discussion on how to progress
 	elsif ($line =~ s/\A(\[$timePattern\]\s)(\<$namePattern\>\s)/$5/i) { $n++; }
@@ -2923,7 +3185,7 @@ $all =~ s/\n\ \ //g;
 my @lines = split(/\n/, $all);
 my $nLines = scalar(@lines);
 my $n = 0; # Number of lines of recognized format.
-my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
 # 2003-12-18T15:26:57-0500 
 my $datePattern = '(\d\d\d\d\-(\ |\d)\d\-(\ |\d)\d)';	# 3 parens
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';	# 4 parens
@@ -2977,7 +3239,7 @@ $all =~ s/\n\ \ //g;
 # Count the number of recognized lines
 my @lines = split(/\n/, $all);
 my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
 foreach my $line (@lines)
 	{
@@ -3001,19 +3263,59 @@ die if @_ != 1;
 my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
-my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
+my $idPattern ='[0-9a-zA-Z;/?\\:@&=+\\$\\.\\-_!~*\\\'()%]+';	# 0 parens
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';		# 4 parens
+my @boilerplateLines = split(/\s*\n\s*/,
+	'<?xml version="1.0" encoding="UTF-8"?>
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+	 <title>IRC log of arch on 2005-02-22</title>
+	<meta name="generator" content="&#36;Id: logger,v 1.75.1.56 2005/02/14 18:10:52 swick Exp &#36;" />
+	 <style type="text/css">
+	  .IRC { font-family: sans-serif }
+	 </style>
+	</head>
+	<body>
+	<h1>IRC log of arch on 2005-02-22</h1>
+	<p><em>Timestamps are in UTC.</em></p>
+	<dl class="IRC">
+	</dl>
+	</body>
+	</html>');
+# Turn the above literal strings into patterns:
+my @boilerPatterns = map { $_ = quotemeta($_); s/\barch\b/\\S+/; s/\d+/\\d+/g; $_ } @boilerplateLines;
+# die "boilerPatterns:\n" . join("\n\t", @boilerPatterns) . "\n";
+my $boilerPattern = join("|", @boilerPatterns);
+my $result = "";
 foreach my $line (@lines)
 	{
 	# <dt id="T14-35-34">14:35:34 [dbooth]</dt><dd>Gudge: why not sufficient?</dd>
-	if ($line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/i)
+	# <dt id="T03-19-51">03:19:51 [MSEder]</dt><dd>MSEder has joined #ws-addr</dd>
+	# <dt id="T13-03-57-1">13:03:57 [Zakim]</dt><dd>ok, MSM; the call is being made</dd>
+	# New: /\<dt/\sid/\=/\"T\d\d\-\d\d\-\d\d(\-\d+)?\"\>\d\d\:\d\d\:\d\d\s\[$namePattern\]\<\/dt\>\<dd\>(.*)\<\/dd\>/
+	# if ($line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/i)
+	# if ($line =~ s/\A\<dt\s+id\=\"($idPattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$6\> $7/i)
+	if ($line =~ s/\A\<dt\s+id\=\"($idPattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$6\> $7/i)
 		{
+		my $name = $6;
+		my $rest = $7;
 		$n++;
 		# warn "MATCHED: $line\n";
+		# Strip out embedded HTML tags:
+		while ($rest =~ s/\<[a-zA-Z0-9\-\_\/]+[^\<\>]*\>//)
+			{
+			# warn "Stripped embedded HTML tag: $&\n";
+			}
+		$line = "<$name> $rest";
 		}
+	elsif ($line =~ s/\A\s*$boilerPattern\s*\Z//) { $n++; }
 	else 	{ 
 		# warn "NO match: $line\n"; 
 		}
+	$result .= $line;
 	}
 $all = "\n" . join("\n", @lines) . "\n";
 # warn "RRSAgent_HTML_Format n matches: $n\n";
@@ -3041,8 +3343,8 @@ my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $nLines = scalar(@lines);
 my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
-my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)'; # 4 parens
 my $done = "";
 # while($all =~ s/\A((.*\n)(.*\n))//)	# Grab next two lines
 my $i = 0;
@@ -3095,7 +3397,7 @@ die if @_ != 1;
 my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 foreach my $line (@lines)
 	{
 	$n++ if $line =~ s/\A($namePattern)\:\s/\<$1\> /i;
@@ -3123,7 +3425,7 @@ my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $n = 0;
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
-my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
 for (my $i=0; $i<@lines; $i++)
 	{
 	# Lines should NOT have timestamps:
@@ -3151,7 +3453,7 @@ $all = "\n" . join("\n", @lines) . "\n";
 # warn "Plain_Text_Format n matches: $n\n";
 my $score = $n / @lines;
 # Artificially downgrade the score, so that more specific formats
-# like Yahoo_IM_Format will win if possible:
+# like Yahoo_IM_Format will win if they both match:
 $score = $score * 0.95;
 return($score, $all);
 }
@@ -3165,14 +3467,21 @@ sub Normalized_Format
 die if @_ != 1;
 my ($all) = @_;
 # Count the number of recognized lines
-my @lines = split(/\n/, $all);
+my @lines = grep {m/\S/} split(/\n/, $all); # Ignore empty lines
 my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
 foreach my $line (@lines)
 	{
 	# <ericn> Review of minutes 
-	$n++ if $line =~ m/\A(\<$namePattern\>\s)/i;
+	if ($line =~ m/\A(\<$namePattern\>\s)/i)
+		{
+		$n++;
+		# warn "Normalized MATCH: $line\n";
+		}
+	else	{
+		# warn "NO MATCH: $line\n";
+		}
 	# warn "LINE: $line\n";
 	}
 # No change to $all
@@ -3360,8 +3669,8 @@ return $template;
 # Grab date from $all or IRC log name or default to today's date.
 sub GetDate
 {
-@_ == 3 || die;
-my ($all, $namePattern, $logURL) = @_;
+@_ == 2 || die;
+my ($all, $logURL) = @_;
 my @days = qw(Sun Mon Tue Wed Thu Fri Sat); 
 @days == 7 || die;
 # English-only month names :(
@@ -3379,7 +3688,7 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	# Parse date from input.
 	# I should have used a library function for this, but I wrote
 	# this without net access, so I couldn't get one.
-	my $d = &Trim($4);
+	my $d = &Trim($2);
 	my @words = split(/[^0-9a-zA-Z]+/, $d);
 	&Die("ERROR: Date not understood: $d\n") if @words != 3;
 	my $correctFormat = "Date command/format should be like \"Date: 31 Jan 2004\"";
@@ -3465,7 +3774,7 @@ my $t; # Temp
 
 # 	  ...something.html Simon's two minutes
 $t = $all;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 # warn "namePattern: $namePattern\n";
 while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /i)
 	{
@@ -4053,12 +4362,12 @@ CVS.</li>
 include a link to the completed minutes.</li>
   <li style="font-style: italic;">Send email <a
  href="mailto:w3t-mit@w3.org">w3t-mit@w3.org</a> and <a
- href="mailto:w3t@w3.org">w3t@w3.org</a> including:</li>
+ href="mailto:w3t@w3.org">w3t@w3.org</a> including:
   <ul style="font-style: italic;">
     <li>a link to the minutes; and</li>
     <li>a text version of the minutes (generated using the <a
  href="http://www.w3.org/,tools">,text comma tool</a>).</li>
-  </ul>
+  </ul></li>
   <li><span style="font-style: italic;"><span
  style="font-style: italic;">Update the </span><a
  style="font-style: italic;"
@@ -4091,26 +4400,32 @@ SV_FORMATTED_IRC_URL
 <ul>
   <li><a href="#agenda">Topics</a>
     <ol>
+<!-- Begin Agenda -->
 SV_MEETING_AGENDA
+<!-- End Agenda -->
     </ol>
   </li>
   <li><a
  href="file:///home/dbooth/w3c/DEV/2002/scribe/mit-template.htm#ActionSummary">Summary
 of Action Items</a></li>
-  <li><a href="#twoMinutes">Two minutes reports from email</a></li>
+  <li><a href="#twoMinutes">Two minutes reports from email</a>
   <ul>
     <li>@@ Insert the table of contents from the result of the
 two-minutes generator at <a href="http://cgi.w3.org/team-bin/mit-2mins">http://cgi.w3.org/team-bin/mit-2mins</a>
 @@<br>
     </li>
-  </ul>
+  </ul></li>
 </ul>
 <hr>
-<div class="meeting">SV_AGENDA_BODIES
+<div class="meeting">
+<!-- Begin Bodies -->
+SV_AGENDA_BODIES
+<!-- End Bodies -->
 </div>
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
-<!-- Action Items -->
+<!-- Begin Action Items -->
 SV_ACTION_ITEMS
+<!-- End Action Items -->
 <h2><a name="twoMinutes">Two minutes around the table</a></h2>
 <p><em>Note to scribe: you can get a start at this section using <a
  href="http://cgi.w3.org/team-bin/mit-2mins">a CGI script</a> that
