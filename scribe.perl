@@ -508,7 +508,6 @@ while($restartForEmbeddedOptions)
 		"RRSAgent_Visible_HTML_Text_Paste_Format", \&RRSAgent_Visible_HTML_Text_Paste_Format,
 		"Mirc_Text_Format", \&Mirc_Text_Format,
 		"Mirc_Timestamped_Log_Format", \&Mirc_Timestamped_Log_Format,
-		"Irssi_GMT_Log_Text_Format", \&Irssi_GMT_Log_Text_Format,
  		"Irssi_ISO8601_Log_Text_Format", \&Irssi_ISO8601_Log_Text_Format,
 		"Yahoo_IM_Format", \&Yahoo_IM_Format,
 		"Plain_Text_Format", \&Plain_Text_Format,
@@ -1427,6 +1426,29 @@ return("\n$done\n");
 }
 
 ##############################################################
+####################### ProcessRalphURL ##############
+##############################################################
+# Hide URLs when there is link text supplied in one of these formats:
+# <RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
+# <RalphS> [-> http://lists.w3.org/Archives/Team/w3t-mit/2005Mar/0113.html Ted's two minutes]
+# (Per Ralph Swick's convention)
+sub ProcessRalphURL
+{
+@_ >= 3 || die;
+my ($writer, $line, $all) = @_;
+# This also permits () {} around the line, in addition to [] or nothing.
+($line =~ m/\A\s*([\[\{\(]?)\s*\-\>\s*($urlPattern)\s+(.*?)\s*([\]\}\)]?)\s*\Z/) || return("", $line, $all);
+my $openBracket = $1;
+my $url = $2;
+my $title = $3;
+my $closeBracket = $4;
+my $lineHTML = &EscapeHTML($openBracket) . "<a href=\"$url\">" . &EscapeHTML($title) . "</a>" . &EscapeHTML($closeBracket);
+my $deltaDone = &FormatParagraph($writer, $lineHTML);
+# *** stopped here ***
+return($deltaDone, "", $all);
+}
+
+##############################################################
 ####################### ProcessIRCStatement ##############
 ##############################################################
 # This must be called last!  It is the default.
@@ -1602,6 +1624,7 @@ my $wh = &EscapeHTML($writer); # Be safe
 $ircParagraphHTML =~ s/\$writer\b/$wh/g;
 $ircParagraphHTML =~ s/\$statementHTML\b/$statementHTML/g;
 $ircParagraphHTML ne $ircParagraphHTMLTemplate || &Die("ERROR: Bad \$ircParagraphHTMLTemplate!\n");
+# &Warn("IRCPARAGRAPH: $ircParagraphHTML");
 return($ircParagraphHTML);
 }
 
@@ -3723,73 +3746,11 @@ return($score, $all);
 }
 
 ##################################################################
-################## Irssi_GMT_Log_Text_Format #####################
-##################################################################
-# Example:
-# 2005-03-28T15:09:45Z <ericP> Sandro: 2/3 through 2 week scramble
-# 2005-03-28T15:11:33Z <ericP> ... program goes out on friday
-# 2005-03-28T15:12:17Z <ericP> Ralph: BPDWG reviewing several docs.
-# 2005-03-28T15:12:33Z <ericP> ... RDF topic map approved for 1st pub WD
-#
-# (This function is a modified version of Irssi_ISO8601_Log_Text_Format. )
-#
-sub Irssi_GMT_Log_Text_Format
-{
-die if @_ != 1;
-my ($all) = @_;
-# Join continued lines:
-$all =~ s/\n\ \ //g;
-# Count the number of recognized lines
-my @lines = split(/\n/, $all);
-my $nLines = scalar(@lines);
-my $n = 0; # Number of lines of recognized format.
-# my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
-# 2005-03-28T15:09:45Z 
-my $datePattern = '(\d\d\d\d\-(\ |\d)\d\-(\ |\d)\d)';	# 3 parens
-my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';	# 4 parens
-my $hourOffsetPattern = 'Z';				# 0 parens
-# Total of 7 parens:
-my $timestampPattern = $datePattern . "T" . $timePattern . $hourOffsetPattern;
-# warn "timestampPattern: $timestampPattern namePattern: $namePattern\n";
-my @linesOut = ();
-while (@lines)
-	{
-	my $line = shift @lines;
-	if (0) {}
-	# Keep normal lines:
-	# 2003-12-18T15:27:36Z <hugo> Hello.
-	elsif ($line =~ s/\A$timestampPattern\s+(\<$namePattern\>)/$8/i)
-		{ $n++; push(@linesOut, $line); }
-	# Also keep comment lines.  They'll be removed later.
-	# 2003-12-18T16:56:06Z  * RRSAgent records action 4
-	elsif ($line =~ s/\A$timestampPattern\s+(\*)/$8/i)
-		{ $n++; push(@linesOut, $line); }
-	# Recognize, but discard:
-	# 2003-12-18T15:26:57Z !mcclure.w3.org hugo invited Zakim into channel #ws-arch.
-	elsif ($line =~ m/\A$timestampPattern\s+\!/i)
-		{ $n++; } 
-	# Recognize, but discard:
-	# 2003-12-18T15:27:30Z -!- dbooth [dbooth@18.29.0.30] has joined #ws-arch
-	elsif ($line =~ m/\A$timestampPattern\s+\-\!\-/i)
-		{ $n++; } 
-	else	{
-		# warn "UNRECOGNIZED LINE: $line\n";
-		push(@linesOut, $line); # Keep unrecognized line
-		}
-	# warn "LINE: $line\n";
-	}
-$all = "\n" . join("\n", @linesOut) . "\n";
-# warn " Irssi_GMT_Log_Text_Format n matches: $n\n";
-my $score = $n / $nLines;
-return($score, $all);
-}
-
-##################################################################
 ################## Irssi_ISO8601_Log_Text_Format #####################
 ##################################################################
 # Example: http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0003/ExampleFormat-NormalizerHugoLogText.txt
 # See also http://wiki.irssi.org/cgi-bin/twiki/view/Irssi/WindowLogging
-sub Irssi_ISO8601_Log_Text_Format
+sub OLD_Irssi_ISO8601_Log_Text_Format
 {
 die if @_ != 1;
 my ($all) = @_;
@@ -3836,6 +3797,79 @@ while (@lines)
 	}
 $all = "\n" . join("\n", @linesOut) . "\n";
 # warn "Irssi_ISO8601_Log_Text_Format n matches: $n\n";
+my $score = $n / $nLines;
+return($score, $all);
+}
+
+##################################################################
+################## Irssi_ISO8601_Log_Text_Format #####################
+##################################################################
+# Example: http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0003/ExampleFormat-NormalizerHugoLogText.txt
+# See also:
+#   http://wiki.irssi.org/cgi-bin/twiki/view/Irssi/WindowLogging
+#   http://www.cl.cam.ac.uk/~mgk25/iso-time.html
+#   http://www.w3.org/TR/NOTE-datetime
+# or search for ISO8601.
+sub Irssi_ISO8601_Log_Text_Format
+{
+die if @_ != 1;
+my ($all) = @_;
+# Join continued lines:
+$all =~ s/\n\ \ //g;
+# die "all: $all\n";
+# Count the number of recognized lines
+my @lines = split(/\n/, $all);
+my $nLines = scalar(@lines);
+my $n = 0; # Number of lines of recognized format.
+# my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
+# 2003-12-18T15:26:57.4321-0500 
+# 2003-12-18T15:26:57,4321-0500 
+# 2003-12-18T15:26:57-0500 
+# 2003-12-18T15:26:57-05:00 
+# 2003-12-18T15:26:57+0500 
+# 2003-12-18T15:26:57Z
+my $yearP = '\d\d\d\d';		# 2004
+my $monP =  '\-?\d\d';		# -12
+my $dayP =  '\-?\d\d';		# -18
+my $hourP = 'T\d\d';		# T15
+my $minP =  '\:?\d\d';		# :26
+my $secP =  '\:?\d\d';		# :57
+my $fracP = '[\.\,]\d+';	# .4321
+my $tzhP =   '[\+\-]\d\d';	# -05
+my $tzmP =  '\:?\d\d';		# :00
+# $iso8601Pattern contains 8 parens:
+my $iso8601Pattern = "$yearP($monP($dayP($hourP$minP($secP($fracP)?)?(Z|($tzhP($tzmP)?)))?)?)?";
+my $timestampPattern = $iso8601Pattern;
+# warn "timestampPattern: $timestampPattern namePattern: $namePattern\n";
+my @linesOut = ();
+while (@lines)
+	{
+	my $line = shift @lines;
+	if (0) {}
+	# Keep normal lines:
+	# 2003-12-18T15:27:36-0500 <hugo> Hello.
+	elsif ($line =~ s/\A$timestampPattern\s+(\<$namePattern\>)/$9/i)
+		{ $n++; push(@linesOut, $line); }
+	# Also keep comment lines.  They'll be removed later.
+	# 2003-12-18T16:56:06-0500  * RRSAgent records action 4
+	elsif ($line =~ s/\A$timestampPattern\s+(\*)/$9/i)
+		{ $n++; push(@linesOut, $line); }
+	# Recognize, but discard:
+	# 2003-12-18T15:26:57-0500 !mcclure.w3.org hugo invited Zakim into channel #ws-arch.
+	elsif ($line =~ m/\A$timestampPattern\s+\!/i)
+		{ $n++; } 
+	# Recognize, but discard:
+	# 2003-12-18T15:27:30-0500 -!- dbooth [dbooth@18.29.0.30] has joined #ws-arch
+	elsif ($line =~ m/\A$timestampPattern\s+\-\!\-/i)
+		{ $n++; } 
+	else	{
+		# warn "UNRECOGNIZED LINE: $line\n";
+		push(@linesOut, $line); # Keep unrecognized line
+		}
+	# warn "LINE: $line\n";
+	}
+$all = "\n" . join("\n", @linesOut) . "\n";
+# warn "Irssi_ISO8601_Log_Text_Format n matches: $n nLines: $nLines\n";
 my $score = $n / $nLines;
 return($score, $all);
 }
