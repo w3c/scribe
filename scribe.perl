@@ -126,7 +126,7 @@ my $postTopicHTML = "</h3>";
 
 # Other globals
 my $debug = 0;
-my $debugActions = 1;
+my $debugActions = 0;
 my $namePattern = '([\\w]([\\w\\d\\-\\.]*))';
 # warn "namePattern: $namePattern\n";
 
