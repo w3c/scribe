@@ -175,20 +175,42 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # 2. Allow the scribe to change.  Process multiple "Scribe: dbooth" commands.
 #
-# 3. Recognize [[ ...lines... ]] and treat them as a block by
+# 3. Improve the guess of who attended, when zakim did not report
+# "attendees were ....".  Pick them up from zakim's lines like:
+#	<dbooth> zakim, who is here?
+#	<Zakim> On the phone I see Mike_Champion, Hugo, Dbooth, Suresh
+#	<Zakim> + +1.978.235.aaaa
+#	<hugo> Zakim, aaaa is Yin-Leng
+#	<Zakim> +Yin-Leng; got it
+#	<Zakim> +??P3
+#	<Zakim> +S_Kumar
+#	<Zakim> +Katia_Sycara
+#	<Zakim> +Abbie
+#	<Zakim> +Sinisa
+#	<Zakim> +MIT308
+#	<Zakim> +Sandro
+#	<RalphS> zakim, mit308 has DBooth, Ralph
+#	<Zakim> +DBooth, Ralph; got it
+#	<RalphS> zakim, Steve just arrived in mit308
+#	<Zakim> +Steve; got it
+# (Examples are from http://www.w3.org/2003/12/11-ws-arch-irc.txt 
+# and http://www.w3.org/2003/12/09-mit-irc.txt )
+# (Also remember to watch out for zakim's continuation lines.)
+#
+# 4. Recognize [[ ...lines... ]] and treat them as a block by
 # allowing them to be continuation lines for the same speaker,
 # because they are probably pasted in.
 #
-# 4. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
+# 5. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
 # so that all formatting info is in the template.
 #
-# 5. Restructure the code to go through a big loop, processing one line
+# 6. Restructure the code to go through a big loop, processing one line
 # at a time, with look-ahead to join continuation lines.
 #
-# 6. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
+# 7. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
 # excuses itself
 #
-# 7. Add a normalizer function for the format from hugo's log in
+# 8. Add a normalizer function for the format from hugo's log in
 # http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
 #
 
@@ -858,13 +880,9 @@ my $prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
 my $prevPattern; # Initialized below
 my @linesIn = split(/\n/, $all);
 my @linesOut = ();
-my $pewter = 0;
 while (@linesIn)
 	{
 	my $line = shift @linesIn;
-	$debug = 1 if $line =~ m/at XML 2003/;
-	$pewter++ if $debug;
-	$debug = 0 if $pewter >= 10;
 	warn "LINE (BEFORE): $line\n" if $debug;
 	# Ignore empty lines
 	if ($line =~ m/\A\s*\Z/)
@@ -890,7 +908,7 @@ while (@linesIn)
 		$writer = $1;
 		$speaker = "";
 		$text = $2;
-		warn "SECOND match\n" if $debug;
+		warn "SECOND match 1:$1 2:$2 LINE: $line\n" if $debug;
 		}
 	else	{
 		die "DIED FROM UNKNOWN LINE FORMAT: $line\n\n";
@@ -901,8 +919,8 @@ while (@linesIn)
 	my $prevSpeakerLC = &LC($prevSpeaker);
 	$prevPattern = quotemeta($prevSpeaker);
 	warn "writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if $debug;
-	warn "PHILIPPE: writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if &Trim($speaker) eq "philippe";
-	warn "EMPTY TEXT: writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if &Trim($text) eq "";
+	# warn "PHILIPPE: writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if &Trim($speaker) eq "philippe";
+	# warn "EMPTY TEXT: writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if &Trim($text) eq "";
 	# Process the various commands
 	if (0) {}
 	# Topic: ... 
