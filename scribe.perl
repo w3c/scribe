@@ -28,16 +28,12 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # P.S. Please try to avoid dependencies on anything that the
 # user might not have installed.  I'd like the code to run on
 # pretty much any minimal perl installation.  
-#
 
 
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 0. Figure out how to handle ACTION items that are pasted in and thus
-# span multiple lines, given that the $allowSpaceContinuation is now
-# turned off (because using space for continuation was too error prone).
-# Perhaps the way to handle this is to 
+# 1. Set up regression testing, so that we can better test future versions.
 #
 # 2. Allow the scribe to change.  Process multiple "Scribe: dbooth" commands.
 # Maybe add "Scribes: dbooth hugo" command.
@@ -121,6 +117,9 @@ my $namePattern = '([\\w]([\\w\\d\\-\\.]*))';
 
 # These are the recognized commands.  Each command should be a
 # single word, so use underscores if you have a multi-word command.
+#### TODO: I don't think we need both "IRC Log" and "IRCLog",
+#### because &WordVariations will generate the spelling variations.
+#### Ditto for Previous_Meeting and PreviousMeeting.
 my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair 
 	Present Regrets Agenda 
 	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION);
@@ -202,9 +201,9 @@ my $scribeOnly = 0;		# Only select scribe lines
 my $trustRRSAgent = 0;		# Trust RRSAgent?
 my $breakActions = 1;		# Break long action lines?
 my $implicitContinuations = 0;	# Option: -implicitContinuations
-my $scribeName = ""; 		# Example: -scribe dbooth
+my @scribeNames = ();		# Example: -scribe dbooth
 				# Or: -scribe "David_Booth"
-my $scribeNick = "";	 	# Example: -scribeNick dbooth
+my @scribeNicks = ();		# Example: -scribeNick dbooth
 my $useZakimTopics = 1; 	# Treat zakim agenda take-up as Topic change?
 my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 my $minScribeLines = 40;	# Min lines to be guessed as scribe.
@@ -311,9 +310,9 @@ while($restartForEmbeddedOptions)
 		elsif ($a eq "-noDashTopics" || $a eq "-noPhilippe" || $a eq "-noPlh") 
 			{ $dashTopics = 0; }
 		elsif ($a eq "-scribe" || $a eq "-scribeName") 
-			{ $scribeName = shift @ARGV; }
+			{ push(@scribeNames, shift @ARGV); }
 		elsif ($a eq "-scribeNick" || $a eq "-scribeNickname") 
-			{ $scribeNick = shift @ARGV; }
+			{ push(@scribeNicks, shift @ARGV); }
 		elsif ($a eq "-tidy") 
 			{ 
 			open(STDOUT, "| tidy -c") || die "ERROR: Could not run \"tidy -c\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n";
@@ -358,6 +357,7 @@ while($restartForEmbeddedOptions)
 		"RRSAgent_HTML_Format", \&RRSAgent_HTML_Format, 
 		"RRSAgent_Visible_HTML_Text_Paste_Format", \&RRSAgent_Visible_HTML_Text_Paste_Format,
 		"Mirc_Text_Format", \&Mirc_Text_Format,
+		"Mirc_Timestamped_Log_Format", \&Mirc_Timestamped_Log_Format,
 		"Irssi_ISO8601_Log_Text_Format", \&Irssi_ISO8601_Log_Text_Format,
 		"Yahoo_IM_Format", \&Yahoo_IM_Format,
 		"Plain_Text_Format", \&Plain_Text_Format,
@@ -504,8 +504,9 @@ if ($useZakimTopics)
 # First see how many "Topic:" lines we have:
 my @topicLines = grep 
 	{
+	die if !defined($_);
 	my ($writer, $type, $value, $rest, undef) = &ParseLine($_);
-	$type eq "COMMAND" && &LC($value) eq "topic" && $rest ne "";
+	$type eq "COMMAND" && $value eq "topic" && $rest ne "";
 	} split(/\n/, $all);
 # Now see how many we'd get if we used the $dashTopics option:
 my ($allDashTopics, $nDashTopics) = &ConvertDashTopics($all);
@@ -555,8 +556,9 @@ if (1)
 	foreach my $line (@lines)
 		{
 		my $ignore = 0;
+		die if !defined($line);
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($line);
-		if ($type eq "COMMAND" && &LC($value) eq "topic")
+		if ($type eq "COMMAND" && $value eq "topic")
 			{
 			$ignore = 1 if (&LC($rest) eq &LC($previousTopic));
 			$previousTopic = $rest;
@@ -584,14 +586,20 @@ my $allNameRefsRef;
 my @allNames = map { ${$_} } @{$allNameRefsRef};
 
 # Determine scribe name and scribeNick:
-$scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)\s*\n/\n/i;
-$scribeNick = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe[ _\-]?Nick\s*\:\s*(.+?)\s*\n/\n/i;
-$scribeName = &Trim($scribeName);
-$scribeNick = &Trim($scribeNick);
-($scribeName, $scribeNick, $all) = 
-	&SetScribeNameAndNick($scribeName, $scribeNick, $all);
-warn "Scribe: $scribeName\n";
-warn "ScribeNick: $scribeNick\n";
+if (1)
+	{
+	# $scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)\s*\n/\n/i;
+	# $scribeNick = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe[ _\-]?Nick\s*\:\s*(.+?)\s*\n/\n/i;
+	# $scribeName = &Trim($scribeName);
+	# $scribeNick = &Trim($scribeNick);
+	my ($newAll, $scribeNamesRef, $scribeNicksRef) = 
+		&GetScribeNamesAndNicks($all, \@scribeNames, \@scribeNicks);
+	$all = $newAll;
+	@scribeNames = @$scribeNamesRef;
+	@scribeNicks = @$scribeNicksRef;
+	warn "Scribes: ", join(", ", @scribeNames), "\n";
+	warn "ScribeNicks: ", join(", ", @scribeNicks), "\n";
+	}
 
 push(@allNames,"scribe");
 my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
@@ -673,6 +681,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 	#	ACTION: [PENDING] whatever
 	if (1)
 		{
+		die if !defined($lines[$i]);
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
 		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine("<scribe> $rest");
 		while ($type2 eq "STATUS")
@@ -683,7 +692,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 			}
 		$debugTypesSeen{$type}++;
 		warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugActions && $debugTypesSeen{$type} < 3;
-		if ($type eq "STATUS" && $type2 eq "COMMAND" && &LC($value2) eq "action")
+		if ($type eq "STATUS" && $type2 eq "COMMAND" && $value2 eq "action")
 			{
 			$lines[$i] = "<$writer\> ACTION: \[$value\] $rest2";
 			warn "MOVED: $lines[$i]\n" if $debugActions;
@@ -700,11 +709,13 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# It might be better if the continuation line processing was
 		# done only once, globally, instead of doing it separately here
 		# for actions.
+		die if !defined($lines[$i]);
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
+		die if !defined($lines[$i+1]);
 		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
 		$debugTypesSeen{$type}++;
 		warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugActions && $debugTypesSeen{$type} < 3;
-		if ($type eq "COMMAND" && &LC($value) eq "action"
+		if ($type eq "COMMAND" && $value eq "action"
 			&& &LC($writer2) eq &LC($writer)
 			&& ($type2 eq "CONTINUATION"))
 			{
@@ -714,7 +725,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 			}
 		#### Commented out this branch, since I think it is handled
 		#### below anyway.
-		elsif (0 && $type eq "COMMAND" && &LC($value) eq "action"
+		elsif (0 && $type eq "COMMAND" && $value eq "action"
 			&& &LC($writer2) eq &LC($writer)
 			&& ($type2 eq "STATUS"))
 			{
@@ -735,11 +746,13 @@ for (my $i=0; $i<(@lines-1); $i++)
 		#	<dbooth> *DONE*
 		# to lines like this:
 		#	<dbooth> ACTION: whatever [DONE]
+		die if !defined($lines[$i]);
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
-		if ($type eq "COMMAND" && &LC($value) eq "action" && $i+1<@lines)
+		if ($type eq "COMMAND" && $value eq "action" && $i+1<@lines)
 			{
 			# warn "FOUND ACTION: $rest\n";
 			# Look ahead at the next line (by anyone).
+			die if !defined($lines[$i+1]);
 			my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
 			if ($type2 eq "STATUS" && $rest2 eq "")
 				{
@@ -753,8 +766,9 @@ for (my $i=0; $i<(@lines-1); $i++)
 				# Look ahead at the next line by the same writer.
 				for (my $j=$i+2; $j<@lines; $j++)
 					{
+					die if !defined($lines[$j]);
 					my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$j]);
-					last if ($type eq "COMMAND" && &LC($value) eq "action");
+					last if ($type eq "COMMAND" && $value eq "action");
 					if (&LC($writer2) eq &LC($writer))
 						{
 						if ($type2 eq "STATUS" && $rest2 eq "")
@@ -778,9 +792,11 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# 	<RRSAgent>   recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24
 		# to lines like this:
 		# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1] [recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24]
+		die if !defined($lines[$i]);
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
+		die if !defined($lines[$i+1]);
 		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
-		if ($type eq "COMMAND" && &LC($value) eq "action"
+		if ($type eq "COMMAND" && $value eq "action"
 			&& &LC($writer) eq "rrsagent" && 
 			&LC($writer2) eq &LC($writer)
 			&& $rest2 =~ m/\A\W*(recorded in http\:[^\s\[\]]+)(\s*\W*)\Z/i)
@@ -1234,6 +1250,7 @@ my $prevSpeaker = "UNKNOWN_SPEAKER"; # Most recent speaker minuted by scribe
 my $pleaseContinue = 0;
 for (my $i=0; $i<@lines; $i++)
 	{
+	die if !defined($lines[$i]);
 	my ($writer, $type, $value, $rest, $allButWriter) = &ParseLine($lines[$i]);
 	warn "\nprevSpeaker: $prevSpeaker pleaseContinue: $pleaseContinue line: $lines[$i]\n" if $debugCurrentSpeaker;
 	warn "writer: $writer, type: $type, value: $value, rest: $rest, allBut: $allButWriter\n" if $debugCurrentSpeaker;
@@ -1268,7 +1285,7 @@ for (my $i=0; $i<@lines; $i++)
 	elsif ($type eq "SPEAKER")
 		{
 		warn "type is SPEAKER\n" if $debugCurrentSpeaker;
-		if ($pleaseContinue && $value eq $prevSpeaker)
+		if ($pleaseContinue && &LC($value) eq &LC($prevSpeaker))
 			{
 			warn "  ... continuing\n" if $debugCurrentSpeaker;
 			# "... rest" or
@@ -1407,7 +1424,8 @@ $result =~ s/SV_MEETING_YEAR/$year/g;
 $result =~ s/SV_MEETING_MONTH_NUMERIC/$mon0/g;
 $result =~ s/SV_PREVIOUS_MEETING_URL/$previousURL/g;
 $result =~ s/SV_MEETING_CHAIR/$chair/g;
-$result =~ s/SV_MEETING_SCRIBE/$scribeName/g;
+my $scribeNames = join(", ", @scribeNames);
+$result =~ s/SV_MEETING_SCRIBE/$scribeNames/g;
 $result =~ s/SV_MEETING_AGENDA/$agenda/g;
 $result =~ s/SV_TEAM_PAGE_LOCATION/SV_TEAM_PAGE_LOCATION/g;
 
@@ -1449,95 +1467,235 @@ exit 0;
 ################### END OF MAIN ######################
 
 #################################################################
-#################### SetScribeNameAndNick #######################
+#################### GetScribeNamesAndNicks #######################
 #################################################################
-# Decide what $scribeNick to use, and modify $all to change
-# <$scribeNick> lines to <scribe> lines.
-sub SetScribeNameAndNick
+# Determine @scribeNames and @scribeNicks and modify $all to change
+# all <dbooth> lines to <scribe> lines, where dbooth is the scribeNick.
+# The logic here is complicated by the fact that we have both a Scribe
+# command and a ScribeNick command, and the given Scribe name will be
+# treated as the ScribeNick (presumabely if ScribeNick isn't specified).
+# However, there is some ambiguity here.  In particular, if both a
+# Scribe and later a ScribeNick is specified, then we don't know for
+# sure whether that was supposed to be specifying two different scribes,
+# or merely clarifying the IRC nickname of a single scribe.  We guess
+# by looking ahead to see if we find any writer names <dbooth> matching
+# the given Scribe name.
+sub GetScribeNamesAndNicks
 {
 @_ == 3 || die;
-my ($scribeName, $scribeNick, $all) = @_;
-my $guessedScribeNick = &GuessScribeNick($all);
-# Cannot guess the scribe when Plain_Text_Format format is used.
-$guessedScribeNick = "scribe" if ($bestName eq "Plain_Text_Format");
-my $guessedScribePattern = quotemeta($guessedScribeNick);
-# warn "guessedScribePattern: $guessedScribePattern\n";
-my $scribeNamePattern = quotemeta($scribeName);
-# warn "scribeNamePattern: $scribeNamePattern\n";
-my $scribeNickPattern = quotemeta($scribeNick);
-# warn "scribeNickPattern: $scribeNickPattern\n";
+my ($all, $scribeNamesRef, $scribeNicksRef) = @_;
+my @scribeNames = @$scribeNamesRef;
+my @scribeNicks = @$scribeNicksRef;
+my @lines = grep {&Trim($_)} split(/\n/, $all); # Non-empty lines
+my $totalLines = scalar(@lines);
 
-# Replace scribe name with "scribe".  I.e., change
-#	<dbooth> Minutes approved
-# to
-#	<scribe> Minutes approved
-$all = "\n$all\n";
-# WARNING: Pattern match (annoyingly) returns "" if no match -- not 0.
-my $nScribeLines = ($all =~ s/\n\<scribe\>/\n\<scribe\>/ig);
-$nScribeLines = 0 if $nScribeLines eq ""; # Make 0 if no match
-# warn "nScribeLines: $nScribeLines\n";
-
-my $tempScribeNameAll = $all;
-my $nScribeNameLines = ($tempScribeNameAll =~ s/\n\<$scribeNamePattern\>/\n\<scribe\>/ig);
-$nScribeNameLines = 0 if $nScribeNameLines eq ""; # Make 0 if no match
-$nScribeNameLines = 0 if $scribeName eq ""; # Make 0 if no $scribeName
-# warn "nScribeNameLines: $nScribeNameLines\n";
-
-my $tempScribeNickAll = $all;
-my $nScribeNickLines = ($tempScribeNickAll =~ s/\n\<$scribeNickPattern\>/\n\<scribe\>/ig);
-$nScribeNickLines = 0 if $nScribeNickLines eq ""; # Make 0 if no match
-$nScribeNickLines = 0 if !$scribeNick; 		# Make 0 if no $scribeNick
-# warn "nScribeNickLines: $nScribeNickLines\n";
-
-my $tempGuessedScribeAll = $all;
-my $nGuessedScribeLines = ($tempGuessedScribeAll =~ s/\n\<$guessedScribePattern\>/\n\<scribe\>/ig);
-$nGuessedScribeLines = 0 if $nGuessedScribeLines eq ""; # Make 0 if no match
-$nGuessedScribeLines = 0 if !$guessedScribeNick;
-# warn "nGuessedScribeLines: $nGuessedScribeLines\n";
-
-if ($scribeNick)
+# Look ahead to see how many Scribe and ScribeNick commands we have,
+# and collect all the writer names (i.e., IRC nicknames).
+# We do this to know whether we need to guess the scribeNick and
+# to know whether there is only a single scribe that should thus
+# take effect from the beginning.
+my @scribeCommands = ();
+my @scribeNickCommands = ();
+my %writersFound = (); # Maps lower case nickname --> Mixed case
+COUNT_SCRIBE_COMMANDS: for (my $i=0; $i<@lines; $i++)
 	{
-	$all = $tempScribeNickAll;
-	if (!$nScribeNickLines)
+	die if !defined($lines[$i]);
+	my ($writer, $type, $value, $rest, $allButWriter) = &ParseLine($lines[$i]);
+	# Avoid unused var warning:
+	($writer, $type, $value, $rest, $allButWriter) = 
+		($writer, $type, $value, $rest, $allButWriter); 
+	my $lcWriter = &LC($writer);
+	$writersFound{$lcWriter} = $writer;
+	# Scribe command?
+	# $type is one of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
+	if ($type eq "COMMAND" && $value eq "scribe")
 		{
-		warn "\nWARNING: No <$scribeNick> lines found.\n";
-		if ($nScribeNameLines > $nGuessedScribeLines)
+		# Scribe command.  Changing scribe name.
+		my $newScribeName = &Trim($rest);
+		push(@scribeCommands, $newScribeName);
+		# warn "Found Scribe command: $newScribeName\n";
+		}
+	# ScribeNick command?
+	# Should this be checking against "scribe_nick" instead, since that
+	# would be the lower case of the preferred spelling?
+	elsif ($type eq "COMMAND" && $value eq "scribenick")
+		{
+		my $newScribeNick = &Trim($rest);
+		push(@scribeNickCommands, $newScribeNick);
+		# warn "Found ScribeNick command: $newScribeNick\n";
+		}
+	else {} # Do nothing
+	}
+@scribeCommands = &Uniq(@scribeCommands);
+@scribeNickCommands = &Uniq(@scribeNickCommands);
+
+# Infer the ScribeNick from ScribeName?
+my @totalScribes = &Uniq(@scribeCommands, @scribeNames);
+my @totalScribeNicks = &Uniq(@scribeNickCommands, @scribeNicks);
+if ((!@totalScribeNicks) && (@totalScribes==1) && exists($writersFound{&LC($totalScribes[0])}))
+	{
+	my $scribeNick = $totalScribes[0];
+	warn "No ScribeNick specified.  Inferring ScribeNick: $scribeNick\n";
+	push(@scribeNicks, $scribeNick);
+	}
+
+# Guess the ScribeNick if none was specified or inferrable.
+@totalScribeNicks = &Uniq(@scribeNickCommands, @scribeNicks);
+if (((!@totalScribeNicks) && (!@totalScribes))
+  || ((!@totalScribeNicks) && (@totalScribes==1) && (!exists($writersFound{&LC($totalScribes[0])})) && !exists($writersFound{"scribe"})))
+	{
+	my $scribeNick = &GuessScribeNick($all);
+	warn "No ScribeNick specified.  Guessing ScribeNick: $scribeNick\n";
+	push(@scribeNicks, $scribeNick);
+	}
+
+# If there is only one Scribe command, let it take effect from the beginning:
+@scribeNames = @scribeCommands if (!@scribeNames) && (@scribeCommands == 1);
+# Ditto if there is only one ScribeNick command:
+@scribeNicks = @scribeNickCommands if (!@scribeNicks) && (@scribeNickCommands == 1);
+
+# Now we're ready to process potentially multiple scribes.
+my $currentScribeName = "";
+$currentScribeName = $scribeNames[0] if @scribeNames==1;
+my $currentScribeNick = "";
+$currentScribeNick = $scribeNicks[0] if @scribeNicks==1;
+my $currentScribeNickPattern = join("|", map {quotemeta $_} @scribeNicks);
+$currentScribeNickPattern = join("|", map {quotemeta $_} @scribeNames) 
+	if !$currentScribeNickPattern;
+my $nLinesCurrentScribeNick = 0; # Lines matching current scribeNick
+my $previousCommand = "";	# Previous command was Scribe or ScribeNick?
+$previousCommand = "scribe" if @scribeNames && !@scribeNicks;
+$previousCommand = "scribenick" if @scribeNicks && !@scribeNames;
+LINE: for (my $i=0; $i<@lines; $i++)
+	{
+	die if !defined($lines[$i]);
+	my ($writer, $type, $value, $rest, $allButWriter) = &ParseLine($lines[$i]);
+	# Avoid unused var warning:
+	($writer, $type, $value, $rest, $allButWriter) = 
+		($writer, $type, $value, $rest, $allButWriter); 
+	# Is this any kind of scribe line?
+	if ($currentScribeNickPattern && ($writer =~ m/\A$currentScribeNickPattern\Z/))
+		{ # Scribe line "<dbooth> ...".  Convert to "<scribe> ..."
+		$lines[$i] = "<scribe> $allButWriter";
+		$nLinesCurrentScribeNick++; # This may include <scribe> lines
+		}
+	# Scribe command?
+	# $type is one of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
+	if ($type eq "COMMAND" && $value eq "scribe")
+		{
+		# Scribe command.  Changing scribe name.
+		my $newScribeName = &Trim($rest);
+		push(@scribeNames, $newScribeName);
+		warn "Found Scribe: $newScribeName\n";
+		# Look ahead (until the next Scribe: or ScribeNick: command)
+		# to see if the given name matches an IRC nick or <scribe>.  
+		# If so, use it as the $currentScribeNick.
+		my $lcNewScribeName = &LC($newScribeName);
+		my $newNickFound = "";
+		my $lastType = ""; 	# Last $type seen in lookahead loop
+		my $lastValue = "";	# Last $value seen in lookahead loop
+		LOOKAHEAD: for (my $j=$i+1; $j<@lines; $j++)
 			{
-			$scribeNick = $scribeName;
-			$all = $tempScribeNameAll;
+			die if !defined($lines[$j]);
+			my ($writer2, $type2, $value2, $rest2, $allButWriter2) = &ParseLine($lines[$j]);
+			# Avoid unused var warning:
+			($writer2, $type2, $value2, $rest2, $allButWriter2) =
+				($writer2, $type2, $value2, $rest2, $allButWriter2);
+			$lastType = $type2;
+			$lastValue = $value2;
+			my $lcWriter2 = &LC($writer2);
+			if (($lcWriter2 eq $lcNewScribeName)
+					|| ($lcWriter2 eq "scribe"))
+				{
+				$newNickFound = $writer2;
+				last LOOKAHEAD;
+				}
+			last LOOKAHEAD if ($type2 eq "COMMAND" && $value2 eq "scribe");
+			last LOOKAHEAD if ($type2 eq "COMMAND" && $value2 eq "scribenick");
+			}
+		if ($newNickFound)
+			{
+			# Found either <$newScribeName> or <scribe>.
+			# scribeNick should change.
+			warn "Inferring ScribeNick: $newNickFound\n";
+			if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0)
+				{
+				warn "WARNING: No scribe lines found matching previous ScribeNick pattern: <$currentScribeNickPattern> ...\n"
+					if $newNickFound !~ m/\A$currentScribeNickPattern\Z/i;
+				}
+			push(@scribeNicks, $newNickFound);
+			$currentScribeNick = $newNickFound;
+			$currentScribeNickPattern = quotemeta($currentScribeNick);
+			$nLinesCurrentScribeNick = 0;
 			}
 		else	{
-			$scribeNick = $guessedScribeNick;
-			$all = $tempGuessedScribeAll;
+			# Got a Scribe: command with no matching lines.
+			# If there is a ScribeNick: command following, then
+			# it's okay -- we'll use the given ScribeNick
+			# when we get to it.  Otherwise, it's an error.
+			if ($previousCommand ne "scribenick"
+			  && @totalScribes>1 && @totalScribeNicks>1
+			  && (!(($lastType eq "COMMAND") && ($lastValue eq "scribenick"))))
+				{
+				warn "\nWARNING: \"Scribe: $newScribeName\" command found, \nbut no lines found matching \"<$newScribeName> . . . \"\n";
+				warn "Continuing with ScribeNick: <$currentScribeNickPattern>\n" if $currentScribeNickPattern;
+				warn "Use \"ScribeNick: dbooth\" (for example) to specify the scribe's IRC nickname.\n\n"
+				}
+			# Hmm, should the above be checking for "scribe_nick"
+			# (the canonical form) instead?
 			}
-		warn "Instead using ScribeNick: $scribeNick\n\n";
+		$previousCommand = "scribe";
 		}
-	$scribeName = $scribeNick if !$scribeName;
-	}
-elsif ($scribeName)
-	{
-	$scribeNick = $scribeName;
-	$all = $tempScribeNameAll;
-	if (!$nScribeNameLines)
+	# ScribeNick command?
+	# Should this be checking against "scribe_nick" instead, since that
+	# would be the lower case of the preferred spelling?
+	elsif ($type eq "COMMAND" && $value eq "scribenick")
 		{
-		warn "\nWARNING: No <$scribeName> lines found.\n";
-		$scribeNick = $guessedScribeNick;
-		warn "Guessing ScribeNick: $scribeNick\n\n";
-		$all = $tempGuessedScribeAll;
+		my $newScribeNick = &Trim($rest);
+		push(@scribeNicks, $newScribeNick);
+		if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0
+			&& $newScribeNick !~ m/\A$currentScribeNickPattern\Z/i)
+			{
+			warn "WARNING: No scribe lines found matching ScribeNick pattern: <$currentScribeNickPattern> ...\n";
+			}
+		warn "Found ScribeNick: $newScribeNick\n";
+		$currentScribeNick = $newScribeNick;
+		$currentScribeNickPattern = quotemeta($newScribeNick);
+		$nLinesCurrentScribeNick = 0;
+		$previousCommand = "scribenick";
 		}
+	else {} # Do nothing
 	}
-else	{
-	warn "\nWARNING: No Scribe or ScribeNick specified.\n";
-	$scribeNick = $guessedScribeNick;
-	warn "Guessing ScribeNick: $scribeNick\n";
-	warn "You can specify the Scribe's IRC name like this:\n";
-	warn "  <$scribeNick> ScribeNick: $scribeNick\n";
-	warn "You can also specify the Scribe's full name like this:\n";
-	warn "  <$scribeNick> Scribe: David_Booth\n\n";
-	$all = $tempGuessedScribeAll;
+if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0)
+	{
+	warn "WARNING: No scribe lines found matching ScribeNick pattern: <$currentScribeNickPattern> ...\n";
 	}
+$all = "\n" . join("\n", @lines) . "\n";
+@scribeNames = &Uniq(@scribeNames);
+@scribeNicks = &Uniq(@scribeNicks);
 
-return ($scribeName, $scribeNick, $all);
+# Default to using ScribeNicks for ScribeNames if no ScribeNames.
+if ((!@scribeNames) && @scribeNicks)
+	{
+	@scribeNames = @scribeNicks;
+	my $scribeNames = join(", ", @scribeNames);
+	warn "Inferring Scribes: $scribeNames\n";
+	}
+# No Scribes or ScribeNicks specified?
+warn "WARNING: No Scribe or ScribeNick could be determined.\nYou can specify the Scribe or ScribeNick like:\n  <dbooth> Scribe: Michael Sperberg-McQueen\n  <dbooth> ScribeNick: msm\n\n"
+	if ((!@scribeNames) && !@scribeNicks);
+# Check for possible scribeNick name error by counting the number
+# of <scribe> lines.
+# Also ensure consistency (lower case) in the spelling of <scribe>.
+# WARNING: Pattern match (annoyingly) returns "" if no match -- not 0.
+my $totalScribeLines = ($all =~ s/\n\<scribe\>/\n\<scribe\>/ig);
+$totalScribeLines = 0 if !$totalScribeLines;
+warn "\nWARNING: $totalScribeLines scribe lines found (out of $totalLines total lines.)\nAre you sure you specified a correct ScribeNick?\n\n"
+	if (($totalLines > 100) && ($totalScribeLines/$totalLines < 0.01))
+		|| ($totalScribeLines < 5);
+
+warn "GetScribeNamesAndNicks RETURNING ScribeNames: @scribeNames ScribeNicks: @scribeNicks\n" if $debug;
+return ($all, \@scribeNames, \@scribeNicks);
 }
 
 ######################################################################
@@ -1556,6 +1714,7 @@ my $nFound = 0;
 my @lines = split(/\n/, $all);
 for(my $i=0; $i<@lines-1; $i++)
 	{
+	die if !defined($lines[$i]);
 	my ($writer, $type, undef, $rest, undef) = &ParseLine($lines[$i]);
 	# Dash separator line?  <Philippe> ---
 	next if ($type ne "PLAIN" || $rest !~ m/\A\-+\Z/);
@@ -1572,7 +1731,7 @@ for(my $i=0; $i<@lines-1; $i++)
 		next if $allButWriter2 eq "";
 		# warn "writer2: $writer2 type2: $type2 value2: $value2 allButWriter2: $allButWriter2 lines[j]: $lines[$j]\n";
 		# Do nothing if the next scribe line is a Topic: command anyway
-		last INNER if ($type2 eq "COMMAND" && &LC($value2) eq "topic");
+		last INNER if ($type2 eq "COMMAND" && $value2 eq "topic");
 		# Turn: 
 		#	<Philippe> UTF16 PR issue
 		# into: 
@@ -1705,10 +1864,9 @@ return $pattern;
 #	$type		One of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
 #	$value		Either: the command; the speaker; the continuation
 #			pattern; the status; or empty (if $type is PLAIN).
-#			WARNING: $value may be mixed case.  Use &LC($value)
-#			for lower case.  (Not sure if this is the right choice
-#			here.  Does anything need it in mixed case?  Maybe
-#			it should always be returned in lower case.)
+#			If $type is COMMAND, then $value is guaranteed
+#			lower case.  If $type is STATUS, then $value is
+#			guaranteed upper case.  Otherwise, it may be mixed case.
 #	$rest		The rest of the line (no $writer or $value), &Trim()'ed
 #	$allButWriter	All but the <writer> part, &Trim()'ed.
 # (I.e., $type is "" if no writer.)
@@ -1716,6 +1874,7 @@ sub ParseLine
 {
 @_ == 1 || die;
 my ($line) = @_;
+die if !defined($line);
 my ($writer, $type, $value, $rest, $allButWriter) = ("", "", "", "", "");
 # Remove "<dbooth> " from the $line
 if ($line !~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
@@ -1735,14 +1894,9 @@ if ($line =~ m/\A\W*($actionStatusesPattern)\W*/i)
 	$value = $1;
 	$rest = $';
 	# die "LINETYPE a s type: $type value: $value rest: $rest\n";
-	#### Don't map to preferred spelling.  Keep existing spelling.
-	if (0)
-		{
-		$value = $actionStatuses{&LC($value)}; # Map to pref spelling
-		}
-	else	{
-		$value =~ tr/a-z/A-Z/; # Make upper case but not pref spelling
-		}
+	# Don't map to preferred spelling, but make it upper case.
+	# Old: $value = $actionStatuses{&LC($value)}; # Map to pref spelling
+	$value =~ tr/a-z/A-Z/; # Make upper case but not pref spelling
 	}
 # Command?
 # This pattern allows up to two *extra* leading spaces for commands
@@ -1751,12 +1905,17 @@ elsif ($line =~ m/\A(\s?(\s?))($commandsPattern)(\s?)\:\s*/i)
 	$type = "COMMAND";
 	$value = $3;
 	$rest = $';
-	# Put command in canonical form (no spaces or underscore):
-	if (!exists($commands{&LC($value)}))
+	$value = &LC($value);
+	# Put command in lower case canonical form (no spaces or underscore):
+	if (!exists($commands{$value}))
 		{
+		#### I have no idea why this next line is here.  An internal guard?
 		die "ParseLine value: $value line: $line\n" if $line =~ m/topic/i;
+		#### I assume the following error is what is needed here.
+		die "INTERNAL ERROR: Unknown command: $line\n";
 		}
-	$value = $commands{&LC($value)}; # previous_meeting --> Previous_Meeting
+	# $value = $commands{&LC($value)}; # previous_meeting --> Previous_Meeting
+	$value = &LC($commands{$value}); # PreviousMeeting --> previous_meeting
 	}
 # Speaker statement?
 # This pattern allows up to two *extra* leading spaces for speaker statements
@@ -2288,6 +2447,81 @@ $all = join("\n", @loggedLines) . "\n";
 # Artificially downgrade the score, so that Normalized_Format will win
 # if the format is already normalized
 $score = $score * 0.99;
+return($score, $all);
+}
+
+##################################################################
+########################## Mirc_Timestamped_Log_Format #########################
+##################################################################
+# Format from saving MIRC buffer.
+sub Mirc_Timestamped_Log_Format
+{
+die if @_ != 1;
+my ($all) = @_;
+# Join continued lines:
+$all =~ s/\n\ \ //g;
+# Count the number of recognized lines
+my @lines = split(/\n/, $all);
+my $nLines = scalar(@lines);
+my $n = 0;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+# First line may be empty
+if (@lines && &Trim($lines[0]) eq "")
+	{
+	$n++;
+	shift @lines;
+	}
+# Second line may be:
+#	Session Start: Thu Jun 24 09:22:36 2004
+if (@lines && $lines[0] =~ m/\ASession Start\:/)
+	{
+	$n++;
+	shift @lines;
+	}
+# Third line may be:
+#	Session Ident: &arch
+if (@lines && $lines[0] =~ m/\ASession Ident\:/)
+	{
+	$n++;
+	shift @lines;
+	}
+# Last line may be:
+#	Session Close: Thu Jun 24 09:23:59 2004
+if (@lines && $lines[@lines-1] =~ m/\ASession Close\:/)
+	{
+	$n++;
+	pop @lines;
+	}
+# Count remaining lines that look reasonable
+# [19:35] <Zakim> Steven should now be muted
+# [19:36] <ph> http://lists.w3.org/Archives/Member/w3c-html-cg/2004JanMar/0038.html
+# [19:36] * Zakim hears Steven's hand up
+# [19:36] * Zakim sees Steven on the speaker queue
+my @loggedLines = ();
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d)'; # 3 parens
+foreach my $line (@lines)
+	{
+	# We may have start/stop messages embedded, such as:
+	#	Session Close: Thu Jun 24 09:22:24 2004
+	#	
+	#	Session Start: Thu Jun 24 09:22:36 2004
+	#	Session Ident: &arch
+	if ($line =~ m/\ASession Close\:/) { $n++; $line = ""; }
+	elsif ($line =~ m/\ASession Start\:/) { $n++; $line = ""; }
+	elsif ($line =~ m/\ASession Ident\:/) { $n++; $line = ""; }
+	# * unlogged comment (delete)
+	elsif ($line =~ m/\A(\[$timePattern\]\s)\*/) { $n++; $line = ""; }
+	# <ericn> Discussion on how to progress
+	elsif ($line =~ s/\A(\[$timePattern\]\s)(\<$namePattern\>\s)/$5/i) { $n++; }
+	else	{
+		# warn "MIRC not match: $line\n";
+		}
+	# warn "LINE: $line\n";
+	push(@loggedLines, $line) if $line =~ m/\S/;
+	}
+my $score = $n / $nLines;
+# warn "Mirc_Text_Format n: $n nLines: $nLines score: $score\n";
+$all = join("\n", @loggedLines) . "\n";
 return($score, $all);
 }
 
