@@ -24,7 +24,34 @@ is a crude perl script for generating meeting minutes from an IRC, IM
 or other log that has been written to follow some simple minuting
 conventions.&nbsp; <a
  href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">Download
-scribe.perl</a>.<br>
+scribe.perl</a>.&nbsp; It reads standard input and writes to standard
+output:<br>
+<pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> &lt; <span
+ style="font-style: italic;">log.txt</span>  &gt; <span
+ style="font-style: italic;">minutes.html</span></code></pre>
+<h2>Pros and Cons of Using Scribe.perl</h2>
+<span style="font-weight: bold;">Pros</span>:<br>
+<ul>
+  <li>It's free, it's open source, and it usually works.</li>
+  <li>It runs anywhere that perl is installed.&nbsp; (I hope!&nbsp;
+Please let me know if it doesn't.)</li>
+  <li>Easy to use.&nbsp; It uses conventions that are used in many W3C
+working groups.</li>
+  <li>It recognizes several input and log formats.</li>
+  <li>If you don't like the format it generates, you can supply your
+own template using the <code>-template</code> option. <br>
+  </li>
+</ul>
+<span style="font-weight: bold;">Cons</span>:<br>
+<ul>
+  <li>You still need to do some manual clean-up.</li>
+  <li>It doesn't recognize all minuting conventions.&nbsp; (Suggestion:
+Learn its conventions, they're simple.)</li>
+  <li>At the moment it generates invalid HTML.&nbsp; (Arrgh!)&nbsp; But
+you can easily correct this using the <code>-tidy</code> option (if
+you have HTML tidy installed).</li>
+  <li>The code is a mess.&nbsp; (Sorry!)</li>
+</ul>
 <h2>Quick Start</h2>
 Step 1:&nbsp; Invite <a href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a>
 and <a href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a>
@@ -85,16 +112,25 @@ the meeting:
     </tr>
     <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code><span
- style="font-weight: bold;">Scribe:</span> <span
+ style="font-weight: bold;">ScribeNick:</span> <span
  style="font-style: italic;">dbooth</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>dbooth</code>
-is scribe today.&nbsp; If the name does not match the scribe's IRC
-nickname, then you should also use the ScribeNick command (below) to
-indicate the scribe's IRC nickname.&nbsp;
-Scribe name will be guessed if this line is
-omitted.&nbsp; HINT: Do <span style="text-decoration: underline;">not</span>
+is the IRC nickname of the scribe.&nbsp; The ScribeNick will be guessed
+if neither Scribe nor ScribeNick are specified.&nbsp; HINT: Do <span
+ style="text-decoration: underline;">not</span>
 change
 your IRC nickname to "scribe".<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
+ style="font-weight: bold;">Scribe:</span> <span
+ style="font-style: italic;">David Booth<br>
+      </span></code></td>
+      <td style="vertical-align: top; font-style: italic;">(Optional) <code>David
+Booth</code> is the name of the scribe as it should appear in the
+generated minutes.&nbsp; The ScribeNick will be used instead if Scribe
+is not specified.<br>
       </td>
     </tr>
     <tr>
@@ -139,8 +175,10 @@ Step 3: Record meeting notes:<br>
       </code></td>
       <td style="vertical-align: top; font-style: italic;">Use
 "Topic: . . ." at the <br>
-start of each agenda topic.&nbsp; Alternatively, you can use Zakim
-bot's agenda control.&nbsp; (See the -useZakimTopics option below.)<br>
+start of each agenda topic.&nbsp; Alternatively, you can use <a
+ href="http://www.w3.org/2001/12/zakim-irc-bot.html#agenda">Zakim
+bot's agenda control</a>, which is recognized by default.&nbsp; (See
+the -useZakimTopics option below.)<br>
       </td>
     </tr>
     <tr>
@@ -185,7 +223,7 @@ write spec</span> <span style="font-weight: bold;">[</span><span
  style="font-style: italic;">PENDING</span><span
  style="font-weight: bold;">]<br>
       </span></code><code><span style="font-weight: bold;"><br>
-      </span><span style="font-style: italic;"></span></code><code><br>
+      </span></code><code><br>
       </code></td>
       <td style="vertical-align: top; font-style: italic;">Record old
 action and status: <br>
@@ -298,12 +336,22 @@ Step 5: Generate the minutes:<br>
     </tr>
     <tr>
       <td style="vertical-align: top;"><span style="font-style: italic;">(Save
-the IRC log, such as<br>
+a copy of the IRC log, such as<br>
       </span><span style="font-style: italic;">http://www.w3.org/2002/04/05-arch-irc.txt)</span><br>
       </td>
       <td style="vertical-align: top;"><span style="font-style: italic;">(Hint:
 Strip #fragid and add .txt to the URL that rrsagent reported above when
 you asked "rrsagent, where am i?".) </span></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><span style="font-style: italic;">(<a
+ href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribe.perl">Download
+scribe.perl</a>)</span><span style="font-style: italic;"><br>
+      </span></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">No
+installation is needed, but you must have <a
+ href="http://www.perl.com/download.csp">perl</a>.<br>
+      </span></td>
     </tr>
     <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code><span
@@ -331,27 +379,12 @@ Option 1 is best if you forgot to indicate who is scribe ("Scribe:
 </table>
 <br>
 <pre><code></code><code></code></pre>
-<h2>Running Scribe.perl</h2>
-Scribe.perl reads standard input and writes to standard output:<br>
-<pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> <span
- style="font-style: italic;">log.txt</span> &gt; <span
- style="font-style: italic;">minutes.html</span><br></code></pre>
-Suggested usage:<br>
-&nbsp;&nbsp;&nbsp; 1. Make a backup of your IRC log.<br>
-&nbsp;&nbsp;&nbsp; 2. Modify the IRC log to make corrections or conform
-to the scribe conventions that this program expects.<br>
-&nbsp;&nbsp;&nbsp; 3. Run this program as described above.<br>
-&nbsp;&nbsp;&nbsp; 4. View the output in a browser.<br>
-&nbsp;&nbsp;&nbsp; 5. Go back to step 2 to make modifications, and
-repeat.<br>
-&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; Once the output looks good enough, then
-. . .<br>
-&nbsp;&nbsp;&nbsp; 6. Manually edit the resulting HTML for any
-remaining details.
-<h2><a name="options"></a>Options</h2>
-<p>The <code>SCRIBEOPTIONS</code> environment variable holds the
-default options that one wants to use. Example for a Bourne-style shell:</p>
+<h2>Environment Variables</h2>
+The <code>SCRIBEOPTIONS</code> environment variable holds the
+default options that one wants to use.&nbsp; It is not required. &nbsp;
+Example for a Bourne-style shell:
 <pre>export SCRIBEOPTIONS="-trustRRSAgent"</pre>
+<h2><a name="options"></a>Options</h2>
 <span style="font-style: italic;">[</span><span
  style="font-style: italic;">For listing the options below </span><span
  style="font-style: italic;">I'm not sure what HTML format to
@@ -363,34 +396,45 @@ inserting the &lt;dt&gt; tags, which is a pain.&nbsp; Any ideas?&nbsp;
 -- dbooth@w3.org]</span><br>
 <br>
 -dashTopics<br>
-Indicate that dash lines are used to indicate that the next line is the
+<div style="margin-left: 40px;">Indicate that dash lines are used to
+indicate that the next line is the
 start of a new topic, such as:<br>
-<pre>&lt;Philippe&gt; ---<br>&lt;Philippe&gt; Review of Action Items<br></pre>
-instead of<br>
-<pre>&lt;Philippe&gt; Topic: Review of Action Items<br></pre>
+</div>
+<pre style="margin-left: 40px;">&lt;Philippe&gt; ---<br>&lt;Philippe&gt; Review of Action Items<br></pre>
+<div style="margin-left: 40px;">instead of<br>
+</div>
+<pre style="margin-left: 40px;">&lt;Philippe&gt; Topic: Review of Action Items<br></pre>
 <br>
 -tidy<br>
-Pipe the output through "tidy -c".&nbsp; This only works if you have
+<div style="margin-left: 40px;">Pipe the output through "tidy
+-c".&nbsp; This only works if you have
 tidy already installed.&nbsp; At present, it also causes tidy's console
 output to be jumbled in with the console messages from scribe.perl,
 which makes it hard to read scribe.perl's warnings.<br>
+</div>
 <br>
-<dl>
-  <dt>-implicitContinuations</dt>
-  <dd>Indicate that the scribe used implicit continuation lines like
-this:
-    <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br></code></pre>
-instead of this (note the leading spaces):
-    <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt;  for all good men and women<br>&lt;dbooth&gt;  to come to the aid of their party.<br></code></pre>
-or this:
-    <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; ... for all good men and women<br>&lt;dbooth&gt; ... to come to the aid of their party.<br></code></pre>
-The <b style="font-weight: bold;">implicit continuation style is not
+-implicitContinuations<br>
+<div style="margin-left: 40px;">Indicate that the scribe used implicit
+continuation lines like
+this:<br>
+</div>
+<pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br></code></pre>
+<div style="margin-left: 40px;">instead of this (note the leading
+spaces):<br>
+</div>
+<pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt;  for all good men and women<br>&lt;dbooth&gt;  to come to the aid of their party.<br></code></pre>
+<div style="margin-left: 40px;">or this:<br>
+</div>
+<pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; ... for all good men and women<br>&lt;dbooth&gt; ... to come to the aid of their party.<br></code></pre>
+<div style="margin-left: 40px;">The <b style="font-weight: bold;">implicit
+continuation style is not
 recommended</b>, because it is ambiguous.
 For example, the "(Group agrees)" statement below will be incorrectly
 attributed to Mary,
-instead of being a scribe comment:
-    <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br>&lt;dbooth&gt; (Group agrees)<br></code></pre>
-  </dd>
+instead of being a scribe comment:<br>
+</div>
+<pre style="margin-left: 40px;"><code>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br>&lt;dbooth&gt; (Group agrees)</code></pre>
+<dl>
   <dt>-useZakimTopics</dt>
   <dd>[Default] Use Zakim bot to change topics, such as "zakim, take up
 next
@@ -409,15 +453,30 @@ as equivalent to the command:
 which must be one of the formats listed in <a href="#input_formats">Input
 Formats</a>.&nbsp;
 This option is not normally needed, as the input format will normally
-be guessed.</dd>
+be guessed.<br>
+  </dd>
+  <dt><br>
+  </dt>
   <dt>-scribe <span style="font-style: italic;">Name</span></dt>
-  <dd>Indicate who was scribe. <span style="font-style: italic;">Name</span>
-should match the scribe's IRC handle, which should <span
- style="text-decoration: underline;">not</span> be "scribe".</dd>
+  <dd>Specify the name of the scribe, as it should appear in the
+generated minutes. If <span style="font-style: italic;">Name</span>
+appears in the input as an IRC nickname, it will also be taken as the
+scribe's nickname, as if specified by the -scribeNick option (below).</dd>
+  <dt><br>
+  </dt>
+  <dt><br>
+  </dt>
+  <dt>-scribeNick <span style="font-style: italic;">nickName</span></dt>
+  <dd>Indicate the IRC nickname of the scribe, which is used to figure
+out which lines were written by the scribe. The <span
+ style="font-style: italic;">nickName</span> will <span
+ style="text-decoration: underline;">not</span> appear in the generated
+minutes.</dd>
   <dt> <br>
   </dt>
   <dt>-scribeOnly</dt>
-  <dd>Only include what the scribe wrote. Ignore all other IRC comments.</dd>
+  <dd>Only include what the scribe wrote. Discard all other IRC
+statements.</dd>
   <dt> <br>
   </dt>
   <dt><br>
@@ -450,10 +509,11 @@ template.)<br>
     <br>
   </dd>
   <dt>-trustRRSAgent</dt>
-  <dd>Take the action items from what RRSAgent says, ("&lt;RRSAgent&gt;
-I see 9 open action items...") rather than directly from the text that
-was written in IRC when the action was recorded ("&lt;dbooth&gt;
-ACTION: ...").&nbsp; <br>
+  <dd>Take the action items from what RRSAgent says, ("<code>&lt;RRSAgent&gt;
+I see 9 open action items...</code>") rather than directly from the
+text that
+was written in IRC when the action was recorded ("<code>&lt;dbooth&gt;
+ACTION: ...</code>").&nbsp; <br>
 This option has pros and cons.&nbsp; <span style="font-weight: bold;"><br>
     <br>
 Pros:</span>
@@ -508,8 +568,8 @@ Mary was the scribe.&nbsp; If you also use the ScribeNick command
 (below), then you can use this to give the full name of the scribe,
 rather than the IRC nickname.<br>
 <br>
-<big><code><span style="font-weight: bold;">ScribeNick: <span
- style="font-style: italic;">MaryScr</span></span></code></big><br
+<big><code><span style="font-weight: bold;"><a name="ScribeNick"></a>ScribeNick:
+<span style="font-style: italic;">MaryScr</span></span></code></big><br
  style="font-weight: bold; font-style: italic;">
 MaryScr was the IRC nickname used by the scribe.&nbsp; Use this (and
 the "Scribe:" command above) if the scribe's IRC nickname was cryptic.<br>
@@ -544,7 +604,6 @@ i?<br>
 #&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;RRSAgent&gt; See
 http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36<br>
 <br>
-<span style="font-weight: bold;"></span>
 <h2><a name="correcting_mistakes"></a>Correcting Mistakes</h2>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
@@ -570,6 +629,14 @@ Replace globally from this point backward.<br>
 <br>
 Replace globally, both forward and backward.<br>
 <br>
+<h2>Handling Multiple Scribes</h2>
+At present, the program is not set up to understand that a meeting
+could have multiple scribes.&nbsp; An example workaround follows.&nbsp;
+The general approach is: (a) document the point when the scribe
+changed; (b) change all the scribe IRC handles to "scribe", either
+using commands like <code>s/&lt;dbooth&gt;/scribe/G</code> in IRC, or
+by editing a copy of the log; (c) use the "Scribe:" command to list all
+of the actual scribe names.&nbsp; Example:<br>
 <br>
 <h2><a name="input_formats"></a>Input Formats Accepted</h2>
 Several log formats are accepted.&nbsp; Scribe.perl guesses which
