@@ -224,6 +224,7 @@ my $template = &DefaultTemplate();	# Template for minutes
 my $bestName = "";  		# Name of input format normalizer guessed
 
 # Get options/args
+my $draft = 1;                  # Include "DRAFT" warning in minutes.
 my $normalizeOnly = 0;		# Output only the normlized input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $scribeOnly = 0;		# Only select scribe lines
@@ -270,6 +271,10 @@ while($restartForEmbeddedOptions)
 		if (0) {}
 		elsif ($a eq "") 
 			{ }
+                elsif ($a eq "-draft")
+                        { $draft = 1; }
+                elsif ($a eq "-final")
+                        { $draft = 0; }
 		elsif ($a eq "-normalize") 
 			{ $normalizeOnly = 1; }
 		elsif ($a eq "-sampleInput") 
@@ -1208,7 +1213,7 @@ for (my $i=0; $i<@lines; $i++)
 $all = "\n" . join("\n", @lines) . "\n";
 
 
-# Experimental code (untested) commented out:
+#### Experimental code (untested) commented out:
 if (0) 
 {
 # warn "all: $all\n";
@@ -1345,6 +1350,10 @@ if ($agendaLocation) {
 }
 $result =~ s/SV_FORMATTED_AGENDA_LINK/$formattedAgendaLocation/g;
 
+# Include DRAFT warning in minutes?
+my $draftWarningHTML = '<h1> - DRAFT - </h1>';
+$draftWarningHTML = '' if !$draft;
+($result =~ s/SV_DRAFT_WARNING/$draftWarningHTML/g) || warn "\nWARNING: SV_DRAFT_WARNING not found in template\n\n"; 
 print $result;
 
 #### Output seems to be normally valid now.
@@ -2875,10 +2884,10 @@ sub GetTemplate
 {
 @_ == 1 || die;
 my ($templateFile) = @_;
-open($templateFile,"<$templateFile") || return "";
-my $template = join("",<$templateFile>);
+open(TFILE,"<$templateFile") || return "";
+my $template = join("",<TFILE>);
 $template =~ s/\r//g;
-close($templateFile);
+close(TFILE);
 return $template;
 }
 
@@ -3225,6 +3234,7 @@ height="48" width="72"></a>
 
 </p>
 
+SV_DRAFT_WARNING
 <h1>SV_MEETING_TITLE</h1>
 <h2>SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h2>
 
@@ -3301,6 +3311,7 @@ my $template = <<'MemberTemplate-EOF'
 height="48" width="72"></a> 
 </p>
 
+SV_DRAFT_WARNING
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
@@ -3378,6 +3389,7 @@ height="48" width="72"></a>
 
 </p>
 
+SV_DRAFT_WARNING
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
@@ -3458,6 +3470,7 @@ href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a>
 	| <a href="http://lists.w3.org/Archives/Team/w3t-mit/SV_MEETING_YEARSV_MEETING_MONTH_ALPHA/">w3t-mit archives
 </a></p>
 
+SV_DRAFT_WARNING
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
