@@ -1030,7 +1030,7 @@ foreach my $status (sort values %actions)
 
 # Try to break lines over 76 chars:
 warn "Breaking lines over 76 chars....\n" if $debugActions;
-@formattedActionLines = map { &BreakLine($_) } @formattedActionLines
+@formattedActionLines = map { &WrapLine($_) } @formattedActionLines
 	if $breakActions;
 # Convert the @formattedActionLines to HTML.
 # Add HTML line break to the end of each line:
@@ -2195,17 +2195,17 @@ return 0;
 }
 
 #################################################################
-########################## BreakLine ###########################
+########################## WrapLine ###########################
 #################################################################
 # Try to break lines longer than $maxLineLength chars.
-# Continuation lines are indented by a space.
+# Continuation lines are indented by $preferredContinuation.
 # Input line should end with a newline;
 # resulting lines will end with newlines.
 # Lines are only broken at spaces.  Long words are never broken.
 # Hence, the resulting line length may exceed the given $maxLineLength
 # if there is a word that is longer than $maxLineLength (such as
 # a URL).
-sub BreakLine
+sub WrapLine
 {
 @_ == 1 || @_ == 2 || die;
 my ($line, $maxLineLength) = @_;
@@ -2224,7 +2224,7 @@ while (1)
 		{
 		$newLine .= "\n";
 		push(@result, $newLine);
-		$newLine = " ";
+		$newLine = $preferredContinuation;
 		}
 	}
 $newLine .= "\n";
