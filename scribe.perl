@@ -33,9 +33,14 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
+# 0. Reduce the number of warnings, because they obscure the important ones.
+# Maybe use options to control which warnings are issued.
+#
 # 1. Set up regression testing, so that we can better test future versions.
 #
-# 2. (done)
+# 2. Allow action status to be picked up on the next line even if there 
+# is other stuff on the same line.  (But not if the next line is another
+# action item!)
 #
 # 3. Handle weird chars in nick name: <maxf``>
 # See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
@@ -143,7 +148,7 @@ my @ucActionStatusListReferences =
         [qw( PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING )],
         [qw( POSTPONED )],
         [qw( UNKNOWN )],
-        [qw( DONE COMPLETED FINISHED )],
+        [qw( DONE COMPLETED FINISHED CLOSED )],
         [qw( DROPPED RETIRED CANCELLED CANCELED WITHDRAWN )],
 	);
 # Flatten the list:
@@ -228,11 +233,11 @@ while($restartForEmbeddedOptions)
 	my $scribeDefaultOptions = 'SCRIBEOPTIONS';
 	if ($embeddedScribeOptions) {
 		# Put embedded options at front of list for lower priority
-		@ARGV = (split(' ', $embeddedScribeOptions), @ARGV);
+		@ARGV = (split(/\s+/, $embeddedScribeOptions), @ARGV);
 	}
 	if ($ENV{$scribeDefaultOptions}) {
 		# Put env options at front of list for lowest priority
-		@ARGV = (split(' ', $ENV{$scribeDefaultOptions}), @ARGV);
+		@ARGV = (split(/\s+/, $ENV{$scribeDefaultOptions}), @ARGV);
 	}
 	while (@ARGV)
 		{
