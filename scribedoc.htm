@@ -250,8 +250,10 @@ syntax for recording action status.</span><br>
  style="font-style: italic;">Marie</span></code><code
  style="font-weight: bold;">/</code><code style="font-weight: bold;"></code></td>
       <td style="vertical-align: top;"><span style="font-style: italic;">Change
-most recent occurrence of "Mary" to "Marie".&nbsp; Fixed strings -- not
-regex'es.</span><br>
+most recent occurrence of "Mary" to "Marie".&nbsp; The old string is
+currently treated as a literal string -- <span
+ style="font-weight: bold;">not a
+regex</span>.</span><br>
       </td>
     </tr>
     <tr>
@@ -407,16 +409,8 @@ default options that one wants to use.&nbsp; It is not required. &nbsp;
 Example for a Bourne-style shell:
 <pre>export SCRIBEOPTIONS="-trustRRSAgent"</pre>
 <h2><a name="options"></a>Options</h2>
-<span style="font-style: italic;">[</span><span
- style="font-style: italic;">For listing the options below </span><span
- style="font-style: italic;">I'm not sure what HTML format to
-use.&nbsp; Any suggestions?&nbsp; I'm using
-the&nbsp; mozilla HTML editor.&nbsp; Thus far I've been trying out a
-definition list, but I haven't been able to figure out how to create
-definition lists in the Mozilla editor without resorting to manually
-inserting the &lt;dt&gt; tags, which is a pain.&nbsp; Any ideas?&nbsp;
--- dbooth@w3.org]</span><br>
-<br>
+<span style="font-style: italic;"></span>
+<h3><span style="font-style: italic;"></span>Input Style Options</h3>
 -dashTopics<br>
 <div style="margin-left: 40px;">Indicate that dash lines are used to
 indicate that the next line is the
@@ -426,14 +420,6 @@ start of a new topic, such as:<br>
 <div style="margin-left: 40px;">instead of<br>
 </div>
 <pre style="margin-left: 40px;">&lt;Philippe&gt; Topic: Review of Action Items<br></pre>
-<br>
--tidy<br>
-<div style="margin-left: 40px;">Pipe the output through "tidy
--c".&nbsp; This only works if you have
-tidy already installed.&nbsp; At present, it also causes tidy's console
-output to be jumbled in with the console messages from scribe.perl,
-which makes it hard to read scribe.perl's warnings.<br>
-</div>
 <br>
 -implicitContinuations<br>
 <div style="margin-left: 40px;">Indicate that the scribe used implicit
@@ -468,63 +454,49 @@ as equivalent to the command:
   <br>
   <dt>-inputFormat <span style="font-style: italic;">NameOfFormat</span></dt>
   <dd>Force input to be treated as <span style="font-style: italic;">NameOfFormat</span>,
-which must be one of the formats listed in <a href="#input_formats">Input
+which must be one of the formats listed in <a
+ href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#input_formats">Input
 Formats</a>.&nbsp;
 This option is not normally needed, as the input format will normally
 be guessed.<br>
   </dd>
   <dt><br>
   </dt>
-  <dt>-scribe <span style="font-style: italic;">Name</span></dt>
-  <dd>Specify the name of the scribe, as it should appear in the
-generated minutes. If <span style="font-style: italic;">Name</span>
-appears in the input as an IRC nickname, it will also be taken as the
-scribe's nickname, as if specified by the -scribeNick option (below)</dd>
-  <dt><br>
-  </dt>
-  <dt><br>
-  </dt>
-  <dt>-scribeNick <span style="font-style: italic;">nickName</span></dt>
-  <dd>Indicate the IRC nickname of the scribe, which is used to figure
-out which lines were written by the scribe. The <span
- style="font-style: italic;">nickName</span> will <span
- style="text-decoration: underline;">not</span> appear in the generated
-minutes.</dd>
+</dl>
+<h3>Output Format Options</h3>
+<br>
+-tidy<br>
+<div style="margin-left: 40px;">Pipe the output through "tidy
+-c".&nbsp; This only works if you have
+tidy already installed.&nbsp; At present, it also causes tidy's console
+output to be jumbled in with the console messages from scribe.perl,
+which makes it hard to read scribe.perl's warnings.<br>
+</div>
+<dl>
   <dt> <br>
   </dt>
   <dt>-scribeOnly</dt>
-  <dd>Only include what the scribe wrote. Discard all other IRC
-statements.</dd>
-  <dt> <br>
+  <dd>Only include what the scribe wrote. Discard IRC
+statements made by others.</dd>
+  <dt><br>
   </dt>
   <dt><br>
   </dt>
-  <dt>-public</dt>
-  <dd>(DEFAULT) Use the built-in W3C template that is styled for public
-access. </dd>
+</dl>
+-draft<br>
+<div style="margin-left: 40px;">[DEFAULT] Include a "- DRAFT -" header
+in the formatted output, to remind you that the generated minutes still
+need manual editing.<br>
+</div>
+<br>
+-final<br>
+<div style="margin-left: 40px;">Omit the "- DRAFT -" header
+in the formatted output.<br>
+</div>
+<dl>
   <dt><br>
   </dt>
-  <dt>-member</dt>
-  <dd>Use the built-in template that is styled for W3C member-only
-access.<br>
-  </dd>
-  <dt>-team</dt>
-  <dd>Use the built-in template that is styled for W3C team-only access.</dd>
-  <dt>-mit</dt>
-  <dd>Use the built-in template that is styled for W3C MIT site
-meetings.&nbsp;&nbsp; After scribe.perl generates your HTML, you will
-still have to manually insert&nbsp; the&nbsp; "Two Minutes"
-reports.&nbsp; Use the <a href="http://cgi.w3.org/team-bin/mit-2mins">Two
-Minutes CGI Script</a> to generate them.</dd>
-  <dt><br>
-  </dt>
-  <dt>-template <span style="font-style: italic;">templateFile.html</span></dt>
-  <dd>Use <span style="font-style: italic;">templateFile.html</span>
-as the template for generating the minutes.</dd>
-  <dt>-sampleTemplate</dt>
-  <dd>Show me a sample template file.&nbsp; (This outputs the default
-template.)<br>
-    <br>
+  <dd><br>
   </dd>
   <dt><a name="trustRRSAgent_option"></a>-trustRRSAgent</dt>
   <dd>Take the action items from what RRSAgent says when it is
@@ -558,13 +530,83 @@ action items to be corrected using "s/old/new/" commands instead of
 RRSAgent commands.</dd>
   <dt><br>
   </dt>
+  <dt><br>
+  </dt>
+</dl>
+<h3>Template Options</h3>
+<dl>
+  <dt>Scribe.perl uses templates for generating the formatted
+output.&nbsp; There are a few built in, but you can specify your own if
+you wish.<br>
+  </dt>
+  <dt><br>
+  </dt>
+  <dt>-public</dt>
+  <dd>(DEFAULT) Use the built-in W3C template that is styled for public
+access. </dd>
+  <dt><br>
+  </dt>
+  <dt>-member</dt>
+  <dd>Use the built-in template that is styled for W3C member-only
+access.<br>
+  </dd>
+  <dt>-team</dt>
+  <dd>Use the built-in template that is styled for W3C team-only access.</dd>
+  <dt>-mit</dt>
+  <dd>Use the built-in template that is styled for W3C MIT site
+meetings.&nbsp;&nbsp; After scribe.perl generates your HTML, <span
+ style="font-weight: bold;">you
+still have to manually insert&nbsp; the&nbsp; "Two Minutes"
+reports</span>.&nbsp; Use the <a
+ href="http://cgi.w3.org/team-bin/mit-2mins">Two
+Minutes CGI Script</a> to generate them.</dd>
+  <dt><br>
+  </dt>
+  <dt>-template <span style="font-style: italic;">templateFile.html</span></dt>
+  <dd>Use <span style="font-style: italic;">templateFile.html</span>
+as the template for generating the minutes.<br>
+    <br>
+  </dd>
+  <dt>-sampleTemplate</dt>
+  <dd>Show me a sample template file.&nbsp; (This outputs the default
+template.)</dd>
+  <dt><br>
+  </dt>
+</dl>
+<h3>Scribe Identification Options</h3>
+<dl>
+  <dt><br>
+  </dt>
+  <dt>-scribe <span style="font-style: italic;">Name</span></dt>
+  <dd>Specify the name of the scribe, as it should appear in the
+generated minutes. If <span style="font-style: italic;">Name</span>
+appears in the input as an IRC nickname, it will also be taken as the
+scribe's nickname, as if specified by the -scribeNick option (below).</dd>
+  <dt><br>
+  </dt>
+  <dt><br>
+  </dt>
+  <dt>-scribeNick <span style="font-style: italic;">nickName</span></dt>
+  <dd>Indicate the IRC nickname of the scribe, which is used to figure
+out which lines were written by the scribe. The <span
+ style="font-style: italic;">nickName</span> will <span
+ style="text-decoration: underline;">not</span> appear in the generated
+minutes.</dd>
+  <dt> <br>
+  </dt>
+  <dt><br>
+  </dt>
+</dl>
+<h3>Miscellaneous Options</h3>
+<dl>
   <dt>-sampleInput</dt>
   <dd>Show me some sample input, so I can learn how to use this
-program.&nbsp; Input is ignored if this option is used.</dd>
+program.&nbsp; Input is ignored if this option is used.<br>
+    <br>
+  </dd>
   <dt>-sampleOutput</dt>
   <dd>Show me some sample output.&nbsp; Input is ignored if this option
 is used.</dd>
-  <br>
 </dl>
 <br>
 <h2><a name="one_time_commands"></a>Commands</h2>
@@ -633,6 +675,11 @@ i?<br>
 #&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;RRSAgent&gt; See
 http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36<br>
 <br>
+<big><code style="font-weight: bold;">ScribeOptions: <span
+ style="font-style: italic;">-tidy -dashTopics</span></code></big><br>
+Specify options inline, as if they had been written on the command line
+like: <br>
+perl scribe.perl -tidy -dashTopics<br>
 <h2><a name="correcting_mistakes"></a>Correcting Mistakes</h2>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
@@ -642,9 +689,11 @@ http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36<br>
  style="font-style: italic;">new</span><br>
 Replace the most recent occurrence of <span style="font-style: italic;">old
 </span>with <span style="font-style: italic;">new</span>.&nbsp; <span
- style="font-style: italic;">Old</span> is treated as a fixed string
-(it will be escaped using quotemeta(...)) -- not a regular
-expression.&nbsp; These are processed in order, first to last.<br>
+ style="font-style: italic;">Old</span> is currently treated as a
+literal string
+(it will be escaped using quotemeta(...)) -- <span
+ style="font-weight: bold;">not a regular
+expression</span>.&nbsp; These are processed in order, first to last.<br>
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
