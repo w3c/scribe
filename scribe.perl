@@ -622,6 +622,19 @@ foreach my $s (@actionStatuses)
 		{
 		# warn "CONVERTED: $&\n";
 		}
+	# Now join ACTION continuation lines.  Convert lines like:
+	#	<dbooth> ACTION: Mary to buy
+	#	<dbooth>   the ingredients.
+	# to this:
+	#	<dbooth> ACTION: Mary to buy the ingredients.
+	# It would be better if the continuation line processing was
+	# done only once, globally, instead of doing it separately here
+	# for actions.
+	while ($all =~ s/\n(\<([^\>]+)\>\s*ACTION\s*\:\s*(.*?))\s*\n\<\2\>\s(\s+|(\s*\.\.+\s*))(.*?)\s*\n/\n\<$2\> ACTION\: $3 $6\n/i)
+		{
+		# warn "ACTION JOINED: $&\n";
+		# die "all:\n$all\n";
+		}
 	# Now look for status on lines following ACTION lines.
 	# This only works if we are NOT using RRSAgent's recorded actions.
 	# Join line pairs like this:
@@ -1161,7 +1174,7 @@ $t =~ s/\n\.\.\.\.*\s*/ /g;
 @zakimLines = split(/\n/, $t);
 foreach my $line (@zakimLines)
 	{
-	if ($line =~ m/attendees\s+were\s+/i)
+	if ($line =~ m/Attendees\s+were\s+/i)
 		{
 		my $raw = $';
 		my @people = map {$_ = &Trim($_); s/\s+/_/g; $_} split(/\,/, $raw);
