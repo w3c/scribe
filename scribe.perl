@@ -3831,36 +3831,46 @@ my $n = 0; # Number of lines of recognized format.
 my $yearP = '\d\d\d\d';		# 2004
 my $monP =  '\-?\d\d';		# -12
 my $dayP =  '\-?\d\d';		# -18
-my $hourP = 'T\d\d';		# T15
+my $hourP = '\d\d';		# 15
 my $minP =  '\:?\d\d';		# :26
 my $secP =  '\:?\d\d';		# :57
 my $fracP = '[\.\,]\d+';	# .4321
 my $tzhP =   '[\+\-]\d\d';	# -05
 my $tzmP =  '\:?\d\d';		# :00
-# $iso8601Pattern contains 8 parens:
-my $iso8601Pattern = "$yearP($monP($dayP($hourP$minP($secP($fracP)?)?(Z|($tzhP($tzmP)?)))?)?)?";
+# This pattern is based on ISO8601 for timestamps, but permits the year, 
+# month and day to be omitted, and requires at least the hours and minutes.
+# It also permits the timezone designation to be omitted.
+# $iso8601Pattern contains 7 parens:
+my $iso8601Pattern = "($yearP$monP$dayP(T))?$hourP$minP($secP($fracP)?)?(Z|($tzhP($tzmP)?))?";
 my $timestampPattern = $iso8601Pattern;
 # warn "timestampPattern: $timestampPattern namePattern: $namePattern\n";
 my @linesOut = ();
 while (@lines)
 	{
-	my $line = shift @lines;
-	if (0) {}
+	my $wholeLine = shift @lines;
+	my $line = $wholeLine;
+	# Remove timestamp: 2003-12-18T15:27:36-0500
+	if ($line !~ s/\A$timestampPattern(\s?)//i)
+		{
+		# warn "UNRECOGNIZED LINE: $wholeLine\n";
+		push(@linesOut, $wholeLine); # Keep unrecognized line
+		next;
+		}
 	# Keep normal lines:
 	# 2003-12-18T15:27:36-0500 <hugo> Hello.
-	elsif ($line =~ s/\A$timestampPattern\s+(\<$namePattern\>)/$9/i)
+	if ($line =~ s/\A\s?\s?(\<$namePattern\>)/$1/i)
 		{ $n++; push(@linesOut, $line); }
 	# Also keep comment lines.  They'll be removed later.
 	# 2003-12-18T16:56:06-0500  * RRSAgent records action 4
-	elsif ($line =~ s/\A$timestampPattern\s+(\*)/$9/i)
+	elsif ($line =~ s/\A\s?\s?(\*)/$1/i)
 		{ $n++; push(@linesOut, $line); }
 	# Recognize, but discard:
 	# 2003-12-18T15:26:57-0500 !mcclure.w3.org hugo invited Zakim into channel #ws-arch.
-	elsif ($line =~ m/\A$timestampPattern\s+\!/i)
+	elsif ($line =~ m/\A\s*\!/i)
 		{ $n++; } 
 	# Recognize, but discard:
 	# 2003-12-18T15:27:30-0500 -!- dbooth [dbooth@18.29.0.30] has joined #ws-arch
-	elsif ($line =~ m/\A$timestampPattern\s+\-\!\-/i)
+	elsif ($line =~ m/\A\s*\-\!\-/i)
 		{ $n++; } 
 	else	{
 		# warn "UNRECOGNIZED LINE: $line\n";
