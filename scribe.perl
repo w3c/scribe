@@ -35,9 +35,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # 1. Set up regression testing, so that we can better test future versions.
 #
-# 2. Allow the scribe to change.  Process multiple "Scribe: dbooth" commands.
-# Maybe add "Scribes: dbooth hugo" command.
-# See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
+# 2. (done)
 #
 # 3. Handle weird chars in nick name: <maxf``>
 # See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
