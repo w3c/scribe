@@ -33,6 +33,13 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
+# 0000. Add  -embedDiagnostics option that dumps the
+# (scribe.perl only) diagnostics into a <div> at the end of the minutes.
+#
+# 000. BUG: Alternate ACTION syntax permitted by RRSAgent is not recognized:
+# <DanC> ACTION EricM: get coffee for all of us
+# See http://lists.w3.org/Archives/Member/w3c-archive/2004Oct/0123.html 
+# 
 # 00. BUG: URLs written like <http://...> are formatted as IRC statements.
 # See the text pasted inside [[ ... ]] at
 # http://www.w3.org/2004/11/04-ws-desc-minutes.htm#item06
@@ -41,7 +48,9 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # 0. Reduce the number of warnings, because they obscure the important ones.
 # Maybe use options to control which warnings are issued.
 #
-# 1. Set up regression testing, so that we can better test future versions.
+# 1. integration between scribe.perl and mit-2 minutes extractor
+#
+# 1.0. Set up regression testing, so that we can better test future versions.
 #
 # 1.1. Add a "Subtopic: ..." command.
 #
@@ -349,7 +358,8 @@ while($restartForEmbeddedOptions)
 			{ push(@scribeNicks, shift @ARGV); }
 		elsif ($a eq "-tidy") 
 			{ 
-			open(STDOUT, "| tidy -c") || die "ERROR: Could not run \"tidy -c\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n";
+			my $tidyCommand = "tidy -c -asxhtml";
+			open(STDOUT, "| $tidyCommand") || die "ERROR: Could not run \"$tidyCommand\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n";
 			}
 		elsif ($a eq "-help" || $a eq "-h") 
 			{ die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; }
