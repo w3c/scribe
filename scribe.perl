@@ -33,8 +33,16 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # See http://lists.w3.org/Archives/Team/w3t/2003Dec/0158.html
 #
 # 2. Allow the scribe to change.  Process multiple "Scribe: dbooth" commands.
+# Maybe add "Scribes: dbooth hugo" command.
+# See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
 #
-# 3. Improve the guess of who attended, when zakim did not report
+# 3. Handle weird chars in nick name: <maxf``>
+# See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
+#
+# 3. Recognize "------------" as topic separator.
+# See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
+#
+# 4. Improve the guess of who attended, when zakim did not report
 # "attendees were ....".  Pick them up from zakim's lines like:
 #	<dbooth> zakim, who is here?
 #	<Zakim> On the phone I see Mike_Champion, Hugo, Dbooth, Suresh
@@ -56,23 +64,23 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # and http://www.w3.org/2003/12/09-mit-irc.txt )
 # (Also remember to watch out for zakim's continuation lines.)
 #
-# 4. Add a -keepUrls option to retain IRC lines that were not written
+# 5. Add a -keepUrls option to retain IRC lines that were not written
 # by the scribe even when the -scribeOnly option is used.
 #
-# 5. Recognize [[ ...lines... ]] and treat them as a block by
+# 6. Recognize [[ ...lines... ]] and treat them as a block by
 # allowing them to be continuation lines for the same speaker,
 # because they are probably pasted in.
 #
-# 6. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
+# 7. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
 # so that all formatting info is in the template.
 #
-# 7. Restructure the code to go through a big loop, processing one line
+# 8. Restructure the code to go through a big loop, processing one line
 # at a time, with look-ahead to join continuation lines.
 #
-# 8. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
+# 9. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
 # excuses itself
 #
-# 9. Delete extra stopList from GetNames.  (There is already a global one.)
+# 10. Delete extra stopList from GetNames.  (There is already a global one.)
 #
 
 ######################################################################
@@ -150,6 +158,7 @@ my $implicitContinuations = 0;	# Option: -implicitContinuations
 my $scribeName = "UNKNOWN"; 	# Example: -scribe dbooth
 my $useZakimTopics = 1; 	# Treat zakim agenda take-up as Topic change?
 my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
+my $minScribeLines = 40;	# Min lines to be guessed as scribe.
 
 my @args = ();
 my $template = &DefaultTemplate();
@@ -213,8 +222,11 @@ while (@ARGV)
 		{ $useZakimTopics = 0; }
 	elsif ($a eq "-useZakimTopics") 
 		{ $useZakimTopics = 1; }
-	elsif ($a eq "-implicitContinuations") 
+	elsif ($a eq "-implicitContinuations"
+		|| $a eq "implicitContinuation") 
 		{ $implicitContinuations = 1; }
+	elsif ($a eq "-minScribeLines") 
+		{ $minScribeLines = shift @ARGV; }
 	elsif ($a eq "-inputFormat") 
 		{ $inputFormat = shift @ARGV; }
 	elsif ($a eq "-scribe" || $a eq "-scribeName") 
@@ -380,7 +392,7 @@ if ($normalizeOnly)
 	}
 
 # Determine scribe name if possible:
-$scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)s*\n/\n/i;
+$scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)\s*\n/\n/i;
 if ($scribeName eq "UNKNOWN")
 	{
 	if ($bestName eq "Plain_Text_Format")
@@ -1478,6 +1490,7 @@ $all = "\n" . join("\n", @allLines) . "\n";
 return $all;
 }
 
+
 #################################################################
 ################# GuessScribeName #################
 #################################################################
@@ -1528,36 +1541,7 @@ my $nLines = scalar(@lines);
 my @scribeLines = ();
 foreach my $line (@lines)
 	{
-	# Ignore /me lines.  Up to 3 leading spaces before "*".
-	next if $line =~ m/\A(\s?)(\s?)(\s?)\*/;
-	next if $line =~ m/\A\<$namePattern\>(\s?)(\s?)(\s?)\*/i;
-	# Select only <speaker> lines
-	next if $line !~ m/\A\<$namePattern\>/i;
-	# Ignore empty lines
-	next if $line =~ m/\A\<$namePattern\>\s*\Z/i;
-	# Ignore join/leave lines:
-	next if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
-	next if $line =~ m/\A\s*\<(Scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
-	# Ignore topic change lines:
-	# <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
-	next if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
-	# Ignore zakim lines
-	next if $line =~ m/\A\<Zakim\>/i;
-	next if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
-	next if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
-	next if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
-	next if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
-	next if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
-	next if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
-	next if $line =~ m/\A\<$namePattern\>\s*queue\s*[\+\-\=\?]/i;
-	next if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
-	# Ignore RRSAgent lines
-	next if $line =~ m/\A\<RRSAgent\>/i;
-	next if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
-	# Remove off the record comments:
-	next if $line =~ m/\A\<$namePattern\>\s*\[\s*off\s*\]/i;
-	# Select only <Scribe> lines?
-	next if $scribeOnly && $line !~ m/\A\<Scribe\>/i;
+	next if &IsIgnorable($line);
 	# warn "KEPT: $line\n";
 	push(@scribeLines, $line);
 	}
@@ -1570,6 +1554,52 @@ my @matches = ($all =~ m/.*has joined.*\n/g);
 warn "\nWARNING: Possible internal error: join/leave lines remaining: \n\t" . join("\t", @matches) . "\n\n"
  	if @matches;
 return $all;
+}
+
+#################################################################
+#################### IsIgnorable ################################
+#################################################################
+# Should the given line be ignored?
+sub IsIgnorable
+{
+@_ == 1 || die;
+my ($line) = @_;
+die if $line =~ m/\n/; # Should be given only one line (with no \n).
+# Ignore empty lines.
+return 1 if &Trim($line) eq "";
+# Ignore /me lines.  Up to 3 leading spaces before "*".
+return 1 if $line =~ m/\A(\s?)(\s?)(\s?)\*/;
+return 1 if $line =~ m/\A\<$namePattern\>(\s?)(\s?)(\s?)\*/i;
+# Select only <speaker> lines
+return 1 if $line !~ m/\A\<$namePattern\>/i;
+# Ignore empty lines
+return 1 if $line =~ m/\A\<$namePattern\>\s*\Z/i;
+# Ignore join/leave lines:
+return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
+return 1 if $line =~ m/\A\s*\<(Scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
+# Ignore topic change lines:
+# <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
+return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
+# Ignore zakim lines
+return 1 if $line =~ m/\A\<Zakim\>/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*queue\s*[\+\-\=\?]/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
+# Ignore RRSAgent lines
+return 1 if $line =~ m/\A\<RRSAgent\>/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
+# Remove off the record comments:
+return 1 if $line =~ m/\A\<$namePattern\>\s*\[\s*off\s*\]/i;
+# Select only <Scribe> lines?
+return 1 if $scribeOnly && $line !~ m/\A\<Scribe\>/i;
+# If we get here, we're keeping the line.
+# warn "KEPT: $line\n";
+return 0;
 }
 
 #################################################################
