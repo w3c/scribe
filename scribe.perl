@@ -229,6 +229,8 @@ my $template = &DefaultTemplate();	# Template for minutes
 my $bestName = "";  		# Name of input format normalizer guessed
 
 # Get options/args
+my $ralphLinks = 1;		# Convert: -> http://foo text
+				# to: <a href="http://foo">text</a> ?
 my $embedDiagnostics = 0;	# Embed diagnostics in the generated minutes?
 my $draft = 1;                  # Include "DRAFT" warning in minutes.
 my $normalizeOnly = 0;		# Output only the normlized input
@@ -1341,7 +1343,7 @@ $all =~ s/<br>((\s*<br>)+)/<br \/>/ig;
 # Standardize continuation lines:
 # $all =~ s/\n\s*\.+/\n\.\.\./g;
 # Make links:
-$all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
+$all = &MakeLinks($all);
 
 # Put into template:
 # $all =~ s/\A\s*<\/p>//;
@@ -1414,6 +1416,76 @@ print $result;
 
 exit 0;
 ################### END OF MAIN ######################
+
+#########################################################
+################### MakeLinks #####################
+#########################################################
+# Convert URLs into links.
+sub MakeLinks
+{
+my ($all) = @_;
+# URL pattern from http://www.stylusstudio.com/xmldev/200108/post60960.html 
+# my $anyUriPattern = '(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)?/{0,2}[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'()%]+)?';
+# $anyUriPattern is too general for our use.   We want to recognize 
+# only http:// or https:// absolute URLs.
+# 3 parens:
+my $urlPattern = '(http(s?)://[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)?';
+# Make links:
+#### Old:
+# $all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
+# Current:
+# $all =~ s/($urlPattern)/<a href=\"$1\">$1<\/a>/ig;
+my $done = "";
+while ($all =~ m/\A((.|\n)*?)($urlPattern)(.*?)\n/)
+	{
+	my $pre = $1;
+	my $url = $3;
+	# $urlPattern has 5 parens:
+	my $line = $7; # To end of line
+	die if !defined($line);
+	my $post = "\n" . $';
+	my $newpre = $pre;
+	# my $t = $pre;
+	# $t =~ s/\A(.|\n)*\n//;
+	# $line = "" if !defined($line);
+	# warn "pre: $t url:$url line:$line|\n";
+	# Check for Ralph's link text syntax.  Example:
+	# <RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
+	# would have already been escaped to:
+	# &lt;RalphS&gt; -&gt; http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
+	if ($ralphLinks
+		&& $newpre =~ s/\&gt\;\s*\-\&gt\;\s*\Z/&gt; /	# > -> 
+		&& $line !~ m/$urlPattern/	# no URL
+		&& $line !~ m/\&gt\;/		# no >
+		&& $line !~ m/\&lt\;/		# no <
+			)
+		{
+		my $text = &Trim($line);
+		# Quoted string?  If so, use that as link text.
+		# <RalphS> -> http://whatever "Skiing pictures", DanC 2005-01-07
+		if ($text =~ m/\A\"([^\"]+)\"/ && &Trim($1))
+			{
+			$post = $' . $post;
+			$text = $1;
+			# warn "MATCH QUOTED link text: $text\n";
+			}
+		my $link = "<a href=\"$url\">$text</a>";
+		# warn "MATCH RALPH text: $text\n";
+		$done .= $newpre . $link;
+		$all = $post;
+		}
+	else	{
+		# Any other URL
+		my $link = "<a href=\"$url\">$url</a>";
+		$done .= $pre . $link;
+		$all = $line . $post;
+		}
+	}
+$done .= $all;
+$all = $done;
+return($all);
+}
+
 
 ################################################################
 #################### &Warn #############################
