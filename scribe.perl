@@ -23,15 +23,14 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # CONTRIBUTIONS
 # Please make improvements to this program!  Check them into CVS (or
 # email them to me) and notify me by email.  Thanks!  -- DBooth
+# P.S. Please try to avoid dependencies on anything that the
+# user might not have installed.  I'd like the code to run an
+# pretty much any minimal perl installation.
 #
 
 
 ######################################################################
 # FEATURE WISH LIST:
-#
-#
-# 0. FIX BUG: Attributing wrong speaker after command. 
-# Try running on 040206-arch-irc.txt and look for "talked to Marie-Claire"
 #
 # 1. Make the generated HTML valid.  At the moment it is INVALID.
 # (Broken by Dom when switching to Karl's new format, and unfortunately
