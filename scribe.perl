@@ -168,8 +168,12 @@ my %stopList = &WordVariationsMap(@stopList);
 # A pattern to match any of them.  (Be sure to use case-insensitive matching.)
 my $stopListPattern = &MakePattern(keys %stopList);
 
-# Get options/args
+# Globals
 my $all = "";			# Input
+my $template = &DefaultTemplate();	# Template for minutes
+my $bestName = "";  		# Name of input format normalizer guessed
+
+# Get options/args
 my $normalizeOnly = 0;		# Output only the normlized input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
@@ -184,210 +188,241 @@ my $minScribeLines = 40;	# Min lines to be guessed as scribe.
 my $dashTopics = 0;		# Treat "---" as starting a new topic
 my $runTidy = 0;		# Pipe the output through "tidy -c"
 my $preferredContinuation = " "; # Either "... " or " ".
+my $embeddedScribeOptions = "";	# Any "ScribeOptions: ..." from input
 
-my @args = ();
-my $template = &DefaultTemplate();
-my $scribeDefaultOptions = 'SCRIBEOPTIONS';
-if ($ENV{$scribeDefaultOptions}) {
-    push (@ARGV, split(' ', $ENV{$scribeDefaultOptions}));
-}
-while (@ARGV)
+# Loop to get options and input.  The reason this is a loop is that there
+# may be options embedded in the input (using "ScribeOptions: ...").
+# In which case, we need to restart using those as default options.
+my @SAVE_ARGV = @ARGV;
+my $restartForEmbeddedOptions = 1;
+while($restartForEmbeddedOptions)
 	{
-	my $a = shift @ARGV;
-	if (0) {}
-	elsif ($a eq "") 
-		{ }
-	elsif ($a eq "-normalize") 
-		{ $normalizeOnly = 1; }
-	elsif ($a eq "-sampleInput") 
-		{ print STDOUT &SampleInput(); exit 0; }
-	elsif ($a eq "-sampleOutput") 
-		{ $all = &SampleInput(); }
-	elsif ($a eq "-sampleTemplate") 
-		{ print STDOUT &DefaultTemplate(); exit 0; }
-	elsif ($a eq "-scribeOnly") 
-		{ $scribeOnly = 1; }
-	elsif ($a eq "-canon") 
-		{ $canonicalizeNames = 1; }
-	elsif ($a eq "-noBreakActions") 
-	        { $breakActions = 0; }
-	elsif ($a eq "-breakActions") 
-	        { $breakActions = 1; }
-	elsif ($a eq "-noTrustRRSAgent") 
-	        { $trustRRSAgent = 0; }
-	elsif ($a eq "-trustRRSAgent") 
-	        { $trustRRSAgent = 1; }
-	elsif ($a eq "-teamSynonyms") 
-		{ $useTeamSynonyms = 1; }
-	elsif ($a eq "-mit") 
-		{ $template = &MITTemplate(); }
-	elsif ($a eq "-team") 
-		{ $template = &TeamTemplate(); }
-	elsif ($a eq "-member") 
-		{ $template = &MemberTemplate(); }
-	elsif ($a eq "-world") 
-		{ $template = &PublicTemplate(); }
-	elsif ($a eq "-public") 
-		{ $template = &PublicTemplate(); }
-	elsif ($a eq "-template") 
-		{ 
-		my $templateFile = shift @ARGV; 
-		die "ERROR: Template file not found: $templateFile\n"
-			if !-e $templateFile;
-		my $t = &GetTemplate($templateFile);
-		if (!$t)
-			{
-			die "ERROR: Empty template: $templateFile\n";
+	$restartForEmbeddedOptions = 0;
+
+	@ARGV = @SAVE_ARGV;
+	my @args = ();
+	$template = &DefaultTemplate();
+	my $scribeDefaultOptions = 'SCRIBEOPTIONS';
+	if ($embeddedScribeOptions) {
+		# Put embedded options at front of list for lower priority
+		@ARGV = (split(' ', $embeddedScribeOptions), @ARGV);
+	}
+	if ($ENV{$scribeDefaultOptions}) {
+		# Put env options at front of list for lowest priority
+		@ARGV = (split(' ', $ENV{$scribeDefaultOptions}), @ARGV);
+	}
+	while (@ARGV)
+		{
+		my $a = shift @ARGV;
+		if (0) {}
+		elsif ($a eq "") 
+			{ }
+		elsif ($a eq "-normalize") 
+			{ $normalizeOnly = 1; }
+		elsif ($a eq "-sampleInput") 
+			{ print STDOUT &SampleInput(); exit 0; }
+		elsif ($a eq "-sampleOutput") 
+			{ 
+			warn "\nWARNING: Replacing input because of -sampleOutput option\n\n" if $all;
+			$all = &SampleInput(); 
 			}
-		$template = $t;
+		elsif ($a eq "-sampleTemplate") 
+			{ print STDOUT &DefaultTemplate(); exit 0; }
+		elsif ($a eq "-scribeOnly") 
+			{ $scribeOnly = 1; }
+		elsif ($a eq "-canon") 
+			{ $canonicalizeNames = 1; }
+		elsif ($a eq "-noBreakActions") 
+			{ $breakActions = 0; }
+		elsif ($a eq "-breakActions") 
+			{ $breakActions = 1; }
+		elsif ($a eq "-noTrustRRSAgent") 
+			{ $trustRRSAgent = 0; }
+		elsif ($a eq "-trustRRSAgent") 
+			{ $trustRRSAgent = 1; }
+		elsif ($a eq "-teamSynonyms") 
+			{ $useTeamSynonyms = 1; }
+		elsif ($a eq "-mit") 
+			{ $template = &MITTemplate(); }
+		elsif ($a eq "-team") 
+			{ $template = &TeamTemplate(); }
+		elsif ($a eq "-member") 
+			{ $template = &MemberTemplate(); }
+		elsif ($a eq "-world") 
+			{ $template = &PublicTemplate(); }
+		elsif ($a eq "-public") 
+			{ $template = &PublicTemplate(); }
+		elsif ($a eq "-template") 
+			{ 
+			my $templateFile = shift @ARGV; 
+			die "ERROR: Template file not found: $templateFile\n"
+				if !-e $templateFile;
+			my $t = &GetTemplate($templateFile);
+			if (!$t)
+				{
+				die "ERROR: Empty template: $templateFile\n";
+				}
+			$template = $t;
+			}
+		elsif ($a eq "-debug") 
+			{ $debug = 1; }
+		elsif ($a eq "-noUseZakimTopics") 
+			{ $useZakimTopics = 0; }
+		elsif ($a eq "-useZakimTopics") 
+			{ $useZakimTopics = 1; }
+		elsif ($a eq "-implicitContinuations"
+			|| $a eq "implicitContinuation") 
+			{ $implicitContinuations = 1; }
+		elsif ($a eq "-minScribeLines") 
+			{ $minScribeLines = shift @ARGV; }
+		elsif ($a eq "-inputFormat") 
+			{ $inputFormat = shift @ARGV; }
+		elsif ($a eq "-dashTopics" || $a eq "-philippe" || $a eq "-plh") 
+			{ $dashTopics = 1; }
+		elsif ($a eq "-scribe" || $a eq "-scribeName") 
+			{ $scribeName = shift @ARGV; }
+		elsif ($a eq "-tidy") 
+			{ 
+			open(STDOUT, "| tidy -c") || die "ERROR: Could not run \"tidy -c\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n";
+			}
+		elsif ($a eq "-help" || $a eq "-h") 
+			{ die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; }
+		elsif ($a =~ m/\A\-/)
+			{ 
+			warn "ERROR: Unknown option: $a\n"; 
+			die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; 
+			}
+		else	
+			{ push(@args, $a); }
 		}
-	elsif ($a eq "-debug") 
-		{ $debug = 1; }
-	elsif ($a eq "-noUseZakimTopics") 
-		{ $useZakimTopics = 0; }
-	elsif ($a eq "-useZakimTopics") 
-		{ $useZakimTopics = 1; }
-	elsif ($a eq "-implicitContinuations"
-		|| $a eq "implicitContinuation") 
-		{ $implicitContinuations = 1; }
-	elsif ($a eq "-minScribeLines") 
-		{ $minScribeLines = shift @ARGV; }
-	elsif ($a eq "-inputFormat") 
-		{ $inputFormat = shift @ARGV; }
-	elsif ($a eq "-dashTopics" || $a eq "-philippe" || $a eq "-plh") 
-		{ $dashTopics = 1; }
-	elsif ($a eq "-scribe" || $a eq "-scribeName") 
-		{ $scribeName = shift @ARGV; }
-	elsif ($a eq "-tidy") 
-		{ 
-		open(STDOUT, "| tidy -c") || die "ERROR: Could not run \"tidy -c\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n";
-		}
-	elsif ($a eq "-help" || $a eq "-h") 
-		{ die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; }
-	elsif ($a =~ m/\A\-/)
-		{ 
-		warn "ERROR: Unknown option: $a\n"; 
-		die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; 
-		}
-	else	
-		{ push(@args, $a); }
-	}
-@ARGV = @args;
-@ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
+	@ARGV = @args;
+	@ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
 
-# Get input:
-$all =  join("",<>) if !$all;
-if (!$all)
-	{
-	warn "\nWARNING: Empty input.\n\n";
-	}
-# Delete control-M's if any.
-$all =~ s/\r//g;
+	# Get input:
+	$all =  join("",<>) if !$all;
+	if (!$all)
+		{
+		warn "\nWARNING: Empty input.\n\n";
+		}
+	# Delete control-M's if any.  Cygwin seems to add them. :(
+	$all =~ s/\r//g;
 
-# Normalize input format.  This accepts several formats of input
-# and puts it into a common format.
-# The @inputFormats is the list of known normalizer functions.
-# Each one is defined below.
-# Just add another to the list if you want to recognize another format.
-# Each function takes $all (the input text) as input and returns
-# a pair: ($score, $newAll). 
-#	$score is a value [0,1] indicating how well it matched (fraction
-#		of lines conforming to this format).
-#	$newAll is the normalized input.
-my @inputFormats = qw(
-		RRSAgent_Text_Format 
-		RRSAgent_HTML_Format 
-		RRSAgent_Visible_HTML_Text_Paste_Format
-		Mirc_Text_Format
-		Irssi_ISO8601_Log_Text_Format
-		Yahoo_IM_Format
-		Plain_Text_Format
-		);
-my %inputFormats = map {($_,$_)} @inputFormats;
-if ($inputFormat && !exists($inputFormats{$inputFormat}))
-	{
-	warn "\nWARNING: Unknown input format specified: $inputFormat\n";
-	warn "Reverting to guessing the format.\n\n";
-	$inputFormat = "";
-	}
-# Try each known format, and see which one matches best.
-my $bestScore = 0;
-my $bestAll = "";
-my $bestName = "";
-foreach my $f (@inputFormats)
-	{
-	my ($score, $newAll) = &$f($all);
-	# warn "$f: $score\n";
-	if ($score > $bestScore)
+	# Normalize input format.  This accepts several formats of input
+	# and puts it into a common format.
+	# The @inputFormats is the list of known normalizer functions.
+	# Each one is defined below.
+	# Just add another to the list if you want to recognize another format.
+	# Each function takes $all (the input text) as input and returns
+	# a pair: ($score, $newAll). 
+	#	$score is a value [0,1] indicating how well it matched (fraction
+	#		of lines conforming to this format).
+	#	$newAll is the normalized input.
+	my @inputFormats = qw(
+			RRSAgent_Text_Format 
+			RRSAgent_HTML_Format 
+			RRSAgent_Visible_HTML_Text_Paste_Format
+			Mirc_Text_Format
+			Irssi_ISO8601_Log_Text_Format
+			Yahoo_IM_Format
+			Plain_Text_Format
+			);
+	my %inputFormats = map {($_,$_)} @inputFormats;
+	if ($inputFormat && !exists($inputFormats{$inputFormat}))
 		{
-		$bestScore = $score;
-		$bestAll = $newAll;
-		$bestName = $f;
+		warn "\nWARNING: Unknown input format specified: $inputFormat\n";
+		warn "Reverting to guessing the format.\n\n";
+		$inputFormat = "";
 		}
-	}
-my $bestScoreString = sprintf("%4.2f", $bestScore);
-if ($inputFormat)
-	{
-	# Format was specified using -inputFormat option
-	my ($score, $newAll) = &$inputFormat($all);
-	my $scoreString = sprintf("%4.2f", $score);
-	$all = $newAll;
-	warn "\nWARNING: Input looks more like $bestName format (score $bestScoreString),
-but \"-inputFormat $inputFormat\" (score $scoreString) was specified.\n\n"
-		if $score < $bestScore;
-	}
-else	{
-	warn "Guessing input format: $bestName (score $bestScoreString)\n\n";
-	die "ERROR: Could not guess input format.\n" if $bestScore == 0;
-	warn "\nWARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\n\n"
-		if $bestScore < 0.7;
-	$all = $bestAll;
-	}
-
-# Perform s/old/new/ substitutions.
-# These are done last to first, so that later substitutions can actually
-# modify earlier substitutions.
-while($all =~ m/\A((.|\n)*)(\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n)/i)
-	{
-	my $old = $4;
-	my $new = $5;
-	my $global = $8;
-	$global = "" if !defined($global);
-	my $pre = $1;
-	my $match = $3;
-	my $post = $';
-	my $oldp = quotemeta($old);
-	# warn "Found match: $match\n";
-	my $told = $old;
-	$told = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
-	my $tnew = $new;
-	$tnew = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
-	my $succeeded = 0;
-	my $tall = $pre . "\n" . $post;
-	# s/old/new/g  replaces globally from this point backward
-	if (($global eq "g")  && $pre =~ s/$oldp/$new/g)
+	# Try each known format, and see which one matches best.
+	my $bestScore = 0;
+	my $bestAll = "";
+	$bestName = "";  	# Global var because we access it later
+	foreach my $f (@inputFormats)
 		{
-		warn "Succeeded: s/$told/$tnew/$global\n";
-		$all = $pre . "\n" . $post;
+		my ($score, $newAll) = &$f($all);
+		# warn "$f: $score\n";
+		if ($score > $bestScore)
+			{
+			$bestScore = $score;
+			$bestAll = $newAll;
+			$bestName = $f;
+			}
 		}
-	# s/old/new/G  replaces globally, both forward and backward
-	elsif (($global eq "G")  && $tall =~ s/$oldp/$new/g)
-		{ 
-		warn "Succeeded: s/$told/$tnew/$global\n";
-		$all = $tall;
-		}
-	# s/old/new/  replaces most recent occurrance of old with new
-	elsif ((!$global) && $pre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/)
+	my $bestScoreString = sprintf("%4.2f", $bestScore);
+	if ($inputFormat)
 		{
-		warn "Succeeded: s/$told/$tnew/$global\n";
-		$all = $pre . "\n" . $post;
+		# Format was specified using -inputFormat option
+		my ($score, $newAll) = &$inputFormat($all);
+		my $scoreString = sprintf("%4.2f", $score);
+		$all = $newAll;
+		warn "\nWARNING: Input looks more like $bestName format (score $bestScoreString),
+	but \"-inputFormat $inputFormat\" (score $scoreString) was specified.\n\n"
+			if $score < $bestScore;
 		}
 	else	{
-		warn "\nWARNING: FAILED: s/$told/$tnew/$global\n\n";
-		$match = &Trim($match);
-		$all = $pre . "\n[scribe.perl auto substitution failed:] " . $match . "\n" . $post;
+		warn "Guessing input format: $bestName (score $bestScoreString)\n\n";
+		die "ERROR: Could not guess input format.\n" if $bestScore == 0;
+		warn "\nWARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\n\n"
+			if $bestScore < 0.7;
+		$all = $bestAll;
 		}
-	warn "\nWARNING: Multiline substitution!!! (Is this correct?)\n\n" if $tnew ne $new || $told ne $old;
+
+	# Perform s/old/new/ substitutions.
+	# These are done last to first, so that later substitutions can actually
+	# modify earlier substitutions.
+	while($all =~ m/\A((.|\n)*)(\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n)/i)
+		{
+		my $old = $4;
+		my $new = $5;
+		my $global = $8;
+		$global = "" if !defined($global);
+		my $pre = $1;
+		my $match = $3;
+		my $post = $';
+		my $oldp = quotemeta($old);
+		# warn "Found match: $match\n";
+		my $told = $old;
+		$told = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
+		my $tnew = $new;
+		$tnew = $& . "...(truncated)...." if ($old =~ m/\A.*\n/);
+		my $succeeded = 0;
+		my $tall = $pre . "\n" . $post;
+		# s/old/new/g  replaces globally from this point backward
+		if (($global eq "g")  && $pre =~ s/$oldp/$new/g)
+			{
+			warn "Succeeded: s/$told/$tnew/$global\n";
+			$all = $pre . "\n" . $post;
+			}
+		# s/old/new/G  replaces globally, both forward and backward
+		elsif (($global eq "G")  && $tall =~ s/$oldp/$new/g)
+			{ 
+			warn "Succeeded: s/$told/$tnew/$global\n";
+			$all = $tall;
+			}
+		# s/old/new/  replaces most recent occurrance of old with new
+		elsif ((!$global) && $pre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/)
+			{
+			warn "Succeeded: s/$told/$tnew/$global\n";
+			$all = $pre . "\n" . $post;
+			}
+		else	{
+			warn "\nWARNING: FAILED: s/$told/$tnew/$global\n\n";
+			$match = &Trim($match);
+			$all = $pre . "\n[scribe.perl auto substitution failed:] " . $match . "\n" . $post;
+			}
+		warn "\nWARNING: Multiline substitution!!! (Is this correct?)\n\n" if $tnew ne $new || $told ne $old;
+		}
+	# Look for embedded options, and restart if we find some.
+	# (Except we do NOT re-read the input.  We keep $all as is.)
+	while ($all =~ s/\n\<[^\<\>]+\>\s*ScribeOption(s?)\s*\:(.*)\n/\n/i)
+		{
+		my $newOptions = &Trim($2);
+		$embeddedScribeOptions .= " $newOptions";
+		warn "FOUND new ScribeOptions: $newOptions\n";
+		$restartForEmbeddedOptions = 1;
+		}
+	warn "FOUND embedded ScribeOptions: $embeddedScribeOptions\n*** RESTARTING ***\n\n"
+		if $restartForEmbeddedOptions;
 	}
 
 if ($canonicalizeNames) 
@@ -657,22 +692,35 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# to lines like this:
 		#	<dbooth> ACTION: whatever [DONE]
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
-		if ($type eq "COMMAND" && $value eq "ACTION")
+		if ($type eq "COMMAND" && $value eq "ACTION" && $i+1<@lines)
 			{
 			# warn "FOUND ACTION: $rest\n";
-			# Look ahead at the next line by the same writer.
-			for (my $j=$i+1; $j<@lines; $j++)
+			# Look ahead at the next line (by anyone).
+			my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
+			if ($type2 eq "STATUS" && $rest2 eq "")
 				{
-				my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$j]);
-				if (&LC($writer2) eq &LC($writer))
+				$lines[$i] = "<$writer\> ACTION: $rest \[$value2\]";
+				$lines[$i+1] = "";
+				# warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n";
+				}
+			else
+				{
+				# Didn't find status on next line. 
+				# Look ahead at the next line by the same writer.
+				for (my $j=$i+2; $j<@lines; $j++)
 					{
-					if ($type2 eq "STATUS" && $rest2 eq "")
+					my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$j]);
+					last if ($type eq "COMMAND" && $value eq "ACTION");
+					if (&LC($writer2) eq &LC($writer))
 						{
-						$lines[$i] = "<$writer\> ACTION: $rest \[$value2\]";
-						$lines[$j] = "";
-						# warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n";
+						if ($type2 eq "STATUS" && $rest2 eq "")
+							{
+							$lines[$i] = "<$writer\> ACTION: $rest \[$value2\]";
+							$lines[$j] = "";
+							# warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n";
+							}
+						last;
 						}
-					last;
 					}
 				}
 			}
@@ -1199,6 +1247,10 @@ for (my $i=0; $i<@lines; $i++)
 	}
 $all = "\n" . join("\n", @lines) . "\n";
 }
+
+# Experimentive code (untested) commented out:
+if (0) 
+{
 # warn "all: $all\n";
 my ($newTemplate, %embeddedTemplates) = &GetEmbeddedTemplates($template);
 foreach my $n (keys %embeddedTemplates)
@@ -1207,6 +1259,7 @@ foreach my $n (keys %embeddedTemplates)
 	warn $embeddedTemplates{$n} . "\n";
 	warn "==============================================\n";
 	}
+}
 
 
 ######################### HTML ##########################
@@ -1286,6 +1339,7 @@ $all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
 my $presentAttendees = join(", ", @present);
 my $regrets = join(", ", @regrets);
 
+die if !$template;
 my $result = $template;
 $result =~ s/SV_MEETING_DAY/$day0/g;
 $result =~ s/SV_MEETING_MONTH_ALPHA/$monthAlpha/g;
@@ -1814,6 +1868,9 @@ return $all;
 #################### IsIgnorable ################################
 #################################################################
 # Should the given line be ignored?
+# Note that this will return true for action status lines
+# like: "<plh> *done*
+# Therefore, action processing should be done first.
 sub IsIgnorable
 {
 @_ == 1 || die;
