@@ -4004,88 +4004,133 @@ my $template = <<'MITTemplate-EOF'
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en">
 <head>
-  <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
-  <meta content="SV_MEETING_TITLE" name="Title">  
-  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+  <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA
+SV_MEETING_YEAR</title>
+  <link type="text/css" rel="STYLESHEET"
+ href="http://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET"
+ href="http://www.w3.org/StyleSheets/team.css">
+  <link type="text/css" rel="STYLESHEET"
+ href="http://www.w3.org/StyleSheets/team-minutes.css">
+  <link type="text/css" rel="STYLESHEET"
+ href="http://www.w3.org/2004/02/minutes-style.css">
+  <meta content="SV_MEETING_TITLE" name="Title">
+  <meta content="text/html; charset=iso-8859-1"
+ http-equiv="Content-Type">
 </head>
-
 <body>
-<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
-height="48" width="72"></a> <a href="http://www.w3.org/Team"><img width="48" height="48"
-alt="W3C Team home" border="0" src="http://www.w3.org/Icons/WWW/team"></a> | <a
-href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> 
-	| <a href="http://lists.w3.org/Archives/Team/w3t-mit/SV_MEETING_YEARSV_MEETING_MONTH_ALPHA/">w3t-mit archives
+<p><a href="http://www.w3.org/"><img
+ src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0" height="48"
+ width="72"></a> <a href="http://www.w3.org/Team"><img width="48"
+ height="48" alt="W3C Team home" border="0"
+ src="http://www.w3.org/Icons/WWW/team"></a> | <a
+ href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> | <a
+ href="http://lists.w3.org/Archives/Team/w3t-mit/SV_MEETING_YEARSV_MEETING_MONTH_ALPHA/">w3t-mit
+archives
 </a></p>
-
-SV_DRAFT_WARNING
+SV_DRAFT_WARNING<br style="font-style: italic;">
+<span style="font-style: italic;"></span>
+<div style="margin-left: 40px;"><span
+ style="font-style: italic; font-weight: bold;">To complete these draft
+minutes:</span><br style="font-style: italic;">
+<ol>
+  <li style="font-style: italic;">Grab the "Two minutes reports from
+email" at <a href="http://cgi.w3.org/team-bin/mit-2mins">http://cgi.w3.org/team-bin/mit-2mins</a><br>
+and insert them near the end of these draft minutes under the "Two
+minutes around the table" section.</li>
+  <li style="font-style: italic;">Grab the generated table of contents
+from those two minutes reports (which appears at the end of the
+generated two minutes reports), and move them to the appropriate spot
+in the meeting table of contents below.</li>
+  <li style="font-style: italic;">Edit these draft minutes overall, and
+remove the DRAFT warning, these instructions, the diagnostics at the
+end (you did review them first, right?), etc.</li>
+  <li style="font-style: italic;">Check the edited minutes back in to
+CVS.</li>
+  <li style="font-style: italic;">Update the <a
+ href="http://www.w3.org/Team/Overview.html#Upcoming">Team page</a><a
+ href="http://www.w3.org/Team/Overview.html#Upcoming"> calendar</a> to
+include a link to the completed minutes.</li>
+  <li style="font-style: italic;">Send email <a
+ href="mailto:w3t-mit@w3.org">w3t-mit@w3.org</a> and <a
+ href="mailto:w3t@w3.org">w3t@w3.org</a> including:</li>
+  <ul style="font-style: italic;">
+    <li>a link to the minutes; and</li>
+    <li>a text version of the minutes (generated using the <a
+ href="http://www.w3.org/,tools">,text comma tool</a>).</li>
+  </ul>
+  <li><span style="font-style: italic;"><span
+ style="font-style: italic;">Update the </span><a
+ style="font-style: italic;"
+ href="http://www.w3.org/Team/Teamtable-MIT.html">MIT scribe list</a><span
+ style="font-style: italic;">.</span><br>
+    </span></li>
+</ol>
+</div>
+<div style="margin-left: 40px;"><span style="font-style: italic;"></span></div>
+<span style="font-style: italic;"><br>
+</span>
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
-
 SV_FORMATTED_AGENDA_LINK
-
 SV_FORMATTED_IRC_URL
-
 <h2><a name="attendees">Attendees</a></h2>
-
 <div class="intro">
 <dl>
-<dt>Present</dt>
-<dd>SV_PRESENT_ATTENDEES</dd>
-<dt>Regrets</dt>
-<dd>SV_REGRETS</dd>
-<dt>Chair</dt>
-<dd>SV_MEETING_CHAIR </dd>
-<dt>Scribe</dt>
-<dd>SV_MEETING_SCRIBE</dd>
+  <dt>Present</dt>
+  <dd>SV_PRESENT_ATTENDEES</dd>
+  <dt>Regrets</dt>
+  <dd>SV_REGRETS</dd>
+  <dt>Chair</dt>
+  <dd>SV_MEETING_CHAIR </dd>
+  <dt>Scribe</dt>
+  <dd>SV_MEETING_SCRIBE</dd>
 </dl>
 </div>
-
 <h2>Contents</h2>
 <ul>
   <li><a href="#agenda">Topics</a>
-	<ol>
-	SV_MEETING_AGENDA
-	</ol>
+    <ol>
+SV_MEETING_AGENDA
+    </ol>
   </li>
-  <li><a href="#twoMinutes">Two minutes around the table</a></li>
-  <li><a href="#ActionSummary">Summary of Action Items</a></li>
+  <li><a
+ href="file:///home/dbooth/w3c/DEV/2002/scribe/mit-template.htm#ActionSummary">Summary
+of Action Items</a></li>
+  <li><a href="#twoMinutes">Two minutes reports from email</a></li>
+  <ul>
+    <li>@@ Insert the table of contents from the result of the
+two-minutes generator at <a href="http://cgi.w3.org/team-bin/mit-2mins">http://cgi.w3.org/team-bin/mit-2mins</a>
+@@<br>
+    </li>
+  </ul>
 </ul>
 <hr>
-
-<div class="meeting">
-SV_AGENDA_BODIES
+<div class="meeting">SV_AGENDA_BODIES
 </div>
-
-<h2><a name="twoMinutes">Two minutes around the table</a></h2>
-
-<p><em>Note to scribe: you can get a start at this section using <a
-href="http://cgi.w3.org/team-bin/mit-2mins">a CGI script</a> that searches <a
-href="http://lists.w3.org/Archives/Team/w3t-mit/">the w3t-mit archive</a> for
-2 minute summaries and HTMLizes them.</em></p>
-%%embed: http://cgi.w3.org/team-bin/mit-2mins%%
-
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- Action Items -->
 SV_ACTION_ITEMS
-
+<h2><a name="twoMinutes">Two minutes around the table</a></h2>
+<p><em>Note to scribe: you can get a start at this section using <a
+ href="http://cgi.w3.org/team-bin/mit-2mins">a CGI script</a> that
+searches <a href="http://lists.w3.org/Archives/Team/w3t-mit/">the
+w3t-mit archive</a> for
+2 minute summaries and HTMLizes them.</em></p>
+@@ Embed the results of <a href="http://cgi.w3.org/team-bin/mit-2mins">http://cgi.w3.org/team-bin/mit-2mins</a>&nbsp;
+here @@ <br>
 [End of minutes] <br>
 <hr>
-
-<address>
-  Minutes formatted by David Booth's 
-  <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
-  $Date$ 
-</address>
+<address> Minutes formatted by David Booth's <a
+ href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm">scribe.perl</a>
+version SCRIBEPERL_VERSION (<a
+ href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
+$Date$ </address>
 <div class="diagnostics">
 SV_DIAGNOSTICS
 </div>
 </body>
 </html>
-
 MITTemplate-EOF
 ;
 return $template;
