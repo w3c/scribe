@@ -36,13 +36,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # http://lists.w3.org/Archives/Team/w3t-arch/2004MarApr/att-0117/minutes.html
 # where Scribe was Yves but nick was ScrYves.
 #
-# 0.1 Make <scribe> statement lines look better.
-#
-# 1. Make the generated HTML valid.  At the moment it is INVALID.
-# (Broken by Dom when switching to Karl's new format, and unfortunately
-# the template process is really messy (my fault (dbooth)), so it isn't 
-# easy to see how to fix it.  I've been wanting to switch to a better
-# technique for template processing.  See wish list item below.)
+# 1 Make <scribe> statement lines look better.
 #
 # 1.1. Fix the default (public) format.  It currently indents the first
 # line of each speaker statement, which makes subsequent lines look ragged:
@@ -148,16 +142,38 @@ my $commandsPattern = &MakePattern(keys %commands);
 # See also http://www.w3.org/2001/sw/Europe/200401/actions/
 # Note that these are ordered: The order in which they are listed here
 # will be the order in which they are listed in the resulting minutes.
-my @ucActionStatuses = qw(
-        NEW
-        PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING
-        UNKNOWN
-        DONE COMPLETED FINISHED
-        DROPPED RETIRED CANCELLED CANCELED WITHDRAWN);
-# Generate spelling variations and lower case:
+
+my @ucActionStatusListReferences = 
+	(
+        [qw( NEW )],
+        [qw( PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING )],
+        [qw( UNKNOWN )],
+        [qw( DONE COMPLETED FINISHED )],
+        [qw( DROPPED RETIRED CANCELLED CANCELED WITHDRAWN )],
+	);
+# Flatten the list:
+my @ucActionStatuses = map { @{$_} } @ucActionStatusListReferences;
+
 my @actionStatuses = &Uniq(&WordVariations(map {&LC($_)} @ucActionStatuses));
-# Map to preferred spelling:
-my %actionStatuses = &WordVariationsMap(@ucActionStatuses);
+my %actionStatuses = (); # Map to preferred spelling. Keys are lower case.
+foreach my $statusRef ( @ucActionStatusListReferences )
+	{
+	my @statuses = @{$statusRef};
+	next if !@statuses;
+	# Map other spellings to preferred spelling:
+	my $pref = $statuses[0];
+	foreach my $other (&Uniq(&WordVariations(map {&LC($_)} @statuses)))
+		{
+		$actionStatuses{$other} = $pref;
+		}
+	}
+
+foreach my $sk (sort keys %actionStatuses)
+	{
+	my $v = $actionStatuses{$sk};
+	warn "actionStatuses map: $sk --> $v\n" if $debugActions;
+	}
+
 # A pattern to match any of them.  (Be sure to use case-insensitive matching.)
 my $actionStatusesPattern = &MakePattern(keys %actionStatuses);
 
@@ -856,9 +872,10 @@ foreach my $action ((keys %rawActions))
 		# Innermost URL takes precedence if specified more than once.
 		# This is not precisely the official URI pattern.
 		my $urlp = "http\:[\#\%\&\*\+\,\-\.\/0-9\:\;\=\?\@-Z_a-z]+";
-		if ($a =~ s/\s*\[\s*recorded in ($urlp)\s*(\]?\s*)\Z//i)
+		if ($a =~ s/\s*\[?\s*recorded in ($urlp)\s*(\]?\s*)\Z//i)
 			{
 			$url = $1;
+			warn "CLEANING ACTIONS GOT URL: $url\n" if $debugActions;
 			next CHANGE;
 			}
 		foreach my $s (@actionStatuses)
@@ -893,6 +910,9 @@ foreach my $action ((keys %rawActions))
 	# Put the URL back on the end
 	$a .= " [recorded in $url]" if $url;
 	$status = "NEW" if !$status;
+	# Canonicalize action statuses:
+	die if !exists($actionStatuses{&LC($status)});
+	$status = $actionStatuses{&LC($status)}; # Map to preferred spelling
 	warn "FINAL: [$status] $a\n\n" if $debugActions;
 	$actions{$a} = $status;
 	}
@@ -982,7 +1002,7 @@ warn "Formatting remaining action items....\n" if $debugActions;
 foreach my $status (sort values %actions)
 	{
 	my $n = 0;
-	my $ucStatus = $actionStatuses{$status};
+	my $ucStatus = $actionStatuses{$status}; # Map to preferred spelling
 	# foreach my $action (sort keys %actions)
 	foreach my $action (&CaseInsensitiveSort(keys %actions))
 		{
@@ -1020,7 +1040,7 @@ $formattedActions =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/ig;
 # Highlight in-line ACTION status:
 foreach my $status (@actionStatuses)
 	{
-	my $ucStatus = $actionStatuses{$status};
+	my $ucStatus = $actionStatuses{$status}; # Map to preferred spelling
 	$formattedActions =~ s/\[$status\]/<strong>[$ucStatus]<\/strong>/ig;
 	}
 warn "Done formatting actions!\n" if $debugActions;
@@ -1313,7 +1333,8 @@ $all = "\n" . join("\n", @allLines) . "\n";
 # Highlight in-line ACTION status:
 foreach my $status (@actionStatuses)
 	{
-	my $ucStatus = $actionStatuses{$status};
+	my $ucStatus = $status;
+	$ucStatus =~ tr/a-z/A-Z/; # Make upper case but not preferred spelling
 	$all =~ s/\[\s*$status\s*\]/<strong>[$ucStatus]<\/strong>/ig;
 	}
 
@@ -1413,7 +1434,8 @@ $result =~ s/SV_FORMATTED_AGENDA_LINK/$formattedAgendaLocation/g;
 
 print $result;
 
-warn "\nWARNING: There is currently a bug that causes this program to\ngenerate INVALID HTML!  You can correct it by piping the output \nthrough \"tidy -c\".   If you have tidy installed, you can use \nthe -tidy option to do so.  Otherwise, run the W3C validator to find \nand fix the error: http://validator.w3.org/\n\n";
+#### Output seems to be normally valid now.
+# warn "\nWARNING: There is currently a bug that causes this program to\ngenerate INVALID HTML!  You can correct it by piping the output \nthrough \"tidy -c\".   If you have tidy installed, you can use \nthe -tidy option to do so.  Otherwise, run the W3C validator to find \nand fix the error: http://validator.w3.org/\n\n";
 exit 0;
 ################### END OF MAIN ######################
 
@@ -1704,7 +1726,14 @@ if ($line =~ m/\A\W*($actionStatusesPattern)\W*/i)
 	$value = $1;
 	$rest = $';
 	# die "LINETYPE a s type: $type value: $value rest: $rest\n";
-	$value = $actionStatuses{&LC($value)}; # in_progress --> IN_PROGRESS
+	#### Don't map to preferred spelling.  Keep existing spelling.
+	if (0)
+		{
+		$value = $actionStatuses{&LC($value)}; # Map to pref spelling
+		}
+	else	{
+		$value =~ tr/a-z/A-Z/; # Make upper case but not pref spelling
+		}
 	}
 # Command?
 # This pattern allows up to two *extra* leading spaces for commands
