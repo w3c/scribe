@@ -2895,8 +2895,8 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	exists($monthNumbers{$tmon}) || die "ERROR: Could not parse date.  Unknown month name \"$TMon\": $d\nFormat should be like \"Date: 31 Jan 2004\"\n";
 	my $mon = $monthNumbers{$tmon};
 	($mon > 0 && $mon < 13) || die; # Internal error.
-	($mday > 0 && $mday < 32) || die "ERROR: Bad day of month (should be >0 && <32) \"$mday\": $d\n$correctFormat\n";
-	($year > 2000 && $year < 2100) || die "ERROR: Bad year (should be >0 && <32) \"$year\": $d\n$correctFormat\n";
+	($mday > 0 && $mday < 32) || die "ERROR: Bad day of month \"$mday\" (should be >0 && <32): $d\n$correctFormat\n";
+	($year > 2000 && $year < 2100) || die "ERROR: Bad year \"$year\" (should be >2000 && <2100): $d\n$correctFormat\n";
 	my $day0 = sprintf("%0d", $mday);
 	my $mon0 = sprintf("%0d", $mon);
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
