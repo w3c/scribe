@@ -9,7 +9,7 @@
 </head>
 <body>
 <p><a href="http://www.w3.org/"><img src="scribe_files/w3c_home.png"
- alt="W3C" border="0" height="48" width="72"></a>&nbsp;<a href="#name"></a></p>
+ alt="W3C" border="0" height="48" width="72"></a>&nbsp;</p>
 <h1>Scribe.perl - Generate Meeting Minutes from an IRC Log</h1>
 <span style="font-style: italic;">This documentation is
 unfinished.&nbsp; See the opening comment in <a
@@ -34,26 +34,26 @@ or other log that has been written to follow some simple conventions. <br>
     <tr>
       <td style="vertical-align: top;"><code>/invite rrsagent <span
  style="font-style: italic;">#ws-arch</span></code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code>#ws-arch</code>
-should be your IRC channel)<br>
+      <td style="vertical-align: top; font-style: italic;"><code>#ws-arch</code>
+should be your IRC channel<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code>/invite zakim <span
  style="font-style: italic;">#ws-arch</span></code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code>#ws-arch</code>
-should be your IRC channel)<br>
+      <td style="vertical-align: top; font-style: italic;"><code>#ws-arch</code>
+should be your IRC channel<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code>zakim, this will be <span
  style="font-style: italic;">ws_arch</span><br>
       </code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code>ws_arch</code>
+      <td style="vertical-align: top; font-style: italic;"><code>ws_arch</code>
 should be your meeting <br>
 name as shown in the <a
  href="http://www.w3.org/Guide/1998/08/teleconference-calendar">W3C
-teleconference calendar</a>)<br>
+teleconference calendar</a><br>
       </td>
     </tr>
     <tr style="font-weight: bold;">
@@ -64,9 +64,10 @@ the meeting:</td>
       <td style="vertical-align: top;"><code><span
  style="font-weight: bold;">Scribe:</span> <span
  style="font-style: italic;">dbooth</span></code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code>dbooth</code>
-is scribe today.&nbsp; Name should <br>
-match scribe's IRC nickname.)<br>
+      <td style="vertical-align: top; font-style: italic;"><code>dbooth</code>
+is scribe today.&nbsp; Name must match scribe's IRC nickname!&nbsp;
+HINT: Do <span style="text-decoration: underline;">not</span> change
+your IRC nickname to "scribe".<br>
       </td>
     </tr>
     <tr>
@@ -75,8 +76,8 @@ match scribe's IRC nickname.)<br>
  style="font-style: italic;">WS Arch
 Teleconference</span><br>
       </code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code></code>Record
-meeting title)<br>
+      <td style="vertical-align: top; font-style: italic;">Record
+meeting title<br>
       </td>
     </tr>
     <tr>
@@ -84,8 +85,8 @@ meeting title)<br>
  style="font-weight: bold;">Chair:</span> <span
  style="font-style: italic;">Mike</span><br style="font-style: italic;">
       </code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code></code>Record
-who chaired)<br>
+      <td style="vertical-align: top; font-style: italic;"><code></code>Record
+who chaired<br>
       </td>
     </tr>
     <tr style="font-weight: bold;">
@@ -97,9 +98,9 @@ meeting notes:</td>
  style="font-weight: bold;">Topic:</span> <span
  style="font-style: italic;">Debate on Feature X</span><br>
       </code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code></code>Use
+      <td style="vertical-align: top; font-style: italic;">Use
 "Topic: . . ." at the <br>
-start of each agenda topic)<br>
+start of each agenda topic<br>
       </td>
     </tr>
     <tr>
@@ -108,7 +109,8 @@ start of each agenda topic)<br>
       <span style="font-style: italic;">Feature X is great</span></code><br>
       </td>
       <td style="vertical-align: top; font-style: italic;"><span
- style="font-family: monospace;">(Record what Mike said</span>) </td>
+ style="font-family: monospace;">Record what Mike said</span>.&nbsp;
+NOTE: Speaker's name must not contain spaces! </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code><span
@@ -116,27 +118,39 @@ start of each agenda topic)<br>
  style="font-style: italic;">and easy to implement.</span></code><br>
       </td>
       <td style="vertical-align: top; font-style: italic;"><span
- style="font-family: monospace;">(Mike's statement continues</span>) </td>
+ style="font-family: monospace;">Mike's statement continues</span> </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code><span
  style="font-weight: bold;">ACTION:</span> <span
- style="font-style: italic;">Frank to order
+ style="font-style: italic;">Frank </span><span
+ style="font-weight: bold;">to</span><span style="font-style: italic;">
+order
 lunch</span><br>
       </code></td>
-      <td style="vertical-align: top; font-style: italic;">(Record new
-action)<br>
+      <td style="vertical-align: top; font-style: italic;">Record new
+action.<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code><span
  style="font-weight: bold;">ACTION:</span> <span
- style="font-style: italic;">Mary to write spec</span> <span
- style="font-weight: bold;">[DONE]</span><br>
+ style="font-style: italic;">Mary </span><span
+ style="font-weight: bold;">to</span><span style="font-style: italic;">
+write spec</span> <span style="font-weight: bold;">[</span><span
+ style="font-style: italic;">PENDING</span><span
+ style="font-weight: bold;">]</span></code><code><span
+ style="font-weight: bold;"><br>
+[</span><span style="font-style: italic;">PENDING</span><span
+ style="font-weight: bold;">] ACTION:</span> <span
+ style="font-style: italic;">Mary </span><span
+ style="font-weight: bold;">to</span><span style="font-style: italic;">
+write spec</span></code><code><br>
       </code></td>
-      <td style="vertical-align: top; font-style: italic;">(Record old
-action and status, e.g. <br>
-      <code>DONE, PENDING, DROPPED</code>)<br>
+      <td style="vertical-align: top; font-style: italic;">Record old
+action and status: <br>
+      <code><span style="font-weight: bold;">DONE, PENDING,</span> </code>or
+      <code style="font-weight: bold;">DROPPED</code><br>
       </td>
     </tr>
     <tr>
@@ -150,23 +164,26 @@ the meeting:</span><br>
       <td style="vertical-align: top;"><code><span
  style="font-weight: bold;">zakim, bye</span><br>
       </code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code></code>Dismiss
+      <td style="vertical-align: top; font-style: italic;">Dismiss
 zakim bot, which will generate a list of attendees.&nbsp; Use "Present:
-..." if you aren't using zakim bot.)<br>
+..." if you aren't using zakim bot.<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code><span
  style="font-weight: bold;">rrsagent, where am i?</span></code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code></code>Determine
-log location.&nbsp; Note URL.)<br>
+      <td style="vertical-align: top; font-style: italic;">Determine
+log location.&nbsp; Scribe.perl will look for this, but you'll need it
+also below.<br>
       </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code><span
  style="font-weight: bold;">rrsagent, bye</span></code></td>
-      <td style="vertical-align: top; font-style: italic;">(<code></code>Dismiss
-rrsagent.)<br>
+      <td style="vertical-align: top; font-style: italic;">Dismiss
+rrsagent, which will also generate a list of action items that will be
+preferred if you use the -trustRRSAgent option.&nbsp; (Otherwise the
+action items will be taken from whereever they were first typed.)<br>
       </td>
     </tr>
     <tr>
@@ -178,11 +195,12 @@ minutes:</span><br>
     </tr>
     <tr>
       <td style="vertical-align: top;"><span style="font-style: italic;">(Save
-      <br>
+the IRC log, such as<br>
       </span><span style="font-style: italic;">http://www.w3.org/2002/04/05-arch-irc.txt)</span><br>
       </td>
       <td style="vertical-align: top;"><span style="font-style: italic;">(Hint:
-Strip #fragid and add .txt to URL) </span></td>
+Strip #fragid and add .txt to the URL that rrsagent reported above when
+you asked "rrsagent, where am i?".) </span></td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code><span
@@ -192,15 +210,19 @@ Strip #fragid and add .txt to URL) </span></td>
  style="font-style: italic;">minutes.html</span></code><br>
       </td>
       <td style="vertical-align: top;"><span style="font-style: italic;">(Generate
-minutes)</span><br>
+minutes.)</span><br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top;"><span style="font-style: italic;">(Then
-modify log.txt and regenerate minutes.html if necessary)</span><br>
+      <td style="vertical-align: top;"><span style="font-style: italic;">(Review
+and make adjustments.)</span><br>
       </td>
-      <td style="vertical-align: top;"><br>
-      </td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">If
+the result isn't good enough, either: 1. edit your copy of the log file
+and regenerate the HTML; or 2. manually edit the resulting HTML.&nbsp;
+Option 1 is best if you forgot to indicate who is scribe ("Scribe:
+..."), or if you forgot to mark a topic start ("Topic: ...").<br>
+      </span> </td>
     </tr>
   </tbody>
 </table>
@@ -213,9 +235,28 @@ Scribe.perl reads standard input and writes to standard output:<br>
 <h3>Options<br>
 </h3>
 <dl>
+  <dt>-implicitContinuations</dt>
+  <dd>Indicate that the scribe used implicit continuation lines like
+this:
+    <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br></code></pre>
+instead of this (note the leading spaces):
+    <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt;  for all good men and women<br>&lt;dbooth&gt;  to come to the aid of their party.<br></code></pre>
+or this:
+    <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; ... for all good men and women<br>&lt;dbooth&gt; ... to come to the aid of their party.<br></code></pre>
+The <b style="font-weight: bold;">implicit continuation style is not
+recommended</b>, because it is ambiguous.
+For example, the "(Group agrees)" statement below will be incorrectly
+attributed to Mary,
+instead of being a scribe comment:
+    <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br>&lt;dbooth&gt; (Group agrees)<br></code></pre>
+  </dd>
+  <dt><br>
+  </dt>
   <dt>-public</dt>
   <dd>(DEFAULT) Use the built-in W3C template that is styled for public
 access. </dd>
+  <dt><br>
+  </dt>
   <dt>-member</dt>
   <dd>Use the built-in template that is styled for W3C member-only
 access.<br>
@@ -291,7 +332,9 @@ Log: <br>
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
  style="font-style: italic;">new</span><br>
 Replace the most recent occurrence of <span style="font-style: italic;">old
-</span>with <span style="font-style: italic;">new</span><br
+</span>with <span style="font-style: italic;">new</span>.&nbsp; <span
+ style="font-style: italic;">Old</span> is treated as a fixed string
+(escaped using quotemeta(...)) -- not a regular expression.<br
  style="font-style: italic;">
 <br>
 <span style="font-weight: bold;">s/</span><span
@@ -362,9 +405,7 @@ remaining details.<br>
 <br>
 <br>
 <hr>
-<address> <a href="http://validator.w3.org/check/referer"></a><a
- href="mailto:dbooth@w3.org">David Booth</a><a
- href="mailto:swick@w3.org"></a><br>
+<address> <a href="mailto:dbooth@w3.org">David Booth</a><br>
 $Date$
 </address>
 </body>
