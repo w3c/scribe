@@ -49,7 +49,7 @@
 #
 # For sample input, see the SampleInput function below.
 #
-# WARNGIN: This code is a horrible mess.  (Sorry!)  Please hold your nose if you
+# WARNING: This code is a horrible mess.  (Sorry!)  Please hold your nose if you
 # look at it.  If you have something better, or fix this up at all, 
 # please let me know.
 
@@ -274,7 +274,7 @@ $previousURL = $4 if $all =~ s/\n\<$namePattern\>\s*(Previous|PreviousMeeting|Pr
 
 # Grab Chair:
 my $chair = "SCRIBE_VAR_MEETING_CHAIR";
-$chair = $4 if $all =~ s/\n\<$namePattern\>\s*(Chair)\s*\:\s*(.*)\n/\n/i;
+$chair = $5 if $all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i;
 
 # Grab IRC Log URL:
 my $logURL = "SCRIBE_VAR_MEETING_IRC_URL";
