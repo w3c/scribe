@@ -142,7 +142,9 @@ my $commandsPattern = &MakePattern(keys %commands);
 # See also http://www.w3.org/2001/sw/Europe/200401/actions/
 # Note that these are ordered: The order in which they are listed here
 # will be the order in which they are listed in the resulting minutes.
-
+# Status words that are on the same line below are treated as synonyms.
+# The first word of each subgroup is treated as the preferred spelling
+# for that subgroup.
 my @ucActionStatusListReferences = 
 	(
         [qw( NEW )],
@@ -3223,8 +3225,9 @@ my $template = <<'MITTemplate-EOF'
 <p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> <a href="http://www.w3.org/Team"><img width="48" height="48"
 alt="W3C Team home" border="0" src="http://www.w3.org/Icons/WWW/team"></a> | <a
-href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> | <a href="http://www.w3.org/">SV_MEETING_MONTH_ALPHA
-SV_MEETING_YEAR</a></p>
+href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> 
+	| <a href="http://lists.w3.org/Archives/Team/w3t-mit/SV_MEETING_YEARSV_MEETING_MONTH_ALPHA/">w3t-mit archives
+</a></p>
 
 <h1>SV_MEETING_TITLE<br>
 SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
@@ -3255,6 +3258,7 @@ SV_FORMATTED_IRC_URL
 	SV_MEETING_AGENDA
 	</ol>
   </li>
+  <li><a href="#twoMinutes">Two minutes around the table</a></li>
   <li><a href="#ActionSummary">Summary of Action Items</a></li>
 </ul>
 <hr>
@@ -3262,6 +3266,14 @@ SV_FORMATTED_IRC_URL
 <div class="meeting">
 SV_AGENDA_BODIES
 </div>
+
+<h2><a name="twoMinutes">Two minutes around the table</a></h2>
+
+<p><em>Note to scribe: you can get a start at this section using <a
+href="http://cgi.w3.org/team-bin/mit-2mins">a CGI script</a> that searches <a
+href="http://lists.w3.org/Archives/Team/w3t-mit/">the w3t-mit archive</a> for
+2 minute summaries and HTMLizes them.</em></p>
+%%embed: http://cgi.w3.org/team-bin/mit-2mins%%
 
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- Action Items -->
@@ -3276,6 +3288,7 @@ SV_ACTION_ITEMS
 </address>
 </body>
 </html>
+
 MITTemplate-EOF
 ;
 return $template;
