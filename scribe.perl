@@ -514,7 +514,7 @@ if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/[^ ]+)\n/\n/i)
       }
 else 	{ 
 	warn "\nWARNING: No agenda location found!
-You should specify the meeting title like this:
+You may specify the agenda like this:
 <scribe> Agenda: http://www.example.com/agenda.html\n\n";
 	}
 
