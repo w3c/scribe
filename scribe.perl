@@ -339,30 +339,45 @@ $all = "\n" . join("\n", @allLines) . "\n";
 # Get the list of people present:
 my @possiblyPresent = @uniqNames;	# People present at the meeting
 my @present = ();			# People present at the meeting
-if ($all =~ s/\s+Present\s*\:\s*(.*)//i)
+while ($all =~ s/\s+Present\s*\:\s*(.*)//i)
 	{
 	my $present = $1;
+	my @p = ();
 	if ($present =~ m/\,/)
 		{
 		# Comma-separated list
-		@present = grep {$_ && $_ ne "and"} 
-				map {s/\As+//; s/s\+\Z//; $_} 
+		@p = grep {$_ && $_ ne "and"} 
+				map {s/\A\s+//; s/\s+\Z//; s/\s+/_/g; $_} 
 				split(/\,/,$present);
 		}
 	else	{
 		# Space-separated list
-		@present = grep {$_} split(/\s+/,$present);
+		@p = grep {$_} split(/\s+/,$present);
 		}
-	if (@present < 3)
+	if (scalar(@p) < scalar(@present))
 		{
-		warn "WARNING: From Present: $present\n";
-		warn "Found only: @present\n";
-		@present = @uniqNames;
-		warn "Defaulting to Present: @present\n\n";
+		warn "\nWARNING: Combining \"$present\"
+with previous list of people present.\n\n";
+		my %seen = map {($_,$_)} @present;
+		my @newp = grep {!exists($seen{$_})} @p;
+		push(@present, @newp);
+		}
+	else	{
+		warn "\nWARNING: Replacing previous list of people present.\n\n" if @present;
+		@present = @p;
+		}
+	warn "Present: @present\n"; 
+	}
+if (@present < 3) 
+	{ 
+	if (@present > 0)  { warn "WARNING: Fewer than 3 people found present!\n\n"; }
+	else	{
+		warn "WARNING: No \"Present: ... \" found!\n";
+		warn "Possibly Present: @possiblyPresent\n"; 
+		warn "You can indicate the people present like this:
+<scribe> Present: dbooth jonathan mary\n\n";
 		}
 	}
-if (@present) { warn "Present: @present\n"; }
-else { warn "Possibly Present: @possiblyPresent\n"; }
 
 # Get the list of regrets:
 my @regrets = ();	# People who sent regrets
@@ -385,15 +400,28 @@ warn "Regrets: @regrets\n" if @regrets;
 
 # Grab meeting name:
 my $title = "SV_MEETING_TITLE";
-$title = $4 if $all =~ s/\n\<$namePattern\>\s*(Meeting|Title)\s*\:\s*(.*)\n/\n/i;
+if ($all =~ s/\n\<$namePattern\>\s*(Meeting|Title)\s*\:\s*(.*)\n/\n/i)
+	{ $title = $4; }
+else 	{ 
+	warn "\nWARNING: No meeting title found!
+You should specify the meeting title like this:
+<scribe> Meeting: Weekly Baking Club Meeting\n\n";
+	}
 
 # Grab Previous meeting URL:
 my $previousURL = "SV_PREVIOUS_MEETING_URL";
-$previousURL = $4 if $all =~ s/\n\<$namePattern\>\s*(Previous|PreviousMeeting|Previous Meeting)\s*\:\s*(.*)\n/\n/i;
+if ($all =~ s/\n\<$namePattern\>\s*(Previous|PreviousMeeting|Previous Meeting)\s*\:\s*(.*)\n/\n/i)
+	{ $previousURL = $4; }
 
 # Grab Chair:
 my $chair = "SV_MEETING_CHAIR";
-$chair = $5 if $all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i;
+if ($all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i)
+	{ $chair = $5; }
+else 	{ 
+	warn "\nWARNING: No meeting chair found!
+You should specify the meeting chair like this:
+<scribe> Chair: dbooth\n\n";
+	}
 
 # Grab IRC Log URL.  Do this before looking for the date, because
 # we can figure out the date from the IRC log name.
@@ -561,8 +589,11 @@ foreach my $line (@lines)
 	next if $line =~ m/\A\<Zakim\>/i;
 	next if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
 	next if $line =~ m/\A\<$namePattern\>\s*agenda\s*[\+\-\=\?]/i;
+	next if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
+	next if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
+	next if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
 	next if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
-	# next if $line =~ m/\A\<$namePattern\>\s*ack\b/i;
+	next if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
 	# Ignore RRSAgent lines
 	next if $line =~ m/\A\<RRSAgent\>/i;
 	next if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
