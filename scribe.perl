@@ -2,15 +2,6 @@
 
 use strict;  	
 
-my $diagnostics = "";		# Accumulated diagnostic output.
-
-my ($CVS_VERSION) = q$Revision$ =~ /(\d+[\d\.]*\.\d+)/;
-&Warn('This is scribe.perl $Revision$ of $Date$ 
-Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
-
-');
-
-
 # Generate minutes in HTML from a text IRC/chat Log.   
 #
 # Author: David Booth <dbooth@w3.org> 
@@ -121,8 +112,18 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 ######################################################################
 
+#### $diagnostics MUST be initialized early, before anything might call &Warn().
+my $diagnostics = "";		# Accumulated diagnostic output.
 
-# Formatting:
+my ($CVS_VERSION) = q$Revision$ =~ /(\d+[\d\.]*\.\d+)/;
+my $versionMessage = 'This is scribe.perl $Revision$ of $Date$ 
+Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
+
+';
+$versionMessage =~ s/\$//g; # Prevent CVS from remunging the version in minutes
+&Warn($versionMessage);
+
+##### Formatting:
 # my $preSpeakerHTML = "<strong>";
 # my $postSpeakerHTML = "</strong> <br />";
 my $preSpeakerHTML = "<cite>";
@@ -3052,7 +3053,7 @@ elsif ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/i)
 else
 	{
 	&Warn("\nWARNING: No date found!  Assuming today.  (Hint: Specify\n");
-	&Warn("the IRC log, and the date will be determined from that.)\n");
+	&Warn("the W3C IRC log URL, and the date will be determined from that.)\n");
 	&Warn("Or specify the date like this:\n");
 	&Warn("<dbooth> Date: 12 Sep 2002\n\n");
 	# Assume today's date by default.
