@@ -1326,7 +1326,6 @@ my $t = join("\n", grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all));
 $t =~ s/\n\.\.\.\.*\s*/ /g;
 # die "t:\n$t\n" . ('=' x 70) . "\n\n";
 @zakimLines = split(/\n/, $t);
-my $isAlreadyDefined = 0;
 foreach my $line (@zakimLines)
 	{
 	if ($line =~ m/Attendees\s+were\s+/i)
@@ -1334,12 +1333,11 @@ foreach my $line (@zakimLines)
 		my $raw = $';
 		my @people = map {$_ = &Trim($_); s/\s+/_/g; $_} split(/\,/, $raw);
 		next if !@people;
-		if (@present && $isAlreadyDefined)
+		if (@present)
 			{
 			warn "\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n";
 			}
 		@present = @people;
-		$isAlreadyDefined = 1;
 		}
 	}
 return(@present);
@@ -1374,6 +1372,7 @@ my @newAllLines = ();	# Collect remaining lines
 # push(@allLines, "<dbooth> Present+: Justin"); # test
 # push(@allLines, "<dbooth> Present+ Silas"); # test
 # push(@allLines, "<dbooth> Present-: Amy"); # test
+my $isAlreadyDefined = 0;
 foreach my $line (@allLines)
 	{
 	$line =~ s/\s+\Z//; # Remove trailing spaces.
@@ -1412,8 +1411,9 @@ foreach my $line (@allLines)
 		@present = sort keys %seen;
 		}
 	else	{
-		warn "\nWARNING: Replacing previous list of people present.\nUse '$keyword\+ ... ' if you meant to add people without replacing the list,\nsuch as: <dbooth> $keyword\+ " . join(', ', @p) . "\n\n" if @present;
+		warn "\nWARNING: Replacing previous list of people present.\nUse '$keyword\+ ... ' if you meant to add people without replacing the list,\nsuch as: <dbooth> $keyword\+ " . join(', ', @p) . "\n\n" if @present && $isAlreadyDefined;
 		@present = @p;
+		$isAlreadyDefined = 1;
 		}
 	}
 @allLines = @newAllLines;
