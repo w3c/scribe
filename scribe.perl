@@ -337,14 +337,16 @@ else	{
 	}
 
 # Perform s/old/new/ substitutions.
-while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
+# These are done last to first, so that later substitutions can actually
+# modify earlier substitutions.
+while($all =~ m/\A((.|\n)*)(\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n)/i)
 	{
-	my $old = $1;
-	my $new = $2;
-	my $global = $5;
+	my $old = $4;
+	my $new = $5;
+	my $global = $8;
 	$global = "" if !defined($global);
-	my $pre = $`;
-	my $match = $&;
+	my $pre = $1;
+	my $match = $3;
 	my $post = $';
 	my $oldp = quotemeta($old);
 	# warn "Found match: $match\n";
