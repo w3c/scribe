@@ -90,6 +90,8 @@
 #	<RRSAgent> See http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36
 # or:
 #	<dbooth> Log: http://www.w3.org/2002/11/07-ws-arch-irc
+# Separator (at least 4 dashes):
+#	<dbooth> ----
 #
 # INPUT FORMATS ACCEPTED:
 #   MIRC buffer style:
@@ -191,15 +193,16 @@ if (!$all)
 # Delete control-M's if any.
 $all =~ s/\r//g;
 
-# Normalize input format.
-# Try different formats, and see which one matches best.
+# Normalize input format.  To do so, we need to guess the input format.
+# Try each known formats, and see which one matches best.
 my $bestScore = 0;
 my $bestAll = "";
 my $bestName = "";
-# These are functions we'll be calling:
+# These are the normalizer functions we'll be calling.
+# Just add another to the list if you want to recognize another format.
 foreach my $f (qw(
 		NormalizerMircTxt
-		NormalizerRRSAgentTimeAngle 
+		NormalizerRRSAgentText 
 		NormalizerRRSAgentHtml 
 		NormalizerRRSAgentHTMLText
 		NormalizerYahoo
@@ -216,15 +219,10 @@ foreach my $f (qw(
 	}
 my $bestScoreString = sprintf("%4.2f", $bestScore);
 warn "Input format (score $bestScoreString): $bestName\n";
-die "ERROR: Could not determine input format.\n" if $bestScore == 0;
-warn "WARNING: Low confidence ($bestScoreString) on input format.  Guessing: $bestName\n"
+die "ERROR: Could not guess input format.\n" if $bestScore == 0;
+warn "WARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\n"
 	if $bestScore < 0.7;
 $all = $bestAll;
-
-
-# Remove timestamps, if there are any:
-$all =~ s/\n\d\d\:\d\d\:\d\d[\ \t]+/\n/g;
-
 
 # Perform s/old/new/ substitutions.
 while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
@@ -296,6 +294,7 @@ $all =~ s/\&/\&amp\;/g;
 # Normalize Scribe continuation lines so that the speaker's name is on every line:
 #	<Scribe> SusanW: We had a mtg on July 16.
 #	<DanC_> pointer to minutes?
+#	<Scribe> SusanW: I'm looking.
 #	<Scribe> ... The minutes are on the admin timeline page.
 my @allLines = split(/\n/, $all);
 my $currentSpeaker = "UNKNOWN_SPEAKER";
@@ -371,19 +370,19 @@ warn "Regrets: @regrets\n" if @regrets;
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate();
 
 # Grab meeting name:
-my $title = "SCRIBE_VAR_MEETING_TITLE";
+my $title = "SV_MEETING_TITLE";
 $title = $4 if $all =~ s/\n\<$namePattern\>\s*(Meeting|Title)\s*\:\s*(.*)\n/\n/i;
 
 # Grab Previous meeting URL:
-my $previousURL = "SCRIBE_VAR_PREVIOUS_MEETING_URL";
+my $previousURL = "SV_PREVIOUS_MEETING_URL";
 $previousURL = $4 if $all =~ s/\n\<$namePattern\>\s*(Previous|PreviousMeeting|Previous Meeting)\s*\:\s*(.*)\n/\n/i;
 
 # Grab Chair:
-my $chair = "SCRIBE_VAR_MEETING_CHAIR";
+my $chair = "SV_MEETING_CHAIR";
 $chair = $5 if $all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i;
 
 # Grab IRC Log URL:
-my $logURL = "SCRIBE_VAR_MEETING_IRC_URL";
+my $logURL = "SV_MEETING_IRC_URL";
 # <RRSAgent>   recorded in http://www.w3.org/2002/04/05-arch-irc#T15-46-50
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(http\:([^\s\#]+))/i;
 $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.*)\n/\n/i;
@@ -574,12 +573,16 @@ warn "WARNING: Possible join/leave lines remaining: \n\t" . join("\t", @matches)
 #	<DanC> something
 #	<DanC> something
 #	<Scribe> DanC: something
+#	<Scribe> ----
+#	<Scribe> Whatever
 # to:
 #	DanC: something
 #	 ... something
 #	<DanC> something
 #	 ... something
 #	DanC: something
+#	----------------------------------------
+#	<Scribe> Whatever
 
 my $prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
 my $prevPattern = quotemeta($prevSpeaker);
@@ -592,6 +595,20 @@ foreach my $line (@lines)
 		# Force the speaker name to be repeated next time
 		$prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
 		$prevPattern = quotemeta($prevSpeaker);
+		}
+	# Separator:
+	#	<Scribe> ----
+	elsif ($line =~ m/\A(\<$namePattern\>)\s*\-\-\-\-+\s*\Z/i)
+		{
+		my $dashes = '-' x 30;
+		$line = $dashes;
+		}
+	# Separator:
+	#	<Scribe> ====
+	elsif ($line =~ m/\A(\<$namePattern\>)\s*\=\=\=\=+\s*\Z/i)
+		{
+		my $dashes = '=' x 30;
+		$line = $dashes;
 		}
 	elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)\s*/ ... /i )
 		{
@@ -676,33 +693,33 @@ my $presentAttendees = join(", ", @present);
 my $regrets = join(", ", @regrets);
 
 my $result = $template;
-$result =~ s/SCRIBE_VAR_MEETING_DAY/$day0/g;
-$result =~ s/SCRIBE_VAR_MEETING_MONTH_ALPHA/$monthAlpha/g;
-$result =~ s/SCRIBE_VAR_MEETING_YEAR/$year/g;
-$result =~ s/SCRIBE_VAR_MEETING_MONTH_NUMERIC/$mon0/g;
-$result =~ s/SCRIBE_VAR_PREVIOUS_MEETING_URL/$previousURL/g;
-$result =~ s/SCRIBE_VAR_MEETING_CHAIR/$chair/g;
-$result =~ s/SCRIBE_VAR_MEETING_SCRIBE/$scribeName/g;
-$result =~ s/SCRIBE_VAR_MEETING_AGENDA/$agenda/g;
-$result =~ s/SCRIBE_VAR_TEAM_PAGE_LOCATION/SCRIBE_VAR_TEAM_PAGE_LOCATION/g;
+$result =~ s/SV_MEETING_DAY/$day0/g;
+$result =~ s/SV_MEETING_MONTH_ALPHA/$monthAlpha/g;
+$result =~ s/SV_MEETING_YEAR/$year/g;
+$result =~ s/SV_MEETING_MONTH_NUMERIC/$mon0/g;
+$result =~ s/SV_PREVIOUS_MEETING_URL/$previousURL/g;
+$result =~ s/SV_MEETING_CHAIR/$chair/g;
+$result =~ s/SV_MEETING_SCRIBE/$scribeName/g;
+$result =~ s/SV_MEETING_AGENDA/$agenda/g;
+$result =~ s/SV_TEAM_PAGE_LOCATION/SV_TEAM_PAGE_LOCATION/g;
 
-$result =~ s/SCRIBE_VAR_REGRETS/$regrets/g;
-$result =~ s/SCRIBE_VAR_PRESENT_ATTENDEES/$presentAttendees/g;
-$result =~ s/SCRIBE_VAR_DONE_ACTION_ITEMS/$formattedDoneActions/;
-$result =~ s/SCRIBE_VAR_PENDING_ACTION_ITEMS/$formattedPendingActions/;
-$result =~ s/SCRIBE_VAR_NEW_ACTION_ITEMS/$formattedActions/;
-$result =~ s/SCRIBE_VAR_AGENDA_BODIES/$all/;
-$result =~ s/SCRIBE_VAR_MEETING_TITLE/$title/g;
+$result =~ s/SV_REGRETS/$regrets/g;
+$result =~ s/SV_PRESENT_ATTENDEES/$presentAttendees/g;
+$result =~ s/SV_DONE_ACTION_ITEMS/$formattedDoneActions/;
+$result =~ s/SV_PENDING_ACTION_ITEMS/$formattedPendingActions/;
+$result =~ s/SV_NEW_ACTION_ITEMS/$formattedActions/;
+$result =~ s/SV_AGENDA_BODIES/$all/;
+$result =~ s/SV_MEETING_TITLE/$title/g;
 
-my $formattedLogURL = '<p>See also: <a href="SCRIBE_VAR_MEETING_IRC_URL">IRC log</a></p>';
-if ($logURL eq "SCRIBE_VAR_MEETING_IRC_URL")
+my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
+if ($logURL eq "SV_MEETING_IRC_URL")
 	{
 	warn "**** Missing IRC LOG!!!! ****\n";
 	$formattedLogURL = "";
 	}
 $formattedLogURL = "" if $logURL =~ m/\ANone\Z/i;
-$result =~ s/SCRIBE_VAR_FORMATTED_IRC_URL/$formattedLogURL/g;
-$result =~ s/SCRIBE_VAR_MEETING_IRC_URL/$logURL/g;
+$result =~ s/SV_FORMATTED_IRC_URL/$formattedLogURL/g;
+$result =~ s/SV_MEETING_IRC_URL/$logURL/g;
 	
 
 print $result;
@@ -716,17 +733,6 @@ sub NormalizerMircTxt
 {
 die if @_ != 1;
 my ($all) = @_;
-my @lines = split(/\n/, $all);
-my $n = 0;
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
-foreach my $line (@lines)
-	{
-	# <ericn> Discussion on how to progress
-	$n++ if $line =~ m/\A\<$namePattern\>\s/;
-	# warn "LINE: $line\n";
-	}
-# warn "NormalizerMircTxt n matches: $n\n";
-my $score = $n / @lines;
 # Join continued lines:
 $all =~ s/\n\ \ //g;
 # Fix split URLs:
@@ -734,17 +740,34 @@ $all =~ s/\n\ \ //g;
 # 	  46.html Simon's two minutes
 # while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
 # while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
+# Count the number of recognized lines
+my @lines = split(/\n/, $all);
+my $n = 0;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+foreach my $line (@lines)
+	{
+	# * unlogged comment
+	if ($line =~ m/\A\s*\*\s/) { $n++; }
+	# <ericn> Discussion on how to progress
+	elsif ($line =~ m/\A\<$namePattern\>\s/) { $n++; }
+	# warn "LINE: $line\n";
+	}
+# warn "NormalizerMircTxt n matches: $n\n";
+my $score = $n / @lines;
 return($score, $all);
 }
 
 ##################################################################
-########################## NormalizerRRSAgentTimeAngle #########################
+########################## NormalizerRRSAgentText #########################
 ##################################################################
 # Example: http://www.w3.org/2003/03/03-ws-desc-irc.txt
-sub NormalizerRRSAgentTimeAngle
+sub NormalizerRRSAgentText
 {
 die if @_ != 1;
 my ($all) = @_;
+# Join continued lines:
+$all =~ s/\n\ \ //g;
+# Count the number of recognized lines
 my @lines = split(/\n/, $all);
 my $n = 0;
 my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
@@ -755,15 +778,8 @@ foreach my $line (@lines)
 	$n++ if $line =~ s/\A$timePattern\s+(\<$namePattern\>\s)/$5/;
 	# warn "LINE: $line\n";
 	}
-# warn "NormalizerRRSAgentTimeAngle n matches: $n\n";
+# warn "NormalizerRRSAgentText n matches: $n\n";
 my $score = $n / @lines;
-# Join continued lines:
-$all =~ s/\n\ \ //g;
-# Fix split URLs:
-# 	<RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2002Mar/00
-# 	  46.html Simon's two minutes
-# while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
-# while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
 return($score, $all);
 }
 
@@ -1225,6 +1241,7 @@ my $sampleInput = <<'SampleInput-EOF'
 <dbooth> Date: 05 Dec 2002
 <dbooth> Topic: Review of Action Items
 <Philippe> PENDING ACTION: Barbara to bake 3 pies 
+<Philippe> ----
 <Philippe> DONE ACTION: David to make ice cream 
 <dbooth> Topic: What to Eat for Dessert
 <dbooth> Joseph: I think that we should all eat cake
@@ -1253,10 +1270,10 @@ my $template = <<'PublicTemplate-EOF'
                       "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
-  <title>SCRIBE_VAR_MEETING_TITLE -- SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</title>
+  <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/public.css">
-  <meta content="SCRIBE_VAR_MEETING_TITLE" lang="en" name="Title">  
+  <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
@@ -1266,28 +1283,28 @@ height="48" width="72"></a>
 
 </p>
 
-<h1>SCRIBE_VAR_MEETING_TITLE<br>
-SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</h1>
+<h1>SV_MEETING_TITLE<br>
+SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
 <!-- Old:
-<p>See also: <a href="SCRIBE_VAR_MEETING_IRC_URL">IRC log</a></p>
+<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
 -->
-SCRIBE_VAR_FORMATTED_IRC_URL
+SV_FORMATTED_IRC_URL
 
 <h2><a name="attendees">Attendees</a></h2>
 
 <div class="intro">
-<p>Present: SCRIBE_VAR_PRESENT_ATTENDEES</p>
-<p>Regrets: SCRIBE_VAR_REGRETS</p>
-<p>Chair: SCRIBE_VAR_MEETING_CHAIR </p>
-<p>Scribe: SCRIBE_VAR_MEETING_SCRIBE</p>
+<p>Present: SV_PRESENT_ATTENDEES</p>
+<p>Regrets: SV_REGRETS</p>
+<p>Chair: SV_MEETING_CHAIR </p>
+<p>Scribe: SV_MEETING_SCRIBE</p>
 </div>
 
 <h2>Contents</h2>
 <ul>
   <li><a href="#agenda">Agenda Items</a>
 	<ol>
-	SCRIBE_VAR_MEETING_AGENDA
+	SV_MEETING_AGENDA
 	</ol>
   </li>
   <li><a href="#newActions">Summary of Action Items</a></li>
@@ -1298,11 +1315,11 @@ SCRIBE_VAR_FORMATTED_IRC_URL
 <!--  We don't need the agenda items listed twice.
 <h2><a name="agenda">Agenda Items</a></h2>
 <ul>
-  SCRIBE_VAR_MEETING_AGENDA
+  SV_MEETING_AGENDA
 </ul>
 -->
 
-SCRIBE_VAR_AGENDA_BODIES
+SV_AGENDA_BODIES
 <!--
 <h3><a name="item1">Item name (owner)</a></h3>
 <p>... text of discussion ...</p>
@@ -1314,11 +1331,11 @@ SCRIBE_VAR_AGENDA_BODIES
 
 <h2><a name="newActions">Summary of Action Items</a></h2>
 <!-- Done Action Items -->
-SCRIBE_VAR_DONE_ACTION_ITEMS
+SV_DONE_ACTION_ITEMS
 <!-- Pending Action Items -->
-SCRIBE_VAR_PENDING_ACTION_ITEMS
+SV_PENDING_ACTION_ITEMS
 <!-- New Action Items -->
-SCRIBE_VAR_NEW_ACTION_ITEMS
+SV_NEW_ACTION_ITEMS
 
 <hr>
 
@@ -1329,7 +1346,7 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
   height="31" width="88" align="right">
   </a> 
   -->
-  <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
+  <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
   Minutes formatted by David Booth's perl script: 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
   $Date$ 
@@ -1351,11 +1368,11 @@ my $template = <<'MemberTemplate-EOF'
                       "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
-  <title>SCRIBE_VAR_MEETING_TITLE -- SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</title>
+  <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member.css">
   <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member-minutes.css">
-  <meta content="SCRIBE_VAR_MEETING_TITLE" lang="en" name="Title">  
+  <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
@@ -1364,28 +1381,28 @@ my $template = <<'MemberTemplate-EOF'
 height="48" width="72"></a> 
 </p>
 
-<h1>SCRIBE_VAR_MEETING_TITLE<br>
-SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</h1>
+<h1>SV_MEETING_TITLE<br>
+SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
 <!-- Old:
-<p>See also: <a href="SCRIBE_VAR_MEETING_IRC_URL">IRC log</a></p>
+<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
 -->
-SCRIBE_VAR_FORMATTED_IRC_URL
+SV_FORMATTED_IRC_URL
 
 <h2><a name="attendees">Attendees</a></h2>
 
 <div class="intro">
-<p>Present: SCRIBE_VAR_PRESENT_ATTENDEES</p>
-<p>Regrets: SCRIBE_VAR_REGRETS</p>
-<p>Chair: SCRIBE_VAR_MEETING_CHAIR </p>
-<p>Scribe: SCRIBE_VAR_MEETING_SCRIBE</p>
+<p>Present: SV_PRESENT_ATTENDEES</p>
+<p>Regrets: SV_REGRETS</p>
+<p>Chair: SV_MEETING_CHAIR </p>
+<p>Scribe: SV_MEETING_SCRIBE</p>
 </div>
 
 <h2>Contents</h2>
 <ul>
   <li><a href="#agenda">Agenda Items</a>
 	<ol>
-	SCRIBE_VAR_MEETING_AGENDA
+	SV_MEETING_AGENDA
 	</ol>
   </li>
   <li><a href="#newActions">Summary of Action Items</a></li>
@@ -1396,11 +1413,11 @@ SCRIBE_VAR_FORMATTED_IRC_URL
 <!--  We don't need the agenda items listed twice.
 <h2><a name="agenda">Agenda Items</a></h2>
 <ul>
-  SCRIBE_VAR_MEETING_AGENDA
+  SV_MEETING_AGENDA
 </ul>
 -->
 
-SCRIBE_VAR_AGENDA_BODIES
+SV_AGENDA_BODIES
 <!--
 <h3><a name="item1">Item name (owner)</a></h3>
 <p>... text of discussion ...</p>
@@ -1412,11 +1429,11 @@ SCRIBE_VAR_AGENDA_BODIES
 
 <h2><a name="newActions">Summary of Action Items</a></h2>
 <!-- Done Action Items -->
-SCRIBE_VAR_DONE_ACTION_ITEMS
+SV_DONE_ACTION_ITEMS
 <!-- Pending Action Items -->
-SCRIBE_VAR_PENDING_ACTION_ITEMS
+SV_PENDING_ACTION_ITEMS
 <!-- New Action Items -->
-SCRIBE_VAR_NEW_ACTION_ITEMS
+SV_NEW_ACTION_ITEMS
 
 <hr>
 
@@ -1427,7 +1444,7 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
   height="31" width="88" align="right">
   </a> 
   -->
-  <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
+  <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
   Minutes formatted by David Booth's perl script: 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
   $Date$ 
@@ -1449,11 +1466,11 @@ my $template = <<'TeamTemplate-EOF'
                       "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
-  <title>SCRIBE_VAR_MEETING_TITLE -- SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</title>
+  <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
   <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
-  <meta content="SCRIBE_VAR_MEETING_TITLE" lang="en" name="Title">  
+  <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
@@ -1463,28 +1480,28 @@ height="48" width="72"></a>
 
 </p>
 
-<h1>SCRIBE_VAR_MEETING_TITLE<br>
-SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</h1>
+<h1>SV_MEETING_TITLE<br>
+SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
 <!-- Old:
-<p>See also: <a href="SCRIBE_VAR_MEETING_IRC_URL">IRC log</a></p>
+<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
 -->
-SCRIBE_VAR_FORMATTED_IRC_URL
+SV_FORMATTED_IRC_URL
 
 <h2><a name="attendees">Attendees</a></h2>
 
 <div class="intro">
-<p>Present: SCRIBE_VAR_PRESENT_ATTENDEES</p>
-<p>Regrets: SCRIBE_VAR_REGRETS</p>
-<p>Chair: SCRIBE_VAR_MEETING_CHAIR </p>
-<p>Scribe: SCRIBE_VAR_MEETING_SCRIBE</p>
+<p>Present: SV_PRESENT_ATTENDEES</p>
+<p>Regrets: SV_REGRETS</p>
+<p>Chair: SV_MEETING_CHAIR </p>
+<p>Scribe: SV_MEETING_SCRIBE</p>
 </div>
 
 <h2>Contents</h2>
 <ul>
   <li><a href="#agenda">Agenda Items</a>
 	<ol>
-	SCRIBE_VAR_MEETING_AGENDA
+	SV_MEETING_AGENDA
 	</ol>
   </li>
   <li><a href="#newActions">Summary of Action Items</a></li>
@@ -1495,11 +1512,11 @@ SCRIBE_VAR_FORMATTED_IRC_URL
 <!--  We don't need the agenda items listed twice.
 <h2><a name="agenda">Agenda Items</a></h2>
 <ul>
-  SCRIBE_VAR_MEETING_AGENDA
+  SV_MEETING_AGENDA
 </ul>
 -->
 
-SCRIBE_VAR_AGENDA_BODIES
+SV_AGENDA_BODIES
 <!--
 <h3><a name="item1">Item name (owner)</a></h3>
 <p>... text of discussion ...</p>
@@ -1511,11 +1528,11 @@ SCRIBE_VAR_AGENDA_BODIES
 
 <h2><a name="newActions">Summary of Action Items</a></h2>
 <!-- Done Action Items -->
-SCRIBE_VAR_DONE_ACTION_ITEMS
+SV_DONE_ACTION_ITEMS
 <!-- Pending Action Items -->
-SCRIBE_VAR_PENDING_ACTION_ITEMS
+SV_PENDING_ACTION_ITEMS
 <!-- New Action Items -->
-SCRIBE_VAR_NEW_ACTION_ITEMS
+SV_NEW_ACTION_ITEMS
 
 <hr>
 
@@ -1526,7 +1543,7 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
   height="31" width="88" align="right">
   </a> 
   -->
-  <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
+  <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
   Minutes formatted by David Booth's perl script: 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
   $Date$ 
@@ -1548,11 +1565,11 @@ my $template = <<'MITTemplate-EOF'
                       "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
-  <title>SCRIBE_VAR_MEETING_TITLE -- SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</title>
+  <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
   <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
-  <meta content="SCRIBE_VAR_MEETING_TITLE" lang="en" name="Title">  
+  <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
@@ -1560,31 +1577,31 @@ my $template = <<'MITTemplate-EOF'
 <p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> <a href="http://www.w3.org/Team"><img width="48" height="48"
 alt="W3C Team home" border="0" src="http://www.w3.org/Icons/WWW/team"></a> | <a
-href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> | <a href="http://www.w3.org/">SCRIBE_VAR_MEETING_MONTH_ALPHA
-SCRIBE_VAR_MEETING_YEAR</a></p>
+href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> | <a href="http://www.w3.org/">SV_MEETING_MONTH_ALPHA
+SV_MEETING_YEAR</a></p>
 
-<h1>SCRIBE_VAR_MEETING_TITLE<br>
-SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</h1>
+<h1>SV_MEETING_TITLE<br>
+SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
 <!-- Old:
-<p>See also: <a href="SCRIBE_VAR_MEETING_IRC_URL">IRC log</a></p>
+<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
 -->
-SCRIBE_VAR_FORMATTED_IRC_URL
+SV_FORMATTED_IRC_URL
 
 <h2><a name="attendees">Attendees</a></h2>
 
 <div class="intro">
-<p>Present: SCRIBE_VAR_PRESENT_ATTENDEES</p>
-<p>Regrets: SCRIBE_VAR_REGRETS</p>
-<p>Chair: SCRIBE_VAR_MEETING_CHAIR </p>
-<p>Scribe: SCRIBE_VAR_MEETING_SCRIBE</p>
+<p>Present: SV_PRESENT_ATTENDEES</p>
+<p>Regrets: SV_REGRETS</p>
+<p>Chair: SV_MEETING_CHAIR </p>
+<p>Scribe: SV_MEETING_SCRIBE</p>
 </div>
 
 <h2>Contents</h2>
 <ul>
   <li><a href="#agenda">Agenda Items</a>
 	<ol>
-	SCRIBE_VAR_MEETING_AGENDA
+	SV_MEETING_AGENDA
 	</ol>
   </li>
   <li><a href="#newActions">Summary of Action Items</a></li>
@@ -1595,11 +1612,11 @@ SCRIBE_VAR_FORMATTED_IRC_URL
 <!--  We don't need the agenda items listed twice.
 <h2><a name="agenda">Agenda Items</a></h2>
 <ul>
-  SCRIBE_VAR_MEETING_AGENDA
+  SV_MEETING_AGENDA
 </ul>
 -->
 
-SCRIBE_VAR_AGENDA_BODIES
+SV_AGENDA_BODIES
 <!--
 <h3><a name="item1">Item name (owner)</a></h3>
 <p>... text of discussion ...</p>
@@ -1611,11 +1628,11 @@ SCRIBE_VAR_AGENDA_BODIES
 
 <h2><a name="newActions">Summary of Action Items</a></h2>
 <!-- Done Action Items -->
-SCRIBE_VAR_DONE_ACTION_ITEMS
+SV_DONE_ACTION_ITEMS
 <!-- Pending Action Items -->
-SCRIBE_VAR_PENDING_ACTION_ITEMS
+SV_PENDING_ACTION_ITEMS
 <!-- New Action Items -->
-SCRIBE_VAR_NEW_ACTION_ITEMS
+SV_NEW_ACTION_ITEMS
 
 <hr>
 
@@ -1626,7 +1643,7 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
   height="31" width="88" align="right">
   </a> 
   -->
-  <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
+  <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
   Minutes formatted by David Booth's perl script: 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/">http://dev.w3.org/cvsweb/~checkout~/2002/scribe/</a><br>
   $Date$ 
