@@ -781,14 +781,13 @@ You should specify the meeting chair like this:
 # Grab IRC LOG URL.  Do this before looking for the date, because
 # we can figure out the date from the IRC log name.
 my $logURL = "";
+# <scribe> IRC: http://www.w3.org/2005/01/05-arch-irc
+$logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC([\s_]*)Log))\s*\:\s*(.*)\n/\n/i;
 # <RRSAgent>   recorded in http://www.w3.org/2002/04/05-arch-irc#T15-46-50
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(http\:([^\s\#]+))/i;
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
 # <RRSAgent> RRSAgent is logging to http://www.w3.org/2005/01/05-arch-irc
-$logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>.*(\s+is\s+logging\s+to)\s+(http\:([^\s\#]+))/i;
-# <scribe> IRC: http://www.w3.org/2005/01/05-arch-irc
-$logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>.*(\s+is\s+logging\s+to)\s+(http\:([^\s\#]+))/i;
-$logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC([\s_]*)Log))\s*\:\s*(.*)\n/\n/i;
+$logURL = $4 if $all =~ m/\n\<(RRSAgent|Zakim)\>.*((\s+is)?\s+logging\s+to)\s+(http\:([^\s\#]+))/i;
 
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
@@ -1169,7 +1168,7 @@ foreach my $key ((keys %actions))
 	#	ACTION: 2003-10-09: Bijan to look into message extensibility Issues
 	#	ACTION: 10/09/03: Bijan to look into message extensibility Issues
 	#	ACTION: 10/9: Bijan to look into message extensibility Issues
-	$a =~ s/\A\d+[\-\/]\d+(([\-\/]\d+)?)\s*\:\s*//;
+	$a =~ s/\A\d+[\-\/]\d+(([\-\/]\d+)?)(\:?)\s*//;
 	# Look for action recipients
 	my @names = ();
 	my @good = ();
