@@ -153,6 +153,21 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #   Yahoo IM style:
 #	ericn: Where is our next F2F?
 #	dbooth: Rennes France.
+
+
+######################################################################
+# FEATURE WISH LIST:
+# 1. Add a normalizer function for the format from hugo's log in
+# http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
+#
+# 2. Grab the list of attendees automatically from zakim bot's
+# message about who was on the call:
+#	<Zakim> WS_DescWG()11:00AM has ended
+#	<Zakim> Attendees were A_Ryman, Dbooth, Dietmar_Gaertner, Plh, GlenD, Youenn, WilliamV, JacekK, DOrchard, Prasad_Yendluri, Jonathan_Marsh, PaulD, J_Thrasher, T_Jordahl, S_Kumar, Allen,
+#	<Zakim> ... IgorS, J.Mischkinsky, Lily, Umit, sanjiva, bijan, JeffM, Erik_Ackerman
+#	* dbooth cheers zakim bot!
+
+######################################################################
 #
 # WARNING: The code is a horrible mess.  (Sorry!)  Please hold your nose if 
 # you look at it.  If you have something better, or make improvements
@@ -334,6 +349,10 @@ if ($canonicalizeNames)
 
 if ($normalizeOnly)
 	{
+	# This isn't really very good.  I thought this would be a
+	# useful option, but now I'm not so sure, because several
+	# of the scribe.perl commands (such as "Scribe: ...") are
+	# removed when they're processed.
 	my $t = join("\n", grep {m/\A\</;} split(/\n/, $all)) . "\n";
 	print "$t\n";
 	exit 0;
