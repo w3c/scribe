@@ -22,69 +22,14 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # 	Please make improvements to this program!  Check them into CVS (or
 # 	email them to me) and notify me know by email.  Thanks!
 #
+# DOCUMENTATION
+# 	Is now at http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm
+#
 # USAGE: 
 #	perl scribe.perl [options] ircLogFile.txt > minutesFile.htm
 #	perl scribe.perl -sampleInput
 #	perl scribe.perl -sampleOutput
 #	perl scribe.perl -sampleTemplate
-#
-# Options:
-#	-sampleInput		Show me some sample input, so I can
-#				learn how to use this program.
-#
-#	-sampleOutput		Show me some sample output.
-#
-#	-scribeOnly		Only keep scribe statements.  (Otherwise
-#				everyone's statements are kept.)
-#
-#	-normalize		Just output the normalized input, without
-#				formatting into HTML.  The purpose of this
-#				is to allow you to edit the normalized log
-#				(which is often easier than editing the raw
-#				low) and then use it as input to generate
-#				the HTML formatted minutes.
-#
-#	-template tfile		Use tfile as the template file for
-#				generating the HTML.  Without this option,
-#				the program will default to an embedded
-#				template, which you can see by using
-#				the "-sampleTemplate" option.
-#
-#	-sampleTemplate		Show me a sample template file.
-#				(The default template.)
-#
-#	-public			Use a template that is formatted
-#				for public access.  DEFAULT.
-#				(Search for "sub PublicTemplate" below.)
-#
-#	-member			Use a template that is formatted 
-#				for W3C member-only access.
-#				(Search for "sub MemberTemplate" below.)
-#
-#	-team			Use a template that is formatted
-#				for W3C team-only access.
-#				(Search for "sub TeamTemplate" below.)
-#
-#	-mit			Use a template that is formatted for
-#				W3C MIT style.
-#				(Search for "sub MITTemplate" below.)
-#
-#	-trustRRSAgent		Take the action items from what RRSAgent says,
-#				("<RRSAgent> I see 9 open action items...")
-#				rather than directly from what an individual
-#				wrote ("<dbooth> ACTION: ...").
-#
-#	-breakActions		Break long action lines into multiple lines.
-#				The purpose of this is to indent the
-#				continuation lines, such that when they are
-#				later copied and pasted, the continuation
-#				lines can be recognized and rejoined.
-#
-#	-implicitContinuations	Speaker statements are continued on following
-#				lines without a leading space or "...":
-#				# <dbooth> Amy: Now is the time
-#				# <dbooth> for all good men and women
-#				# <dbooth> to come to the aid of their party.
 #
 #
 # The best way to use this program is:
@@ -100,72 +45,11 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # It's a good idea to run the output through "tidy -c".
 # (See http://www.w3.org/People/Raggett/tidy/ .)
 #
-# SCRIBE CONVENTIONS:
-# This program expects certain conventions in the IRC log as follows.
-# Identify the IRC name of the scribe (Note that names must not contain spaces):
-#	<dbooth> Scribe: dbooth
-# Identify the meeting chair:
-#	<dbooth> Chair: Jonathan
-# Identify the meeting itself:
-#	<dbooth> Meeting: Weekly Baking Club Meeting
-# Identify the agenda:
-#	<hugo> Agenda: http://www.example.com/myagenda
-# Fix the meeting date (default is auto set from IRC log name or today if 
-# there is no "Date:" line):
-#	<dbooth> Date: 05 Dec 2002
-# Identify the current topic.  You should insert one of
-# these lines before the start of EACH topic:
-#	<dbooth> Topic: Review of Action Items
-# Record an action item:
-#	<dbooth> ACTION: dbooth to send a message to himself about action items
-# Record action item status (preferred format):
-#	<Philippe> ACTION: Barbara to bake 3 pies [DONE]
-#	<Philippe> ACTION: Barbara to bake 3 pies [PENDING]
-#	<Philippe> ACTION: Barbara to bake 3 pies [DROPPED]
-#	<Philippe> ACTION: Barbara to bake 3 pies [UNKNOWN]
-#	<Philippe> ACTION: Barbara to bake 3 pies [IN_PROGRESS]
-# Other formats also recognized:
-#	<Philippe> ACTION: Barbara to bake 3 pies [IN PROGRESS]
-#	<Philippe> ACTION: Barbara to bake 3 pies [IN-PROGRESS]
-#	<Philippe> ACTION: Barbara to bake 3 pies  -- DONE
-#	<Philippe> ACTION: Barbara to bake 3 pies  *DONE*
-#	<Philippe> ACTION: Barbara to bake 3 pies  (DONE)
-#	<Philippe> DONE: ACTION: Barbara to bake 3 pies
-#	<Philippe> DONE ACTION: Barbara to bake 3 pies
-# Scribe someone's statements:
-#	<dbooth> Joseph: I think that we should all eat cake
-#	<dbooth> ... with ice creme.
-# Correct a mistake (changes most recent instance):
-#	<dbooth> s/creme/cream/
-# Correct a mistake globally from this point back in the input:
-#	<dbooth> s/Baking/Cooking/g
-# Identify the IRC log produced by RRSAGENT (this also sets the date):
-#	<dbooth> rrsagent, where am i?
-#	<RRSAgent> See http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36
-# or:
-#	<dbooth> Log: http://www.w3.org/2002/11/07-ws-arch-irc
-# Separator (at least 4 dashes):
-#	<dbooth> ----
-#
 # INPUT FORMATS ACCEPTED
-# These formats are auto detected.  The best match wins.
-#   MIRC buffer style:
-#	<ericn> Where is our next F2F?
-#	<dbooth> Rennes France.
-#   RRSAgent Text style:
-#	20:41:27 <ericn> Where is our next F2F?
-#	20:41:37 <dbooth> Rennes France.
-#   RRSAgent HTML style:
-#	<dt id="T20-41-27">20:41:27 [ericn]</dt><dd>Where is our next F2F? </dd>
-#	<dt id="T20-41-37">20:41:37 [dbooth]</dt><dd>Rennes France. </dd>
-#   RRSAgent HTML Text style (text copied and pasted from the browser):
-#	20:41:27 [ericn]
-#	     Where is our next F2F?
-#	20:41:37 [dbooth]
-#	     Rennes France.
-#   Yahoo IM style:
-#	ericn: Where is our next F2F?
-#	dbooth: Rennes France.
+# Input formats are normally auto detected.  The best match wins.
+# Format can be forced with the -inputFormat option.
+# Formats are recognized by "normalizer" functions.
+# Search for "Normalize" in the code below.
 
 
 ######################################################################
@@ -260,7 +144,7 @@ my $trustRRSAgent = 0;		# Trust RRSAgent?
 my $breakActions = 1;		# Break long action lines?
 my $implicitContinuations = 0;	# Option: -implicitContinuations
 my $scribeName = "UNKNOWN"; 	# Example: -scribe dbooth
-my $useZakimTopics = 0; 	# Treat zakim agenda take-up as Topic change?
+my $useZakimTopics = 1; 	# Treat zakim agenda take-up as Topic change?
 my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 
 my @args = ();
@@ -355,7 +239,7 @@ my @inputFormats = qw(
 		RRSAgent_HTML_Format 
 		RRSAgent_Visible_HTML_Text_Paste_Format
 		Mirc_Text_Format
-		Hugo_Log_Text_Format
+		Irssi_ISO8601_Log_Text_Format
 		Yahoo_IM_Format
 		Plain_Text_Format
 		);
@@ -1523,10 +1407,11 @@ return($score, $all);
 }
 
 ##################################################################
-########################## Hugo_Log_Text_Format #########################
+########################## Irssi_ISO8601_Log_Text_Format #########################
 ##################################################################
 # Example: http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0003/ExampleFormat-NormalizerHugoLogText.txt
-sub Hugo_Log_Text_Format
+# See also http://wiki.irssi.org/cgi-bin/twiki/view/Irssi/WindowLogging
+sub Irssi_ISO8601_Log_Text_Format
 {
 die if @_ != 1;
 my ($all) = @_;
@@ -1572,7 +1457,7 @@ while (@lines)
 	# warn "LINE: $line\n";
 	}
 $all = "\n" . join("\n", @linesOut) . "\n";
-# warn "Hugo_Log_Text_Format n matches: $n\n";
+# warn "Irssi_ISO8601_Log_Text_Format n matches: $n\n";
 my $score = $n / $nLines;
 return($score, $all);
 }
