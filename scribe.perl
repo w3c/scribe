@@ -3184,24 +3184,24 @@ sub PublicTemplate
 {
 my $template = <<'PublicTemplate-EOF'
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang='en'>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/public.css">
-  <LINK rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
-  <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/public.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 
 </p>
 
-<h1>SV_MEETING_TITLE<br>
-SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
+<h1>SV_MEETING_TITLE</h1>
+<h2>SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h2>
 
 SV_FORMATTED_AGENDA_LINK
 
@@ -3260,19 +3260,19 @@ sub MemberTemplate
 {
 my $template = <<'MemberTemplate-EOF'
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member.css">
-  <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member-minutes.css">
-  <LINK rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
-  <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member-minutes.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 </p>
 
@@ -3336,19 +3336,19 @@ sub TeamTemplate
 {
 my $template = <<'TeamTemplate-EOF'
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
-  <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
-  <LINK rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
-  <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 
 </p>
@@ -3414,19 +3414,19 @@ sub MITTemplate
 {
 my $template = <<'MITTemplate-EOF'
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
-  <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
-  <LINK rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
-  <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
+  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> <a href="http://www.w3.org/Team"><img width="48" height="48"
 alt="W3C Team home" border="0" src="http://www.w3.org/Icons/WWW/team"></a> | <a
 href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> 
