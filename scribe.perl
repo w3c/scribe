@@ -6,9 +6,15 @@
 #
 # Take a raw W3C IRC log, tidy it up a bit, and put it into HTML
 # to create meeting minutes.  Reads stdin, writes stdout.
-# The IRC log can be with or without timestamps.
+#
+# INPUT FORMAT:
+# The IRC log can be with or without timestamps.  However, it MUST
+# be in PLAIN TEXT format -- not HTML.  (By default, w3.org serves
+# the IRC logs as HTML.  To get one in plain text, add ".txt" to the end 
+# of the URL, such as: http://www.w3.org/2003/02/06-ws-arch-irc.txt .)
+# See "SCRIBE CONVENTIONS" below.
 # 
-# Usage: 
+# USAGE: 
 #	perl scribe.perl [options] ircLogFile.txt > minutesFile.htm
 #	perl scribe.perl -sampleInput
 #	perl scribe.perl -sampleOutput
@@ -30,18 +36,35 @@
 #				the "-sampleTemplate" option.
 #
 #	-sampleTemplate		Show me a sample template file.
+#				(The default template.)
+#
+#	-public			Use a template that is formatted
+#				for public access.  DEFAULT.
+#				(Search for "sub PublicTemplate" below.)
+#
+#	-member			Use a template that is formatted 
+#				for W3C member-only access.
+#				(Search for "sub PublicTemplate" below.)
+#
+#	-team			Use a template that is formatted
+#				for W3C team-only access.
+#				(Search for "sub PublicTemplate" below.)
+#
+#	-mit			Use a template that is formatted for
+#				W3C MIT style.
+#				(Search for "sub PublicTemplate" below.)
 #
 # The best way to use this program is:
 #	1. Make a backup of your IRC log.
-#	2. Modify the IRC log to conform to the formats that this
+#	2. Modify the IRC log to conform to the scribe conventions that this
 #	   program expects (described below).
 #	3. Run this program as described above.
 #	4. View the output in a browser.
 #	5. Go back to step 2 to make modifications, and repeat.
 #	   Once the output looks good enough, then . . .
 #	6. Manually edit the resulting HTML for any remaining fixes.
-#	   (E.g., Usually the list of people present needs editing.)
 #
+# SCRIBE CONVENTIONS:
 # This program expects certain conventions in the IRC log as follows.
 # Identify the scribe (Note that names must not contain spaces):
 #	<dbooth> Scribe: dbooth
@@ -68,10 +91,13 @@
 # Identify the IRC log produced by RRSAGENT:
 #	<dbooth> rrsagent, where am i?
 #	<RRSAgent> See http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36
+# or:
+#	<dbooth> Log: http://www.w3.org/2002/11/07-ws-arch-irc
 #
 # WARNING: The code is a horrible mess.  (Sorry!)  Please hold your nose if 
 # you look at it.  If you have something better, or fix this up at all, 
-# please let me know.  Thanks!
+# please let me know.  Perhaps it's a good example of Fred Brooke's advice
+# in Mythical Man Month: "Plan to throw one away". 
 #
 ######################################################################
 
@@ -94,7 +120,7 @@ my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
 my $scribeOnly = 0;		# Only select scribe lines
 @ARGV = map {glob} @ARGV;
 my @args = ();
-my $templateFile = $ENV{'HOME'} . "\\w3c\\scribe-TEMPLATE-team.htm";
+my $template = &DefaultTemplate();
 while (@ARGV)
 	{
 	my $a = shift @ARGV;
@@ -112,17 +138,27 @@ while (@ARGV)
 	elsif ($a eq "-teamSynonyms") 
 		{ $useTeamSynonyms = 1; }
 	elsif ($a eq "-mit") 
-		{ $templateFile = $ENV{'HOME'} . "\\w3c\\scribe-TEMPLATE-mit.htm"; }
+		{ $template = &MITTemplate(); }
 	elsif ($a eq "-team") 
-		{ $templateFile = $ENV{'HOME'} . "\\w3c\\scribe-TEMPLATE-team.htm"; }
+		{ $template = &TeamTemplate(); }
 	elsif ($a eq "-member") 
-		{ $templateFile = $ENV{'HOME'} . "\\w3c\\scribe-TEMPLATE-member.htm"; }
+		{ $template = &MemberTemplate(); }
 	elsif ($a eq "-world") 
-		{ $templateFile = $ENV{'HOME'} . "\\w3c\\scribe-TEMPLATE-public.htm"; }
+		{ $template = &PublicTemplate(); }
 	elsif ($a eq "-public") 
-		{ $templateFile = $ENV{'HOME'} . "\\w3c\\scribe-TEMPLATE-public.htm"; }
+		{ $template = &PublicTemplate(); }
 	elsif ($a eq "-template") 
-		{ $templateFile = shift @ARGV; }
+		{ 
+		my $templateFile = shift @ARGV; 
+		die "ERROR: Template file not found: $templateFile\n"
+			if !-e $templateFile;
+		my $t = &GetTemplate($templateFile);
+		if (!$t)
+			{
+			die "ERROR: Empty template: $templateFile\n";
+			}
+		$template = $t;
+		}
 	elsif ($a =~ m/\A\-/)
 		{ die "ERROR: Unknown option: $a\n"; }
 	else	
@@ -138,14 +174,13 @@ if (!$all)
 	}
 # Delete control-M's if any.
 $all =~ s/\r//g;
+# Join continued lines:
+$all =~ s/\n\ \ //g;
 # Fix split URLs:
 # 	<RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2002Mar/00
 # 	  46.html Simon's two minutes
-while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
-while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
-# Join continued lines:
-$all =~ s/\s*\n  \s*/ /g;
-$all =~ s/\s*\n \s*/ /g;
+# while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
+# while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
 # Remove timestamps, if there are any:
 $all =~ s/\n\d\d\:\d\d\:\d\d[\ \t]+/\n/g;
 
@@ -245,7 +280,8 @@ for (my $i=0; $i<@allLines; $i++)
 $all = "\n" . join("\n", @allLines) . "\n";
 
 # Get the list of people present:
-my @present = @uniqNames;	# People present at the meeting
+my @possiblyPresent = @uniqNames;	# People present at the meeting
+my @present = ();			# People present at the meeting
 if ($all =~ s/\s+Present\s*\:\s*(.*)//i)
 	{
 	my $present = $1;
@@ -268,7 +304,8 @@ if ($all =~ s/\s+Present\s*\:\s*(.*)//i)
 		warn "Defaulting to Present: @present\n\n";
 		}
 	}
-warn "Present: @present\n";
+if (@present) { warn "Present: @present\n"; }
+else { warn "Possibly Present: @possiblyPresent\n"; }
 
 # Get the list of regrets:
 my @regrets = ();	# People who sent regrets
@@ -287,7 +324,7 @@ if ($all =~ s/\s+Regrets\s*\:\s*(.*)//i)
 		@regrets = grep {$_} split(/\s+/,$regrets);
 		}
 	}
-warn "Regrets: @regrets\n";
+warn "Regrets: @regrets\n" if @regrets;
 
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate();
@@ -597,14 +634,7 @@ $all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/g;
 my $presentAttendees = join(", ", @present);
 my $regrets = join(", ", @regrets);
 
-my $result = &GetTemplate($templateFile);
-if (!$result)
-	{
-	warn "WARNING: No template file found: $templateFile\n";
-	warn "Using defaultTemplate.\n";
-	$result = &DefaultTemplate();
-	die if !$result;
-	}
+my $result = $template;
 $result =~ s/SCRIBE_VAR_MEETING_DAY/$day0/g;
 $result =~ s/SCRIBE_VAR_MEETING_MONTH_ALPHA/$monthAlpha/g;
 $result =~ s/SCRIBE_VAR_MEETING_YEAR/$year/g;
@@ -635,8 +665,11 @@ $result =~ s/SCRIBE_VAR_MEETING_IRC_URL/$logURL/g;
 	
 
 print $result;
+exit 0;
 
+##################################################################
 ##################### GetTemplate ####################
+##################################################################
 sub GetTemplate
 {
 @_ == 1 || die;
@@ -648,7 +681,9 @@ close($templateFile);
 return $template;
 }
 
+##################################################################
 ######################## GetDate ####################
+##################################################################
 # Grab date from $all or default to today's date.
 # Global: $namePattern
 sub GetDate
@@ -701,7 +736,9 @@ return @date;
 
 
 
+##################################################################
 ###################### GetNames ######################
+##################################################################
 # Look for people in IRC log.
 sub GetNames
 {
@@ -715,7 +752,7 @@ my @stopList = qw(a q on items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
 	Scribe 00AM 00PM P IRC Topics Keio DROPPED 
 	yes no abstain Consensus Participants Question RESOLVED strategy
-	AGREED);
+	AGREED Date);
 @stopList = (@stopList, @rooms);
 @stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
 my %stopList = map {($_,$_)} @stopList;
@@ -970,10 +1007,50 @@ my @sortedUniqNames = sort values %uniqNames;
 return($expandedIRC, $scribe, \@allNameRefs, @sortedUniqNames);
 }
 
+##################################################################
 ################ DefaultTemplate ####################
+##################################################################
 sub DefaultTemplate
 {
-my $defaultTemplate = <<'DefaultTemplate-EOF'
+return &PublicTemplate();
+}
+
+##################################################################
+####################### SampleInput ##############################
+##################################################################
+sub SampleInput
+{
+my $sampleInput = <<'SampleInput-EOF'
+<dbooth> Scribe: dbooth
+<dbooth> Chair: Jonathan
+<dbooth> Meeting: Weekly Baking Club Meeting
+<dbooth> Date: 05 Dec 2002
+<dbooth> Topic: Review of Action Items
+<Philippe> PENDING ACTION: Barbara to bake 3 pies 
+<Philippe> DONE ACTION: David to make ice cream 
+<dbooth> Topic: What to Eat for Dessert
+<dbooth> Joseph: I think that we should all eat cake
+<dbooth> ... with ice creme.
+<dbooth> s/creme/cream/
+<Philippe> That's a good idea
+<dbooth> ACTION: dbooth to send a message to himself about action items
+<dbooth> Topic: Next Week's Meeting
+<Philippe> I think we should do this again next week.
+<Jonathan> Sounds good to me.
+<dbooth> rrsagent, where am i?
+<RRSAgent> I am logging.
+<RRSAgent> See http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36
+SampleInput-EOF
+;
+return $sampleInput;
+}
+
+##################################################################
+###################### PublicTemplate ############################
+##################################################################
+sub PublicTemplate
+{
+my $template = <<'PublicTemplate-EOF'
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
                       "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
@@ -1061,36 +1138,307 @@ SCRIBE_VAR_NEW_ACTION_ITEMS
 </address>
 </body>
 </html>
-DefaultTemplate-EOF
+PublicTemplate-EOF
 ;
-return $defaultTemplate;
+return $template;
 }
 
-############### SampleInput ###################
-sub SampleInput
+##################################################################
+###################### MemberTemplate ############################
+##################################################################
+sub MemberTemplate
 {
-my $sampleInput = <<'SampleInput-EOF'
-<dbooth> Scribe: dbooth
-<dbooth> Chair: Jonathan
-<dbooth> Meeting: Weekly Baking Club Meeting
-<dbooth> Date: 05 Dec 2002
-<dbooth> Topic: Review of Action Items
-<Philippe> PENDING ACTION: Barbara to bake 3 pies 
-<Philippe> DONE ACTION: David to make ice cream 
-<dbooth> Topic: What to Eat for Dessert
-<dbooth> Joseph: I think that we should all eat cake
-<dbooth> ... with ice creme.
-<dbooth> s/creme/cream/
-<Philippe> That's a good idea
-<dbooth> ACTION: dbooth to send a message to himself about action items
-<dbooth> Topic: Next Week's Meeting
-<Philippe> I think we should do this again next week.
-<Jonathan> Sounds good to me.
-<dbooth> rrsagent, where am i?
-<RRSAgent> I am logging.
-<RRSAgent> See http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36
-SampleInput-EOF
+my $template = <<'MemberTemplate-EOF'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+                      "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>SCRIBE_VAR_MEETING_TITLE -- SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</title>
+  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
+  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member.css">
+  <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member-minutes.css">
+  <meta content="SCRIBE_VAR_MEETING_TITLE" lang="en" name="Title">  
+  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+</head>
+
+<body>
+<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
+height="48" width="72"></a> 
+</p>
+
+<h1>SCRIBE_VAR_MEETING_TITLE<br>
+SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</h1>
+
+<!-- Old:
+<p>See also: <a href="SCRIBE_VAR_MEETING_IRC_URL">IRC log</a></p>
+-->
+SCRIBE_VAR_FORMATTED_IRC_URL
+
+<h2><a name="attendees">Attendees</a></h2>
+
+<div class="intro">
+<p>Present: SCRIBE_VAR_PRESENT_ATTENDEES</p>
+<p>Regrets: SCRIBE_VAR_REGRETS</p>
+<p>Chair: SCRIBE_VAR_MEETING_CHAIR </p>
+<p>Scribe: SCRIBE_VAR_MEETING_SCRIBE</p>
+</div>
+
+<h2>Contents</h2>
+<ul>
+  <li><a href="#agenda">Agenda Items</a>
+	<ol>
+	SCRIBE_VAR_MEETING_AGENDA
+	</ol>
+  </li>
+  <li><a href="#newActions">Summary of Action Items</a></li>
+</ul>
+<hr>
+
+
+<!--  We don't need the agenda items listed twice.
+<h2><a name="agenda">Agenda Items</a></h2>
+<ul>
+  SCRIBE_VAR_MEETING_AGENDA
+</ul>
+-->
+
+SCRIBE_VAR_AGENDA_BODIES
+<!--
+<h3><a name="item1">Item name (owner)</a></h3>
+<p>... text of discussion ...</p>
+
+<h3><a name="item2">Item name (owner)</a></h3>
+<p>... text of discussion ...</p>
+-->
+
+
+<h2><a name="newActions">Summary of Action Items</a></h2>
+<!-- Done Action Items -->
+SCRIBE_VAR_DONE_ACTION_ITEMS
+<!-- Pending Action Items -->
+SCRIBE_VAR_PENDING_ACTION_ITEMS
+<!-- New Action Items -->
+SCRIBE_VAR_NEW_ACTION_ITEMS
+
+<hr>
+
+<address>
+  <!--
+  <a href="http://validator.w3.org/check/referer"><img border="0"
+  src="http://validator.w3.org/images/vh40.gif" alt="Valid HTML 4.0!"
+  height="31" width="88" align="right">
+  </a> 
+  -->
+  <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
+  David Booth <br />
+  <a href="mailto:dbooth@w3.org">dbooth@w3.org</a><br>
+  $Date$ 
+</address>
+</body>
+</html>
+MemberTemplate-EOF
 ;
-return $sampleInput;
+return $template;
 }
+
+##################################################################
+###################### TeamTemplate ############################
+##################################################################
+sub TeamTemplate
+{
+my $template = <<'TeamTemplate-EOF'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+                      "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>SCRIBE_VAR_MEETING_TITLE -- SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</title>
+  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
+  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
+  <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
+  <meta content="SCRIBE_VAR_MEETING_TITLE" lang="en" name="Title">  
+  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+</head>
+
+<body>
+<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
+height="48" width="72"></a> 
+
+</p>
+
+<h1>SCRIBE_VAR_MEETING_TITLE<br>
+SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</h1>
+
+<!-- Old:
+<p>See also: <a href="SCRIBE_VAR_MEETING_IRC_URL">IRC log</a></p>
+-->
+SCRIBE_VAR_FORMATTED_IRC_URL
+
+<h2><a name="attendees">Attendees</a></h2>
+
+<div class="intro">
+<p>Present: SCRIBE_VAR_PRESENT_ATTENDEES</p>
+<p>Regrets: SCRIBE_VAR_REGRETS</p>
+<p>Chair: SCRIBE_VAR_MEETING_CHAIR </p>
+<p>Scribe: SCRIBE_VAR_MEETING_SCRIBE</p>
+</div>
+
+<h2>Contents</h2>
+<ul>
+  <li><a href="#agenda">Agenda Items</a>
+	<ol>
+	SCRIBE_VAR_MEETING_AGENDA
+	</ol>
+  </li>
+  <li><a href="#newActions">Summary of Action Items</a></li>
+</ul>
+<hr>
+
+
+<!--  We don't need the agenda items listed twice.
+<h2><a name="agenda">Agenda Items</a></h2>
+<ul>
+  SCRIBE_VAR_MEETING_AGENDA
+</ul>
+-->
+
+SCRIBE_VAR_AGENDA_BODIES
+<!--
+<h3><a name="item1">Item name (owner)</a></h3>
+<p>... text of discussion ...</p>
+
+<h3><a name="item2">Item name (owner)</a></h3>
+<p>... text of discussion ...</p>
+-->
+
+
+<h2><a name="newActions">Summary of Action Items</a></h2>
+<!-- Done Action Items -->
+SCRIBE_VAR_DONE_ACTION_ITEMS
+<!-- Pending Action Items -->
+SCRIBE_VAR_PENDING_ACTION_ITEMS
+<!-- New Action Items -->
+SCRIBE_VAR_NEW_ACTION_ITEMS
+
+<hr>
+
+<address>
+  <!--
+  <a href="http://validator.w3.org/check/referer"><img border="0"
+  src="http://validator.w3.org/images/vh40.gif" alt="Valid HTML 4.0!"
+  height="31" width="88" align="right">
+  </a> 
+  -->
+  <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
+  David Booth <br />
+  <a href="mailto:dbooth@w3.org">dbooth@w3.org</a><br>
+  $Date$ 
+</address>
+</body>
+</html>
+TeamTemplate-EOF
+;
+return $template;
+}
+
+##################################################################
+###################### MITTemplate ############################
+##################################################################
+sub MITTemplate
+{
+my $template = <<'MITTemplate-EOF'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+                      "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>SCRIBE_VAR_MEETING_TITLE -- SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</title>
+  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
+  <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
+  <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
+  <meta content="SCRIBE_VAR_MEETING_TITLE" lang="en" name="Title">  
+  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+</head>
+
+<body>
+<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border="0"
+height="48" width="72"></a> <a href="http://www.w3.org/Team"><img width="48" height="48"
+alt="W3C Team home" border="0" src="http://www.w3.org/Icons/WWW/team"></a> | <a
+href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> | <a href="http://www.w3.org/">SCRIBE_VAR_MEETING_MONTH_ALPHA
+SCRIBE_VAR_MEETING_YEAR</a></p>
+
+<h1>SCRIBE_VAR_MEETING_TITLE<br>
+SCRIBE_VAR_MEETING_DAY SCRIBE_VAR_MEETING_MONTH_ALPHA SCRIBE_VAR_MEETING_YEAR</h1>
+
+<!-- Old:
+<p>See also: <a href="SCRIBE_VAR_MEETING_IRC_URL">IRC log</a></p>
+-->
+SCRIBE_VAR_FORMATTED_IRC_URL
+
+<h2><a name="attendees">Attendees</a></h2>
+
+<div class="intro">
+<p>Present: SCRIBE_VAR_PRESENT_ATTENDEES</p>
+<p>Regrets: SCRIBE_VAR_REGRETS</p>
+<p>Chair: SCRIBE_VAR_MEETING_CHAIR </p>
+<p>Scribe: SCRIBE_VAR_MEETING_SCRIBE</p>
+</div>
+
+<h2>Contents</h2>
+<ul>
+  <li><a href="#agenda">Agenda Items</a>
+	<ol>
+	SCRIBE_VAR_MEETING_AGENDA
+	</ol>
+  </li>
+  <li><a href="#newActions">Summary of Action Items</a></li>
+</ul>
+<hr>
+
+
+<!--  We don't need the agenda items listed twice.
+<h2><a name="agenda">Agenda Items</a></h2>
+<ul>
+  SCRIBE_VAR_MEETING_AGENDA
+</ul>
+-->
+
+SCRIBE_VAR_AGENDA_BODIES
+<!--
+<h3><a name="item1">Item name (owner)</a></h3>
+<p>... text of discussion ...</p>
+
+<h3><a name="item2">Item name (owner)</a></h3>
+<p>... text of discussion ...</p>
+-->
+
+
+<h2><a name="newActions">Summary of Action Items</a></h2>
+<!-- Done Action Items -->
+SCRIBE_VAR_DONE_ACTION_ITEMS
+<!-- Pending Action Items -->
+SCRIBE_VAR_PENDING_ACTION_ITEMS
+<!-- New Action Items -->
+SCRIBE_VAR_NEW_ACTION_ITEMS
+
+<hr>
+
+<address>
+  <!--
+  <a href="http://validator.w3.org/check/referer"><img border="0"
+  src="http://validator.w3.org/images/vh40.gif" alt="Valid HTML 4.0!"
+  height="31" width="88" align="right">
+  </a> 
+  -->
+  <!-- <a href="/Team/SCRIBE_VAR_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
+  David Booth <br />
+  <a href="mailto:dbooth@w3.org">dbooth@w3.org</a><br>
+  $Date$ 
+</address>
+</body>
+</html>
+MITTemplate-EOF
+;
+return $template;
+}
+
+
 
