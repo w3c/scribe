@@ -151,11 +151,11 @@ $all =~ s/\n\d\d\:\d\d\:\d\d[\ \t]+/\n/g;
 
 
 # Perform s/old/new/ substitutions.
-while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)(\/?(g?))(\s*)\n/i)
+while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 	{
 	my $old = $1;
 	my $new = $2;
-	my $global = $4;
+	my $global = $5;
 	my $pre = $`;
 	my $match = $&;
 	my $post = $';
@@ -459,6 +459,9 @@ foreach my $line (@lines)
 	# Ignore join/leave lines:
 	next if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
 	next if $line =~ m/\A\s*\<(Scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
+	# Ignore topic change lines:
+	# <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
+	next if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
 	# Ignore zakim lines
 	next if $line =~ m/\A\<Zakim\>/i;
 	next if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
