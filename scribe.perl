@@ -22,24 +22,34 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # CONTRIBUTIONS
 # Please make improvements to this program!  Check them into CVS (or
-# email them to me) and notify me know by email.  Thanks!  -- DBooth
+# email them to me) and notify me by email.  Thanks!  -- DBooth
 #
 
 
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 1. Adopt Karl's improved HTML style for MIT minutes.
-# See http://lists.w3.org/Archives/Team/w3t/2003Dec/0158.html
+#
+# 0. FIX BUG: Attributing wrong speaker after command. 
+# Try running on 040206-arch-irc.txt and look for "talked to Marie-Claire"
+#
+# 1. Make the generated HTML valid.  At the moment it is INVALID.
+# (Broken by Dom when switching to Karl's new format, and unfortunately
+# the template process is really messy (my fault (dbooth)), so it isn't 
+# easy to see how to fix it.  I've been wanting to switch to a better
+# technique for template processing.  See wish list item below.)
+#
+# 1.1. Fix the default (public) format.  It currently indents the first
+# line of each speaker statement, which makes subsequent lines look ragged:
+#	    Hugo: He told me it's based on WSDL 1.1.
+#	Who wants to champion this response? 
+#	Need someone to read the spec.
 #
 # 2. Allow the scribe to change.  Process multiple "Scribe: dbooth" commands.
 # Maybe add "Scribes: dbooth hugo" command.
 # See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
 #
 # 3. Handle weird chars in nick name: <maxf``>
-# See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
-#
-# 3. Recognize "------------" as topic separator.
 # See http://cvs.w3.org/Team/~checkout~/WWW/2003/11/21-ia-irc.txt?rev=1.139&content-type=text/plain
 #
 # 4. Improve the guess of who attended, when zakim did not report
@@ -142,7 +152,7 @@ my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
 	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
-	AGREED Date queue no one in XachBot got it WARNING);
+	AGREED Date queue no one in XachBot got it WARNING upcoming);
 # @stopList = (@stopList, @rooms);
 @stopList = (@stopList, @commands, @actionStatuses);
 @stopList = &Uniq(&WordVariations(map {&LC($_)} @stopList));
@@ -164,7 +174,9 @@ my $scribeName = "UNKNOWN"; 	# Example: -scribe dbooth
 my $useZakimTopics = 1; 	# Treat zakim agenda take-up as Topic change?
 my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 my $minScribeLines = 40;	# Min lines to be guessed as scribe.
-
+my $dashTopics = 0;		# Treat "---" as starting a new topic
+my $runTidy = 0;		# Pipe the output through "tidy -c"
+my $preferredContinuation = " "; # Either "... " or " ".
 my @args = ();
 my $template = &DefaultTemplate();
 my $scribeDefaultOptions = 'SCRIBEOPTIONS';
@@ -234,8 +246,14 @@ while (@ARGV)
 		{ $minScribeLines = shift @ARGV; }
 	elsif ($a eq "-inputFormat") 
 		{ $inputFormat = shift @ARGV; }
+	elsif ($a eq "-dashTopics" || $a eq "-philippe" || $a eq "-plh") 
+		{ $dashTopics = 1; }
 	elsif ($a eq "-scribe" || $a eq "-scribeName") 
 		{ $scribeName = shift @ARGV; }
+	elsif ($a eq "-tidy") 
+		{ 
+		open(STDOUT, "| tidy -c") || die "ERROR: Could not run \"tidy -c\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n";
+		}
 	elsif ($a eq "-help" || $a eq "-h") 
 		{ die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; }
 	elsif ($a =~ m/\A\-/)
@@ -385,6 +403,15 @@ if ($useZakimTopics)
 		}
 	}
 
+my ($allDashTopics, $nDashTopics) = &ConvertDashTopics($all);
+if ($dashTopics)
+	{
+	$all = $allDashTopics;
+	}
+else	{
+	$nDashTopics==0 || warn "\nWARNING: Dash separator lines found.  If you intended them to mark\nthe start of a new topic, you need the -dashTopics option.\nFor example:\n        <Philippe> ---\n        <Philippe> Review of Action Items\n\n";
+	}
+
 if ($normalizeOnly)
 	{
 	# This isn't really very good.  I thought this would be a
@@ -523,17 +550,17 @@ for (my $i=0; $i<(@lines-1); $i++)
 	#	ACTION: [PENDING] whatever
 	if (1)
 		{
-		my ($writer, $type, $value, $rest) = &ParseLine($lines[$i]);
-		my ($writer2, $type2, $value2, $rest2) = &ParseLine("<scribe> $rest");
-		while ($type2 eq "status")
+		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
+		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine("<scribe> $rest");
+		while ($type2 eq "STATUS")
 			{
 			# Ignore nested status:
 			#	[PENDING] [NEW] ACTION: whatever
-			($writer2, $type2, $value2, $rest2) = &ParseLine("<scribe> $rest2");
+			($writer2, $type2, $value2, $rest2, undef) = &ParseLine("<scribe> $rest2");
 			}
 		# $debugTypesSeen{$type}++;
 		# warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugTypesSeen{$type} < 3;
-		if ($type eq "status" && $type2 eq "command" && $value2 eq "ACTION")
+		if ($type eq "STATUS" && $type2 eq "COMMAND" && $value2 eq "ACTION")
 			{
 			$lines[$i] = "<$writer\> ACTION: \[$value\] $rest2";
 			# warn "MOVED: $lines[$i]\n";
@@ -550,16 +577,16 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# It might be better if the continuation line processing was
 		# done only once, globally, instead of doing it separately here
 		# for actions.
-		my ($writer, $type, $value, $rest) = &ParseLine($lines[$i]);
-		my ($writer2, $type2, $value2, $rest2) = &ParseLine($lines[$i+1]);
+		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
+		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
 		# $debugTypesSeen{$type}++;
 		# warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugTypesSeen{$type} < 3;
-		if ($type eq "command" && $value eq "ACTION"
+		if ($type eq "COMMAND" && $value eq "ACTION"
 			&& &LC($writer2) eq &LC($writer)
-			&& ($type2 eq "status" || $type2 eq "continuation"))
+			&& ($type2 eq "STATUS" || $type2 eq "CONTINUATION"))
 			{
-			my $cont = "\[$value2\] $rest2"; # if type2 eq status
-			$cont = $rest2 if $type2 eq "continuation";
+			my $cont = "\[$value2\] $rest2"; # if type2 eq STATUS
+			$cont = $rest2 if $type2 eq "CONTINUATION";
 			$lines[$i] = "";
 			$lines[$i+1] = "<$writer\> ACTION: $rest $cont";
 			# warn "JOINED: " . $lines[$i+1] . "\n";
@@ -575,17 +602,17 @@ for (my $i=0; $i<(@lines-1); $i++)
 		#	<dbooth> *DONE*
 		# to lines like this:
 		#	<dbooth> ACTION: whatever [DONE]
-		my ($writer, $type, $value, $rest) = &ParseLine($lines[$i]);
-		if ($type eq "command" && $value eq "ACTION")
+		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
+		if ($type eq "COMMAND" && $value eq "ACTION")
 			{
 			# warn "FOUND ACTION: $rest\n";
 			# Look ahead at the next line by the same writer.
 			for (my $j=$i+1; $j<@lines; $j++)
 				{
-				my ($writer2, $type2, $value2, $rest2) = &ParseLine($lines[$j]);
+				my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$j]);
 				if (&LC($writer2) eq &LC($writer))
 					{
-					if ($type2 eq "status" && $rest2 eq "")
+					if ($type2 eq "STATUS" && $rest2 eq "")
 						{
 						$lines[$i] = "<$writer\> ACTION: $rest \[$value2\]";
 						$lines[$j] = "";
@@ -605,9 +632,9 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# 	<RRSAgent>   recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24
 		# to lines like this:
 		# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1] [recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24]
-		my ($writer, $type, $value, $rest) = &ParseLine($lines[$i]);
-		my ($writer2, $type2, $value2, $rest2) = &ParseLine($lines[$i+1]);
-		if ($type eq "command" && $value eq "ACTION"
+		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
+		my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
+		if ($type eq "COMMAND" && $value eq "ACTION"
 			&& &LC($writer) eq "rrsagent" && 
 			&LC($writer2) eq &LC($writer)
 			&& $rest2 =~ m/\A\W*(recorded in http\:[^\s\[\]]+)(\s*\W*)\Z/i)
@@ -883,8 +910,10 @@ else	{
 		}
 	}
 
-$all = &PutSpeakerOnEveryLine($all);
 
+if (0)
+{
+$all = &PutSpeakerOnEveryLine($all);
 # Convert from:
 #	<dbooth> DanC: something
 #	<dbooth> DanC: something
@@ -1021,9 +1050,109 @@ while (@linesIn)
 	push(@linesOut, $line) if $line ne "";	# Default
 	# die if $line =~ "Topic";
 	}
-
 $all = join("\n", @linesOut);
 $all = "\n" . $all . "\n";	# Easier pattern matching
+}
+
+else
+{
+if (0)
+{
+warn "############# TEST DATA ONLY #############\n";
+$all = '<scribe> dbooth: dbooth said 1
+<scribe>  dbooth said 2 # This should be continuation
+<hugo> Topic: New topic A
+<scribe> ... dbooth said 3 # This should be speaker david
+<scribe> dbooth: dbooth said 4 # This should be continuation
+<scribe> Topic: New topic B
+<scribe> ... dbooth said 5 # This should be UNKNOWN_SPEAKER
+';
+}
+my $debugCurrentSpeaker = 0;
+my @lines = split(/\n/, $all);
+my $prevSpeaker = "UNKNOWN_SPEAKER"; # Most recent speaker minuted by scribe
+my $pleaseContinue = 0;
+for (my $i=0; $i<@lines; $i++)
+	{
+	my ($writer, $type, $value, $rest, $allButWriter) = &ParseLine($lines[$i]);
+	warn "\nprevSpeaker: $prevSpeaker pleaseContinue: $pleaseContinue line: $lines[$i]\n" if $debugCurrentSpeaker;
+	warn "writer: $writer, type: $type, value: $value, rest: $rest, allBut: $allButWriter\n" if $debugCurrentSpeaker;
+	# $type	is one of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
+	next if $type eq "";
+	if (&LC($writer) ne "scribe")
+		{
+		warn "writer NOT scribe\n" if $debugCurrentSpeaker;
+		$pleaseContinue = 0;
+		next;
+		}
+	# $writer is scribe
+	if ($type eq "COMMAND") 
+		{ 
+		warn "type is COMMAND\n" if $debugCurrentSpeaker;
+		$pleaseContinue = 0; 
+		$prevSpeaker = "UNKNOWN_SPEAKER";
+		}
+	elsif ($type eq "STATUS") 
+		{ 
+		warn "type is STATUS\n" if $debugCurrentSpeaker;
+		$pleaseContinue = 0; 
+		$prevSpeaker = "UNKNOWN_SPEAKER";
+		}
+	elsif ($type eq "PLAIN") 
+		{ 
+		warn "type is PLAIN\n" if $debugCurrentSpeaker;
+		$pleaseContinue = 0; 
+		$prevSpeaker = "UNKNOWN_SPEAKER";
+		}
+	elsif ($type eq "SPEAKER")
+		{
+		warn "type is SPEAKER\n" if $debugCurrentSpeaker;
+		if ($pleaseContinue && $value eq $prevSpeaker)
+			{
+			warn "  ... continuing\n" if $debugCurrentSpeaker;
+			# "... rest" or
+			# " rest"
+			$lines[$i] = $preferredContinuation . $rest;
+			}
+		else	{
+			warn "  Restating speaker\n" if $debugCurrentSpeaker;
+			# speaker: rest
+			$lines[$i] = "$value\: $rest";
+			}
+		$prevSpeaker = $value;
+		$pleaseContinue = 1;
+		}
+	elsif ($type eq "CONTINUATION")
+		{
+		warn "type is CONTINUATION\n" if $debugCurrentSpeaker;
+		if ($pleaseContinue)
+			{
+			warn "  ... continuing\n" if $debugCurrentSpeaker;
+			# "... rest" or
+			# " rest"
+			$lines[$i] = $preferredContinuation . $rest;
+			}
+		else	{
+			warn "  Restating speaker\n" if $debugCurrentSpeaker;
+			# speaker: rest
+			$lines[$i] = "$prevSpeaker\: $rest";
+			}
+		$pleaseContinue = 1;
+		}
+	else	{
+		warn "INTERNAL ERROR: Unknown line type: ($type) returned by ParseLine(...)\n";
+		}
+	}
+$all = "\n" . join("\n", @lines) . "\n";
+}
+# warn "all: $all\n";
+my ($newTemplate, %embeddedTemplates) = &GetEmbeddedTemplates($template);
+foreach my $n (keys %embeddedTemplates)
+	{
+	warn "=============== template $n =================\n";
+	warn $embeddedTemplates{$n} . "\n";
+	warn "==============================================\n";
+	}
 
 
 ######################### HTML ##########################
@@ -1145,12 +1274,64 @@ if ($agendaLocation) {
 $result =~ s/SV_FORMATTED_AGENDA_LINK/$formattedAgendaLocation/g;
 
 print $result;
+
+warn "\nWARNING: There is currently a bug that causes this program to\ngenerate INVALID HTML!  You can correct it by piping the output \nthrough \"tidy -c\".   If you have tidy installed, you can use \nthe -tidy option to do so.  Otherwise, run the W3C validator to find \nand fix the error: http://validator.w3.org/\n\n";
 exit 0;
 ################### END OF MAIN ######################
+
+######################################################################
+######################## ConvertDashTopics ###########################
+######################################################################
+# Treat dash lines as starting a new topic:
+#	<Philippe> ---
+#	<Philippe> UTF16 PR issue
+# as equivalent to:
+#	<Philippe> Topic: UTF16 PR issue
+sub ConvertDashTopics
+{
+@_ == 1 || die;
+my ($all) = @_;
+my $nFound = 0;
+my @lines = split(/\n/, $all);
+for(my $i=0; $i<@lines-1; $i++)
+	{
+	my ($writer, $type, undef, $rest, undef) = &ParseLine($lines[$i]);
+	# Dash separator line?  <Philippe> ---
+	next if ($type ne "PLAIN" || $rest !~ m/\A\-+\Z/);
+	# Some other writer may have said something
+	# between the dash separator line and the topic line, 
+	# so look forward for the next line by the same writer.
+	INNER: for (my $j=$i+1; $j<@lines; $j++)
+		{
+		my ($writer2, $type2, undef, undef, $allButWriter2) = &ParseLine($lines[$j]);
+		# Same writer?
+		next if $writer2 ne $writer;
+		# Empty lines don't count.
+		next if $type2 eq "";
+		next if $allButWriter2 eq "";
+		# Turn: 
+		#	<Philippe> UTF16 PR issue
+		# into: 
+		#	<Philippe> Topic: UTF16 PR issue
+		$lines[$j] = "\<$writer\> Topic: $allButWriter2";
+		$nFound++;
+		# $type2 is one of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
+		if ($type2 eq "COMMAND" || $type2 eq "STATUS" || $type2 eq "CONTINUATION")
+			{
+			warn "\nWARNING: Unusual topic line found after \"$rest\" topic separator:" . $lines[$j] . "\n\n" if $dashTopics;
+			}
+		last INNER;
+		}
+	}
+$all = "\n" . join("\n", @lines) . "\n";
+return($all, $nFound);
+}
 
 ###############################################################
 ################# WordVariationsMap ###########################
 ###############################################################
+# Generates word variations and returns a map from each lower case
+# variation to the preferred (original) mixed case form.
 sub WordVariationsMap
 {
 my @words = @_;	# Preferred mixed case words.
@@ -1170,7 +1351,7 @@ return(%map);
 ###################################################################
 ####################### WordVariations #######################
 ###################################################################
-# Generate variations of the given words, e.g.
+# Generate spelling variations of the given words, e.g.
 #	Previous_Minutes
 #	Previous-Minutes
 #	Previous Minutes
@@ -1231,62 +1412,67 @@ return $pattern;
 ###################################################################
 # Parse the line and return:
 #	$writer		E.g. dbooth from "<dbooth> ..."
-#	$type		One of: command status speaker continuation plain ""
+#	$type		One of: COMMAND STATUS SPEAKER CONTINUATION PLAIN ""
 #	$value		Either: the command; the speaker; the continuation
-#			pattern; the status; or empty (if $type is plain).
-#	$rest		The rest of the line
+#			pattern; the status; or empty (if $type is PLAIN).
+#	$rest		The rest of the line (no $writer or $value), &Trim()'ed
+#	$allButWriter	All but the <writer> part, &Trim()'ed.
 # (I.e., $type is "" if no writer.)
 sub ParseLine
 {
 @_ == 1 || die;
 my ($line) = @_;
-my ($writer, $type, $value, $rest) = ("", "", "", "");
+my ($writer, $type, $value, $rest, $allButWriter) = ("", "", "", "", "");
+# Remove "<dbooth> " from the $line
 if ($line !~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
 	{
+	# No <writer>.
 	$rest = &Trim($line);
-	return ($writer, $type, $value, $rest);
+	$allButWriter = $rest;
+	return ($writer, $type, $value, $rest, $allButWriter);
 	}
 # "<dbooth> " has now been removed from the $line
 $writer = $2;
+$allButWriter = &Trim($line);
 # Action status?
 if ($line =~ m/\A\W*($actionStatusesPattern)\W*/i)
 	{
-	$type = "status";
+	$type = "STATUS";
 	$value = $1;
-	$rest = &Trim($');
+	$rest = $';
 	# die "LINETYPE a s type: $type value: $value rest: $rest\n";
 	$value = $actionStatuses{&LC($value)}; # in_progress --> IN_PROGRESS
 	}
 # Command?
-# This pattern allows up to two extra leading spaces for commands
+# This pattern allows up to two *extra* leading spaces for commands
 elsif ($line =~ m/\A(\s?(\s?))($commandsPattern)(\s?)\:\s*/i)
 	{
-	$type = "command";
+	$type = "COMMAND";
 	$value = $3;
-	$rest = &Trim($');
+	$rest = $';
 	# Put command in canonical form (no spaces or underscore):
 	# die if !exists($commands{$value});
 	$value = $commands{&LC($value)}; # previous_meeting --> Previous_Meeting
 	}
 # Speaker statement?
-# This pattern allows up to two extra leading spaces for speaker statements
+# This pattern allows up to two *extra* leading spaces for speaker statements
 elsif ($line =~ m/\A(\s?)(\s?)([_\w\-\.]+)(\s?)\:\s*/)
 	{
 	$value = $3;
-	$rest = &Trim($');
+	$rest = $';
 	# Make sure it's not in the stopList (non-name).
 	if (!exists($stopList{&LC($value)}))
 		{
 		# Must be a speaker statement.
-		$type = "speaker";
+		$type = "SPEAKER";
 		}
 	}
 # Continuation line?
 if ((!$type) && $line =~ m/\A((\s)|(\s?(\s?)\.\.+(\s?)(\s?)))/)
 	{
-	$type = "continuation";
+	$type = "CONTINUATION";
 	$value = $&;
-	$rest = &Trim($');
+	$rest = $';
 	if ($value =~ m/\./) { $value = "... "; } # Standardize
 	else { $value = " "; }
 	}
@@ -1294,10 +1480,11 @@ if (!$type)
 	{
 	# Must be plain line
 	$value = "";
-	$rest = &Trim($line);
-	$type = "plain";
+	$rest = $line;
+	$type = "PLAIN";
 	}
-return ($writer, $type, $value, $rest);
+$rest = &Trim($rest);
+return ($writer, $type, $value, $rest, $allButWriter);
 }
 
 ###################################################################
@@ -1328,7 +1515,7 @@ $t =~ s/\n\.\.\.\.*\s*/ /g;
 @zakimLines = split(/\n/, $t);
 foreach my $line (@zakimLines)
 	{
-	if ($line =~ m/Attendees\s+were\s+/i)
+	if ($line =~ m/Attendees\s+((were)|(have\s+been))\s+/i)
 		{
 		my $raw = $';
 		my @people = map {$_ = &Trim($_); s/\s+/_/g; $_} split(/\,/, $raw);
@@ -1943,7 +2130,7 @@ return($score, $all);
 # 	<dbooth> for all good men and women
 # 	<dbooth> to come to the aid
 # 	<dbooth> of their party.
-# Note that there is no extra space setting of the continuation lines.
+# Note that there is no extra space setting off the continuation lines.
 # This style is ambiguous, because we can't distinguish between the
 # continuation of the previous speaker's statement and a new statement made
 # by the scribe.
@@ -1985,6 +2172,7 @@ my $nExpCont = $nTotal - ($nSpeaker + scalar(@t));
 my $nPossCont = scalar(@t);
 die if $nPossCont + $nExpCont + $nSpeaker != $nTotal;
 # warn "nTotal: $nTotal nSpeaker: $nSpeaker nExpCont: $nExpCont nPossCont: $nPossCont\n";
+# warn "Possible continuations: ", join("\n", @t), "\n\n";
 # Guess the format
 my $result = 0;
 if ($nPossCont == 0)
@@ -2714,6 +2902,32 @@ my $sampleInput = <<'SampleInput-EOF'
 SampleInput-EOF
 ;
 return $sampleInput;
+}
+
+##################################################################
+###################### GetEmbeddedTemplates ############################
+##################################################################
+# For new template processing.  Test with NewTemplate.htm
+# Remove and return all embedded templates from given $text.  Returns:
+#	$newText     -- $text after removing templates
+#	%templateMap -- Map from templateNames to templates
+# Returned templates also have any embedded templates removed.
+sub GetEmbeddedTemplates
+{
+@_ == 1 || die;
+my ($text) = @_;
+if ($text =~ s/\<\!\-\-BEGIN\:(\w+)\-\-\>((.|\n)*?)\<\!\-\-END\:\1\-\-\>//)
+	{
+	my $templateName = $1;
+	my $template = $2; 
+	my ($newTemplate, %nestedTemplates) = &GetEmbeddedTemplates($template);
+	my ($newText, %otherTemplates) = &GetEmbeddedTemplates($text);
+	my %templateMap = ($templateName, $newTemplate, %nestedTemplates, %otherTemplates);
+	return($newText, %templateMap);
+	}
+else	{
+	return($text, ());
+	}
 }
 
 ##################################################################
