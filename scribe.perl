@@ -408,7 +408,6 @@ for (my $i=0; $i<@allLines; $i++)
 	if ($allLines[$i] =~ m/\A\<Scribe\>\s*($speakerPattern)\s*\:/i)
 		{
 		$currentSpeaker = $1;
-		# warn "SET SPEAKER: $currentSpeaker\n";
 		}
 	elsif ($allLines[$i] =~ s/\A\<Scribe\>\s*\.\.+\s*/\<Scribe\> $currentSpeaker: /i)
 		{
@@ -465,7 +464,6 @@ my @newAllLines = ();	# Collect remaining lines
 foreach my $line (@allLines)
 	{
 	$line =~ s/\s+\Z//; # Remove trailing spaces.
-	# warn "line: $line\n";
 	if ($line !~ m/\A\<[^\>]+\>\s*Present\s*(\:|((\+|\-)\s*\:?))\s*(.*)\Z/i)
 		{
 		push(@newAllLines, $line);
@@ -501,7 +499,7 @@ foreach my $line (@allLines)
 		@present = sort keys %seen;
 		}
 	else	{
-		warn "\nWARNING: Replacing previous list of people present.\nUse 'Present+: ... ' if you meant to add people without replacing the list.\n" if @present;
+		warn "\nWARNING: Replacing previous list of people present.\nUse 'Present+: ... ' if you meant to add people without replacing the list with: " . join(',', @p) . "\n" if @present;
 		@present = @p;
 		}
 	}
@@ -552,7 +550,7 @@ You should specify the meeting title like this:
 
 # Grab agenda URL:
 my $agendaLocation;
-if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/[^ ]+)\n/\n/i)
+if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/\S+)\n/\n/i)
 	{ $agendaLocation = $4;
 	  warn "Agenda: $agendaLocation\n";
       }
@@ -1678,7 +1676,7 @@ my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
 	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
-	AGREED Date queue no one in XachBot got it WARNING);
+	AGREED Date queue no one in XachBot got it WARNING Present Agenda);
 @stopList = (@stopList, @rooms);
 @stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
 my %stopList = map {($_,$_)} @stopList;
