@@ -1028,8 +1028,8 @@ foreach my $status (sort values %actions)
 	push(@formattedActionLines, "\n") if $n>0;
 	}
 
-# Try to break lines over 76 chars:
-warn "Breaking lines over 76 chars....\n" if $debugActions;
+# Try to break lines over 67 chars:
+warn "Breaking lines over 67 chars....\n" if $debugActions;
 @formattedActionLines = map { &WrapLine($_) } @formattedActionLines
 	if $breakActions;
 # Convert the @formattedActionLines to HTML.
@@ -2209,7 +2209,7 @@ sub WrapLine
 {
 @_ == 1 || @_ == 2 || die;
 my ($line, $maxLineLength) = @_;
-$maxLineLength = 76 if !defined($maxLineLength);
+$maxLineLength = 67 if !defined($maxLineLength);
 die if $line !~ m/\n\Z/;
 my @result = ();
 my $newLine = "";
