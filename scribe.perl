@@ -2,12 +2,13 @@
 
 use strict;  	
 
-my ($CVS_VERSION) = q$Revision$ =~ /(\d+[\d\.]*\.\d+)/;
+my $diagnostics = "";		# Accumulated diagnostic output.
 
-warn 'This is scribe.perl $Revision$ of $Date$ 
+my ($CVS_VERSION) = q$Revision$ =~ /(\d+[\d\.]*\.\d+)/;
+&Warn('This is scribe.perl $Revision$ of $Date$ 
 Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 
-';
+');
 
 
 # Generate minutes in HTML from a text IRC/chat Log.   
@@ -31,10 +32,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 
 
 ######################################################################
-# FEATURE WISH LIST:
-#
-# 000. Add  -embedDiagnostics option that dumps the
-# (scribe.perl only) diagnostics into a <div> at the end of the minutes.
+# FEATURE WISH LIST / BUG LIST:
 #
 # 00. BUG: URLs written like <http://...> are formatted as IRC statements.
 # See the text pasted inside [[ ... ]] at
@@ -197,6 +195,8 @@ foreach my $statusRef ( @ucActionStatusListReferences )
 		}
 	}
 
+#### This foreach loop does not seem to be executing.  Must be a bug.
+#### I don't know why.
 foreach my $sk (sort keys %actionStatuses)
 	{
 	my $v = $actionStatuses{$sk};
@@ -228,6 +228,7 @@ my $template = &DefaultTemplate();	# Template for minutes
 my $bestName = "";  		# Name of input format normalizer guessed
 
 # Get options/args
+my $embedDiagnostics = 0;	# Embed diagnostics in the generated minutes?
 my $draft = 1;                  # Include "DRAFT" warning in minutes.
 my $normalizeOnly = 0;		# Output only the normlized input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
@@ -275,6 +276,10 @@ while($restartForEmbeddedOptions)
 		if (0) {}
 		elsif ($a eq "") 
 			{ }
+                elsif ($a eq "-embedDiagnostics")
+                        { $embedDiagnostics = 1; }
+                elsif ($a eq "-noEmbedDiagnostics")
+                        { $embedDiagnostics = 0; }
                 elsif ($a eq "-draft")
                         { $draft = 1; }
                 elsif ($a eq "-final")
@@ -285,7 +290,7 @@ while($restartForEmbeddedOptions)
 			{ print STDOUT &SampleInput(); exit 0; }
 		elsif ($a eq "-sampleOutput") 
 			{ 
-			warn "\nWARNING: Replacing input because of -sampleOutput option\n\n" if $all;
+			&Warn("\nWARNING: Replacing input because of -sampleOutput option\n\n") if $all;
 			$all = &SampleInput(); 
 			}
 		elsif ($a eq "-sampleTemplate") 
@@ -303,7 +308,7 @@ while($restartForEmbeddedOptions)
 		elsif ($a eq "-trustRRSAgent") 
 			{ $trustRRSAgent = 1; }
 		elsif ($a eq "-teamSynonyms") 
-			{ warn "\nWARNING: -teamSynonyms option no longer implemented\n\n"; }
+			{ &Warn("\nWARNING: -teamSynonyms option no longer implemented\n\n"); }
 		elsif ($a eq "-plain") 
 			{ $template = &PlainTemplate(); }
 		elsif ($a eq "-mit") 
@@ -319,12 +324,12 @@ while($restartForEmbeddedOptions)
 		elsif ($a eq "-template") 
 			{ 
 			my $templateFile = shift @ARGV; 
-			die "ERROR: Template file not found: $templateFile\n"
+			&Die("ERROR: Template file not found: $templateFile\n")
 				if !-e $templateFile;
 			my $t = &GetTemplate($templateFile);
 			if (!$t)
 				{
-				die "ERROR: Empty template: $templateFile\n";
+				&Die("ERROR: Empty template: $templateFile\n");
 				}
 			$template = $t;
 			}
@@ -356,14 +361,14 @@ while($restartForEmbeddedOptions)
 		elsif ($a eq "-tidy") 
 			{ 
 			my $tidyCommand = "tidy -c -asxhtml";
-			open(STDOUT, "| $tidyCommand") || die "ERROR: Could not run \"$tidyCommand\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n";
+			open(STDOUT, "| $tidyCommand") || &Die("ERROR: Could not run \"$tidyCommand\"\nYou need to have tidy installed on your system to use\nthe -tidy option.\n");
 			}
 		elsif ($a eq "-help" || $a eq "-h") 
-			{ die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; }
+			{ &Die("For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"); }
 		elsif ($a =~ m/\A\-/)
 			{ 
-			warn "ERROR: Unknown option: $a\n"; 
-			die "For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"; 
+			&Warn("ERROR: Unknown option: $a\n"); 
+			&Die("For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm\n"); 
 			}
 		else	
 			{ push(@args, $a); }
@@ -375,7 +380,7 @@ while($restartForEmbeddedOptions)
 	$all =  join("",<>) if !$all;
 	if (!$all)
 		{
-		warn "\nWARNING: Empty input.\n\n";
+		&Warn("\nWARNING: Empty input.\n\n");
 		}
 	# Delete control-M's if any.  Cygwin seems to add them. :(
 	$all =~ s/\r//g;
@@ -408,8 +413,8 @@ while($restartForEmbeddedOptions)
 
 	if ($inputFormat && !exists($inputFormats{$inputFormat}))
 		{
-		warn "\nWARNING: Unknown input format specified: $inputFormat\n";
-		warn "Reverting to guessing the format.\n\n";
+		&Warn("\nWARNING: Unknown input format specified: $inputFormat\n");
+		&Warn("Reverting to guessing the format.\n\n");
 		$inputFormat = "";
 		}
 	# Try each known format, and see which one matches best.
@@ -437,14 +442,14 @@ while($restartForEmbeddedOptions)
 		my ($score, $newAll) = &$fAddress($all);
 		my $scoreString = sprintf("%4.2f", $score);
 		$all = $newAll;
-		warn "\nWARNING: Input looks more like $bestName format (score $bestScoreString),
-	but \"-inputFormat $inputFormat\" (score $scoreString) was specified.\n\n"
+		&Warn("\nWARNING: Input looks more like $bestName format (score $bestScoreString),
+	but \"-inputFormat $inputFormat\" (score $scoreString) was specified.\n\n")
 			if $score < $bestScore;
 		}
 	else	{
-		warn "Guessing input format: $bestName (score $bestScoreString)\n\n";
-		die "ERROR: Could not guess input format.\n" if $bestScore == 0;
-		warn "\nWARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\n\n"
+		&Warn("Guessing input format: $bestName (score $bestScoreString)\n\n");
+		&Die("ERROR: Could not guess input format.\n") if $bestScore == 0;
+		&Warn("\nWARNING: Low confidence ($bestScoreString) on guessing input format: $bestName\n\n")
 			if $bestScore < 0.7;
 		$all = $bestAll;
 		}
@@ -472,27 +477,27 @@ while($restartForEmbeddedOptions)
 		# s/old/new/g  replaces globally from this point backward
 		if (($global eq "g")  && $pre =~ s/$oldp/$new/g)
 			{
-			warn "Succeeded: s/$told/$tnew/$global\n";
+			&Warn("Succeeded: s/$told/$tnew/$global\n");
 			$all = $pre . "\n" . $post;
 			}
 		# s/old/new/G  replaces globally, both forward and backward
 		elsif (($global eq "G")  && $tall =~ s/$oldp/$new/g)
 			{ 
-			warn "Succeeded: s/$told/$tnew/$global\n";
+			&Warn("Succeeded: s/$told/$tnew/$global\n");
 			$all = $tall;
 			}
 		# s/old/new/  replaces most recent occurrance of old with new
 		elsif ((!$global) && $pre =~ s/\A((.|\n)*)($oldp)((.|\n)*?)\Z/$1$new$4/)
 			{
-			warn "Succeeded: s/$told/$tnew/$global\n";
+			&Warn("Succeeded: s/$told/$tnew/$global\n");
 			$all = $pre . "\n" . $post;
 			}
 		else	{
-			warn "\nWARNING: FAILED: s/$told/$tnew/$global\n\n";
+			&Warn("\nWARNING: FAILED: s/$told/$tnew/$global\n\n");
 			$match = &Trim($match);
 			$all = $pre . "\n[scribe.perl auto substitution failed:] " . $match . "\n" . $post;
 			}
-		warn "\nWARNING: Multiline substitution!!! (Is this correct?)\n\n" if $tnew ne $new || $told ne $old;
+		&Warn("\nWARNING: Multiline substitution!!! (Is this correct?)\n\n") if $tnew ne $new || $told ne $old;
 		}
 	# Look for embedded options, and restart if we find some.
 	# (Except we do NOT re-read the input.  We keep $all as is.)
@@ -500,12 +505,12 @@ while($restartForEmbeddedOptions)
 		{
 		my $newOptions = &Trim($2);
 		$embeddedScribeOptions .= " $newOptions";
-		# warn "FOUND new ScribeOptions: $newOptions\n";
+		# &Warn("FOUND new ScribeOptions: $newOptions\n");
 		$restartForEmbeddedOptions = 1;
 		}
 	if ($restartForEmbeddedOptions)
 		{
-		warn "FOUND embedded ScribeOptions: $embeddedScribeOptions\n*** RESTARTING DUE TO EMBEDDED OPTIONS ***\n\n";
+		&Warn("FOUND embedded ScribeOptions: $embeddedScribeOptions\n*** RESTARTING DUE TO EMBEDDED OPTIONS ***\n\n");
 		# Prevent input from being re-normalized:
 		push(@SAVE_ARGV, ("-inputFormat", "Normalized_Format"));
 		}
@@ -532,8 +537,8 @@ if (1)
 	$all = $newAll;
 	@scribeNames = @$scribeNamesRef;
 	@scribeNicks = @$scribeNicksRef;
-	warn "Scribes: ", join(", ", @scribeNames), "\n";
-	warn "ScribeNicks: ", join(", ", @scribeNicks), "\n";
+	&Warn("Scribes: ", join(", ", @scribeNames), "\n");
+	&Warn("ScribeNicks: ", join(", ", @scribeNicks), "\n");
 	}
 
 if ($useZakimTopics)
@@ -574,23 +579,23 @@ my ($allDashTopics, $nDashTopics) = &ConvertDashTopics($all);
 # For completeness, we'll just enumerate the 8 cases:
 if (0) {}
 elsif ((!$dashTopics) && (!$nDashTopics) && (!@topicLines))
-	{ warn "\nWARNING: No \"Topic:\" lines found.\n\n"; }
+	{ &Warn("\nWARNING: No \"Topic:\" lines found.\n\n"); }
 elsif ((!$dashTopics) && (!$nDashTopics) && ( @topicLines))
 	{ }
 elsif ((!$dashTopics) && ( $nDashTopics) && (!@topicLines))
 	{ 
-	warn "\nWARNING: No \"Topic:\" lines found, but dash separators were found.  \nDefaulting to -dashTopics option.\n\n"; 
+	&Warn("\nWARNING: No \"Topic:\" lines found, but dash separators were found.  \nDefaulting to -dashTopics option.\n\n"); 
 	$dashTopics = 1;
 	}
 elsif ((!$dashTopics) && ( $nDashTopics) && ( @topicLines))
 	{ 
-	warn "\nWARNING: Dash separator lines found.  If you intended them to mark\nthe start of a new topic, you need the -dashTopics option.\nFor example:\n        <Philippe> ---\n        <Philippe> Review of Action Items\n\n";
+	&Warn("\nWARNING: Dash separator lines found.  If you intended them to mark\nthe start of a new topic, you need the -dashTopics option.\nFor example:\n        <Philippe> ---\n        <Philippe> Review of Action Items\n\n");
 	}
 elsif (( $dashTopics) && (!$nDashTopics) && (!@topicLines))
-	{ warn "\nWARNING: No \"Topic:\" lines found.\n\n"; }
+	{ &Warn("\nWARNING: No \"Topic:\" lines found.\n\n"); }
 elsif (( $dashTopics) && (!$nDashTopics) && ( @topicLines))
 	{ 
-	warn "\nWARNING: -dashTopics option used, but no separator lines found.\nFor example:\n        <Philippe> ---\n        <Philippe> Review of Action Items\n\n";
+	&Warn("\nWARNING: -dashTopics option used, but no separator lines found.\nFor example:\n        <Philippe> ---\n        <Philippe> Review of Action Items\n\n");
 	}
 elsif (( $dashTopics) && ( $nDashTopics) && (!@topicLines))
 	{ }
@@ -649,7 +654,7 @@ my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # Get the list of people present.
 # First look for zakim output, as the default:
 my @present = &GetPresentFromZakim($all); 
-warn "Default Present: " . join(", ", @present) . "\n" if @present;
+&Warn("Default Present: " . join(", ", @present) . "\n") if @present;
 # Now look for explicit "Present: ... " commands:
 die if !defined($all);
 ($all, @present) = &GetPresentOrRegrets("Present", 3, $all, @present); 
@@ -664,21 +669,21 @@ my $title = "SV_MEETING_TITLE";
 if ($all =~ s/\n\<$namePattern\>\s*(Meeting)\s*\:\s*(.*)\n/\n/i)
 	{ $title = $4; }
 else 	{ 
-	warn "\nWARNING: No meeting title found!
+	&Warn("\nWARNING: No meeting title found!
 You should specify the meeting title like this:
-<dbooth> Meeting: Weekly Baking Club Meeting\n\n";
+<dbooth> Meeting: Weekly Baking Club Meeting\n\n");
 	}
 
 # Grab agenda URL:
 my $agendaLocation;
 if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/\S+)\n/\n/i)
 	{ $agendaLocation = $4;
-	  warn "Agenda: $agendaLocation\n";
+	  &Warn("Agenda: $agendaLocation\n");
       }
 else 	{ 
-	warn "\nWARNING: No agenda location found (optional).
+	&Warn("\nWARNING: No agenda location found (optional).
 If you wish, you may specify the agenda like this:
-<dbooth> Agenda: http://www.example.com/agenda.html\n\n";
+<dbooth> Agenda: http://www.example.com/agenda.html\n\n");
 	}
 
 # Grab Previous meeting URL:
@@ -691,9 +696,9 @@ my $chair = "SV_MEETING_CHAIR";
 if ($all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i)
 	{ $chair = $5; }
 else 	{ 
-	warn "\nWARNING: No meeting chair found!
+	&Warn("\nWARNING: No meeting chair found!
 You should specify the meeting chair like this:
-<dbooth> Chair: dbooth\n\n";
+<dbooth> Chair: dbooth\n\n");
 	}
 
 # Grab IRC LOG URL.  Do this before looking for the date, because
@@ -918,12 +923,12 @@ foreach my $line (split(/\n/,  $all))
 my %rawActions = ();	# Maps action to status (NEW|DONE|PENDING...)
 if ($trustRRSAgent) {
 	if (((keys %rrsagentActions) == 0) && ((keys %otherActions) > 0)) 
-		{ warn "\nWARNING: No RRSAgent-recorded actions found, but 'ACTION:'s appear in the text.\nSUGGESTED REMEDY: Try running WITHOUT the -trustRRSAgent option\n\n"; }
+		{ &Warn("\nWARNING: No RRSAgent-recorded actions found, but 'ACTION:'s appear in the text.\nSUGGESTED REMEDY: Try running WITHOUT the -trustRRSAgent option\n\n"); }
 	%rawActions = %rrsagentActions;
-	warn "Using RRSAgent ACTIONS\n" if $debugActions;
+	&Warn("Using RRSAgent ACTIONS\n") if $debugActions;
 } else {
 	%rawActions = %otherActions;
-	warn "Using OTHER ACTIONS\n" if $debugActions;
+	&Warn("Using OTHER ACTIONS\n") if $debugActions;
 }
 
 my %statusPatterns = ();	# Maps from a status to its regex.
@@ -1060,10 +1065,10 @@ foreach my $key ((keys %actions))
 			}
 		}
 	else	{
-		warn "NO PERSON FOUND FOR ACTION: $a\n";
+		&Warn("\nWARNING: No person found for ACTION item: $a\n\n");
 		}
 	}
-warn "People with action items: ",join(" ", sort keys %actionPeople), "\n";
+&Warn("People with action items: ",join(" ", sort keys %actionPeople), "\n");
 
 # Format the resulting action items.
 # Iterate through the @actionStatuses in order to group them by status.
@@ -1150,8 +1155,8 @@ else	{
 	# warn "Scribing style: -explicitContinuations\n";
 	if (&ProbablyUsesImplicitContinuations($all))
 		{
-		warn "\nWARNING: Input appears to use implicit continuation lines.\n";
-		warn "You may need the \"-implicitContinuations\" option.\n\n";
+		&Warn("\nWARNING: Input appears to use implicit continuation lines.\n");
+		&Warn("You may need the \"-implicitContinuations\" option.\n\n");
 		}
 	}
 
@@ -1243,7 +1248,7 @@ for (my $i=0; $i<@lines; $i++)
 		$pleaseContinue = 1;
 		}
 	else	{
-		warn "INTERNAL ERROR: Unknown line type: ($type) returned by ParseLine(...)\n";
+		&Warn("\nINTERNAL ERROR: Unknown line type: ($type) returned by ParseLine(...)\n\n");
 		}
 	}
 $all = "\n" . join("\n", @lines) . "\n";
@@ -1299,7 +1304,7 @@ while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTM
 	}
 if (!scalar(keys %agenda)) 	# No "Topic:"s found?
 	{
-	warn "\nWARNING: No \"Topic: ...\" lines found!  \nResulting HTML may have an empty (invalid) <ol>...</ol>.\n\nExplanation: \"Topic: ...\" lines are used to indicate the start of \nnew discussion topics or agenda items, such as:\n<dbooth> Topic: Review of Amy's report\n\n";
+	&Warn("\nWARNING: No \"Topic: ...\" lines found!  \nResulting HTML may have an empty (invalid) <ol>...</ol>.\n\nExplanation: \"Topic: ...\" lines are used to indicate the start of \nnew discussion topics or agenda items, such as:\n<dbooth> Topic: Review of Amy's report\n\n");
 	}
 my $agenda = "";
 foreach my $item (sort keys %agenda)
@@ -1343,7 +1348,7 @@ $all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
 my $presentAttendees = join(", ", @present);
 my $regrets = join(", ", @regrets);
 
-die if !$template;
+&Die("\nERROR: Empty minutes template\n\n") if !$template;
 my $result = $template;
 $result =~ s/SV_MEETING_DAY/$day0/g;
 $result =~ s/SV_MEETING_MONTH_ALPHA/$monthAlpha/g;
@@ -1361,8 +1366,8 @@ $result =~ s/SV_PRESENT_ATTENDEES/$presentAttendees/g;
 if ($result !~ s/SV_ACTION_ITEMS/$formattedActions/)
 	{
 	if ($result =~ s/SV_NEW_ACTION_ITEMS/$formattedActions/)
-		{ warn "\nWARNING: Template format has changed.  SV_NEW_ACTION_ITEMS should now be SV_ACTION_ITEMS\n\n"; }
-	else { warn "\nWARNING: SV_ACTION_ITEMS marker not found in template!\n\n"; } 
+		{ &Warn("\nWARNING: Template format has changed.  SV_NEW_ACTION_ITEMS should now be SV_ACTION_ITEMS\n\n"); }
+	else { &Warn("\nWARNING: SV_ACTION_ITEMS marker not found in template!\n\n"); } 
 	}
 $result =~ s/SV_AGENDA_BODIES/$all/;
 $result =~ s/SV_MEETING_TITLE/$title/g;
@@ -1373,7 +1378,7 @@ $result =~ s/SCRIBEPERL_VERSION/$CVS_VERSION/;
 my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
 if ($logURL eq "SV_MEETING_IRC_URL")
 	{
-	warn "\nWARNING: Missing IRC LOG!\n\n";
+	&Warn("\nWARNING: Missing IRC LOG!\n\n");
 	$formattedLogURL = "";
 	}
 $formattedLogURL = "" if $logURL =~ m/\ANone\Z/i;
@@ -1389,13 +1394,72 @@ $result =~ s/SV_FORMATTED_AGENDA_LINK/$formattedAgendaLocation/g;
 # Include DRAFT warning in minutes?
 my $draftWarningHTML = '<h1> - DRAFT - </h1>';
 $draftWarningHTML = '' if !$draft;
-($result =~ s/SV_DRAFT_WARNING/$draftWarningHTML/g) || warn "\nWARNING: SV_DRAFT_WARNING not found in template\n\n"; 
-print $result;
+($result =~ s/SV_DRAFT_WARNING/$draftWarningHTML/g) || &Warn("\nWARNING: SV_DRAFT_WARNING not found in template.\nYou can ignore this warning if your minutes template does not\nneed a '- DRAFT -' warning.\n\n"); 
 
 #### Output seems to be normally valid now.
-# warn "\nWARNING: There is currently a bug that causes this program to\ngenerate INVALID HTML!  You can correct it by piping the output \nthrough \"tidy -c\".   If you have tidy installed, you can use \nthe -tidy option to do so.  Otherwise, run the W3C validator to find \nand fix the error: http://validator.w3.org/\n\n";
+# &Warn("\nWARNING: There is currently a bug that causes this program to\ngenerate INVALID HTML!  You can correct it by piping the output \nthrough \"tidy -c\".   If you have tidy installed, you can use \nthe -tidy option to do so.  Otherwise, run the W3C validator to find \nand fix the error: http://validator.w3.org/\n\n");
+
+# Embed diagnostics in the generated minutes?
+my $diagnosticsHTML = "<hr />
+<h2>Scribe.perl diagnostic output</h2>
+[Delete this section before finalizing the minutes.] <br>
+<pre>\n" . &EscapeHTML($diagnostics) . "\n</pre>
+[End of scribe.perl diagnostic output]\n";
+$diagnosticsHTML = '' if !$embedDiagnostics;
+($result =~ s/SV_DIAGNOSTICS/$diagnosticsHTML/g) || warn "\nWARNING: SV_DIAGNOSTICS not found in template.\nYou can ignore this warning if your minutes template does not\nneed to contain scribe.perl's diagnostic output.\n\n";
+
+# Done.
+print $result;
+
 exit 0;
 ################### END OF MAIN ######################
+
+################################################################
+#################### &Warn #############################
+############################################################
+# Write a warning and save it in a buffer so that it can be embedded into
+# the minutes output later.
+sub Warn
+{
+my $m = "" . join("", @_);
+warn $m;
+$diagnostics .= $m;
+}
+
+################################################################
+#################### Die #############################
+############################################################
+# Output any diagnostics and die.
+sub Die
+{
+&Warn(@_);
+my $diagnosticsHTML = "<html><head><title>Scribe.perl: Fatal error</title></head>
+<body><h1>Scribe.perl: Fatal error</h1>
+<pre>
+" . &EscapeHTML($diagnostics) . "
+</pre>
+</body>
+</html>
+";
+print STDOUT $diagnosticsHTML;
+exit 1;
+}
+
+#################################################################
+#################### EscapeHTML ################################
+#################################################################
+#  Escape < > as &lt; &gt; 
+sub EscapeHTML
+{
+my $all = join("", @_);
+# Escape < and >:
+$all =~ s/\&/\&amp\;/g;
+$all =~ s/\</\&lt\;/g;
+$all =~ s/\>/\&gt\;/g;
+# $all =~ s/\"/\&quot\;/g;
+return ($all);
+}
+
 
 #################################################################
 #################### GetScribeNamesAndNicks #######################
@@ -1466,7 +1530,7 @@ my @totalScribeNicks = &CaseInsensitiveUniq(@scribeNickCommands, @scribeNicks);
 if ((!@totalScribeNicks) && (@totalScribes==1) && exists($writersFound{&LC($totalScribes[0])}))
 	{
 	my $scribeNick = $totalScribes[0];
-	# warn "No ScribeNick specified.  Inferring ScribeNick: $scribeNick\n";
+	# &Warn("No ScribeNick specified.  Inferring ScribeNick: $scribeNick\n");
 	push(@scribeNicks, $scribeNick);
 	}
 
@@ -1476,7 +1540,7 @@ if (((!@totalScribeNicks) && (!@totalScribes))
   || ((!@totalScribeNicks) && (@totalScribes==1) && (!exists($writersFound{&LC($totalScribes[0])})) && !exists($writersFound{"scribe"})))
 	{
 	my $scribeNick = &GuessScribeNick($all);
-	warn "No ScribeNick specified.  Guessing ScribeNick: $scribeNick\n";
+	&Warn("No ScribeNick specified.  Guessing ScribeNick: $scribeNick\n");
 	push(@scribeNicks, $scribeNick);
 	}
 
@@ -1521,7 +1585,7 @@ LINE: for (my $i=0; $i<@lines; $i++)
 		# Scribe command.  Changing scribe name.
 		my $newScribeName = &Trim($rest);
 		push(@scribeNames, $newScribeName);
-		warn "Found Scribe: $newScribeName\n";
+		&Warn("Found Scribe: $newScribeName\n");
 		# Look ahead (until the next Scribe: or ScribeNick: command)
 		# to see if the given name matches an IRC nick or <scribe>.  
 		# If so, use it as the $currentScribeNick.
@@ -1553,10 +1617,10 @@ LINE: for (my $i=0; $i<@lines; $i++)
 			{
 			# Found either <$newScribeName> or <scribe>.
 			# scribeNick should change.
-			warn "Inferring ScribeNick: $newNickFound\n";
+			&Warn("Inferring ScribeNick: $newNickFound\n");
 			if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0)
 				{
-				warn "WARNING: No scribe lines found matching previous ScribeNick pattern: <$currentScribeNickPattern> ...\n"
+				&Warn("WARNING: No scribe lines found matching previous ScribeNick pattern: <$currentScribeNickPattern> ...\n")
 					if $newNickFound !~ m/\A$currentScribeNickPattern\Z/i;
 				}
 			push(@scribeNicks, $newNickFound);
@@ -1573,9 +1637,9 @@ LINE: for (my $i=0; $i<@lines; $i++)
 			  && @totalScribes>1 && @totalScribeNicks>1
 			  && (!(($lastType eq "COMMAND") && ($lastValue eq "scribenick"))))
 				{
-				warn "\nWARNING: \"Scribe: $newScribeName\" command found, \nbut no lines found matching \"<$newScribeName> . . . \"\n";
-				warn "Continuing with ScribeNick: <$currentScribeNickPattern>\n" if $currentScribeNickPattern;
-				warn "Use \"ScribeNick: dbooth\" (for example) to specify the scribe's IRC nickname.\n\n"
+				&Warn("\nWARNING: \"Scribe: $newScribeName\" command found, \nbut no lines found matching \"<$newScribeName> . . . \"\n");
+				&Warn("Continuing with ScribeNick: <$currentScribeNickPattern>\n") if $currentScribeNickPattern;
+				&Warn("Use \"ScribeNick: dbooth\" (for example) to specify the scribe's IRC nickname.\n\n")
 				}
 			# Hmm, should the above be checking for "scribe_nick"
 			# (the canonical form) instead?
@@ -1592,9 +1656,9 @@ LINE: for (my $i=0; $i<@lines; $i++)
 		if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0
 			&& $newScribeNick !~ m/\A$currentScribeNickPattern\Z/i)
 			{
-			warn "WARNING: No scribe lines found matching ScribeNick pattern: <$currentScribeNickPattern> ...\n";
+			&Warn("WARNING: No scribe lines found matching ScribeNick pattern: <$currentScribeNickPattern> ...\n");
 			}
-		warn "Found ScribeNick: $newScribeNick\n";
+		&Warn("Found ScribeNick: $newScribeNick\n");
 		$currentScribeNick = $newScribeNick;
 		$currentScribeNickPattern = quotemeta($newScribeNick);
 		$nLinesCurrentScribeNick = 0;
@@ -1604,7 +1668,7 @@ LINE: for (my $i=0; $i<@lines; $i++)
 	}
 if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0)
 	{
-	warn "WARNING: No scribe lines found matching ScribeNick pattern: <$currentScribeNickPattern> ...\n";
+	&Warn("WARNING: No scribe lines found matching ScribeNick pattern: <$currentScribeNickPattern> ...\n");
 	}
 $all = "\n" . join("\n", @lines) . "\n";
 @scribeNames = &CaseInsensitiveUniq(@scribeNames);
@@ -1615,10 +1679,10 @@ if ((!@scribeNames) && @scribeNicks)
 	{
 	@scribeNames = @scribeNicks;
 	my $scribeNames = join(", ", @scribeNames);
-	warn "Inferring Scribes: $scribeNames\n";
+	&Warn("Inferring Scribes: $scribeNames\n");
 	}
 # No Scribes or ScribeNicks specified?
-warn "WARNING: No Scribe or ScribeNick could be determined.\nYou can specify the Scribe or ScribeNick like:\n  <dbooth> Scribe: Michael Sperberg-McQueen\n  <dbooth> ScribeNick: msm\n\n"
+&Warn("WARNING: No Scribe or ScribeNick could be determined.\nYou can specify the Scribe or ScribeNick like:\n  <dbooth> Scribe: Michael Sperberg-McQueen\n  <dbooth> ScribeNick: msm\n\n")
 	if ((!@scribeNames) && !@scribeNicks);
 # Check for possible scribeNick name error by counting the number
 # of <scribe> lines.
@@ -1626,7 +1690,7 @@ warn "WARNING: No Scribe or ScribeNick could be determined.\nYou can specify the
 # WARNING: Pattern match (annoyingly) returns "" if no match -- not 0.
 my $totalScribeLines = ($all =~ s/\n\<scribe\>/\n\<scribe\>/ig);
 $totalScribeLines = 0 if !$totalScribeLines;
-warn "\nWARNING: $totalScribeLines scribe lines found (out of $totalLines total lines.)\nAre you sure you specified a correct ScribeNick?\n\n"
+&Warn("\nWARNING: $totalScribeLines scribe lines found (out of $totalLines total lines.)\nAre you sure you specified a correct ScribeNick?\n\n")
 	if (($totalLines > 100) && ($totalScribeLines/$totalLines < 0.01))
 		|| ($totalScribeLines < 5);
 
@@ -1678,7 +1742,7 @@ for(my $i=0; $i<@lines-1; $i++)
 		if ($type2 eq "COMMAND" || $type2 eq "STATUS" 
 			|| ($type2 eq "CONTINUATION" && $value2 !~ m/\A\s*\Z/))
 			{
-			warn "\nWARNING: Unusual topic line found after \"$rest\" topic separator:" . $lines[$j] . "\n\n" if $dashTopics;
+			&Warn("\nWARNING: Unusual topic line found after \"$rest\" topic separator:" . $lines[$j] . "\n\n") if $dashTopics;
 			# warn "value2: $value2\n";
 			}
 		last INNER;
@@ -1866,9 +1930,9 @@ elsif ($line =~ m/\A(\s?(\s?))($commandsPattern)(\s?)\:\s*/i)
 	if (!exists($commands{$value}))
 		{
 		#### I have no idea why this next line is here.  An internal guard?
-		die "ParseLine value: $value line: $line\n" if $line =~ m/topic/i;
+		&Warn("ERROR: ParseLine value: $value line: $line\n") if $line =~ m/topic/i;
 		#### I assume the following error is what is needed here.
-		die "INTERNAL ERROR: Unknown command: $line\n";
+		&Die("INTERNAL ERROR: Unknown command: $line\n");
 		}
 	# $value = $commands{&LC($value)}; # previous_meeting --> Previous_Meeting
 	$value = &LC($commands{$value}); # PreviousMeeting --> previous_meeting
@@ -1942,7 +2006,7 @@ foreach my $line (@zakimLines)
 		next if !@people;
 		if (@present)
 			{
-			warn "\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n";
+			&Warn("\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n");
 			}
 		@present = @people;
 		}
@@ -2018,7 +2082,7 @@ foreach my $line (@allLines)
 		@present = sort keys %seen;
 		}
 	else	{
-		warn "\nWARNING: Replacing previous list of people present.\nUse '$keyword\+ ... ' if you meant to add people without replacing the list,\nsuch as: <dbooth> $keyword\+ " . join(', ', @p) . "\n\n" if @present && $isAlreadyDefined;
+		&Warn("\nWARNING: Replacing previous $keyword list. (Old list: " . join(", ",@present) . ")\nUse '$keyword\+ ... ' if you meant to add people without replacing the list,\nsuch as: <dbooth> $keyword\+ " . join(', ', @p) . "\n\n") if @present && $isAlreadyDefined;
 		@present = @p;
 		$isAlreadyDefined = 1;
 		}
@@ -2027,15 +2091,15 @@ foreach my $line (@allLines)
 $all = "\n" . join("\n", @allLines) . "\n";
 if (@present == 0)	
 	{
-	warn "\nWARNING: No \"$keyword\: ... \" found!\n";
-	warn "Possibly Present: @possiblyPresent\n" if $keyword eq "Present"; 
-	warn "You can indicate people for the $keyword list like this:
+	&Warn("\nWARNING: No \"$keyword\: ... \" found!\n");
+	&Warn("Possibly Present: @possiblyPresent\n") if $keyword eq "Present"; 
+	&Warn("You can indicate people for the $keyword list like this:
 <dbooth> $keyword\: dbooth jonathan mary
-<dbooth> $keyword\+ amy\n\n";
+<dbooth> $keyword\+ amy\n\n");
 	}
 else	{
-	warn "$keyword\: @present\n"; 
-	warn "\nWARNING: Fewer than $minPeople people found for $keyword list!\n\n" if @present < $minPeople;
+	&Warn("$keyword\: @present\n"); 
+	&Warn("\nWARNING: Fewer than $minPeople people found for $keyword list!\n\n") if @present < $minPeople;
 	}
 return ($all, @present);
 }
@@ -2094,13 +2158,13 @@ for (my $i=0; $i<@allLines; $i++)
 	elsif ($allLines[$i] =~ s/\A\<scribe\>(\s?)\.\.+(\s?)/\<scribe\> $currentSpeaker: /i)
 		{
 		# warn "Scribe NORMALIZED: $& --> $allLines[$i]\n";
-		warn "\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line: <Zakim> +someone\n\n" if $currentSpeaker eq "UNKNOWN_SPEAKER";
+		&Warn("\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line: <Zakim> +someone\n\n") if $currentSpeaker eq "UNKNOWN_SPEAKER";
 		}
 	# Leading-blank continuation line: "<dbooth>  the admin timeline page.".
 	elsif ($allLines[$i] =~ s/\A\<scribe\>\s\s/\<scribe\> $currentSpeaker:  /i)
 		{
 		# warn "Scribe NORMALIZED: $& --> $allLines[$i]\n";
-		warn "\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line: <Zakim> +someone\n\n" if $currentSpeaker eq "UNKNOWN_SPEAKER";
+		&Warn("\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line: <Zakim> +someone\n\n") if $currentSpeaker eq "UNKNOWN_SPEAKER";
 		}
 	else	{
 		}
@@ -2166,12 +2230,12 @@ foreach my $line (@lines)
 	push(@scribeLines, $line);
 	}
 my $nScribeLines = scalar(@scribeLines);
-# warn "Minuted lines found: $nScribeLines\n";
+# &Warn("Minuted lines found: $nScribeLines\n");
 $all = "\n" . join("\n", @scribeLines) . "\n";
 
 # Verify that we axed all join/leave lines:
 my @matches = ($all =~ m/.*has joined.*\n/g);
-warn "\nWARNING: Possible internal error: join/leave lines remaining: \n\t" . join("\t", @matches) . "\n\n"
+&Warn("\nWARNING: Possible internal error: join/leave lines remaining: \n\t" . join("\t", @matches) . "\n\n")
  	if @matches;
 return $all;
 }
@@ -2655,7 +2719,7 @@ $done .= $lines[$i] . "\n" if $i < @lines; # Remaining line
 $all = $done;
 # warn "RRSAgent_Visible_HTML_Text_Paste_Format n matches: $n\n";
 my $score = $n / $nLines;
-# die "Score: $score n: $n nLines: $nLines\n";
+# &Die("Score: $score n: $n nLines: $nLines\n");
 return($score, $all);
 }
 
@@ -2954,21 +3018,21 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	# this without net access, so I couldn't get one.
 	my $d = &Trim($4);
 	my @words = split(/[^0-9a-zA-Z]+/, $d);
-	die "ERROR: Date not understood: $d\n" if @words != 3;
+	&Die("ERROR: Date not understood: $d\n") if @words != 3;
 	my $correctFormat = "Date command/format should be like \"Date: 31 Jan 2004\"";
 	my ($mday, $TMon, $year) = @words;
 	my $tmon = $TMon;	# Lower case, truncated version
 	$tmon =~ tr/A-Z/a-z/;
 	$tmon =~ s/\A(...).*\Z/$1/; # Truncate to length 3
-	exists($monthNumbers{$tmon}) || die "ERROR: Could not parse date.  Unknown month name \"$TMon\": $d\nFormat should be like \"Date: 31 Jan 2004\"\n";
+	exists($monthNumbers{$tmon}) || &Die("ERROR: Could not parse date.  Unknown month name \"$TMon\": $d\nFormat should be like \"Date: 31 Jan 2004\"\n");
 	my $mon = $monthNumbers{$tmon};
 	($mon > 0 && $mon < 13) || die; # Internal error.
-	($mday > 0 && $mday < 32) || die "ERROR: Bad day of month \"$mday\" (should be >0 && <32): $d\n$correctFormat\n";
-	($year > 2000 && $year < 2100) || die "ERROR: Bad year \"$year\" (should be >2000 && <2100): $d\n$correctFormat\n";
+	($mday > 0 && $mday < 32) || &Die("ERROR: Bad day of month \"$mday\" (should be >0 && <32): $d\n$correctFormat\n");
+	($year > 2000 && $year < 2100) || &Die("ERROR: Bad year \"$year\" (should be >2000 && <2100): $d\n$correctFormat\n");
 	my $day0 = sprintf("%0d", $mday);
 	my $mon0 = sprintf("%0d", $mon);
 	my $alphaMonth = $months[$mon-1];
-	warn "Found Date: $day0 $alphaMonth $year\n";
+	&Warn("Found Date: $day0 $alphaMonth $year\n");
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	}
 # Figure out date from IRC log name:
@@ -2983,14 +3047,14 @@ elsif ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/i)
 	my $day0 = sprintf("%0d", $mday);
 	my $mon0 = sprintf("%0d", $mon);
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
-	warn "Got date from IRC log name: $day0 " . $months[$mon-1] . " $year\n";
+	&Warn("Got date from IRC log name: $day0 " . $months[$mon-1] . " $year\n");
 	}
 else
 	{
-	warn "\nWARNING: No date found!  Assuming today.  (Hint: Specify\n";
-	warn "the IRC log, and the date will be determined from that.)\n";
-	warn "Or specify the date like this:\n";
-	warn "<dbooth> Date: 12 Sep 2002\n\n";
+	&Warn("\nWARNING: No date found!  Assuming today.  (Hint: Specify\n");
+	&Warn("the IRC log, and the date will be determined from that.)\n");
+	&Warn("Or specify the date like this:\n");
+	&Warn("<dbooth> Date: 12 Sep 2002\n\n");
 	# Assume today's date by default.
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	$mon++;	# put in range [1..12] instead of [0..11].
@@ -3305,6 +3369,7 @@ SV_AGENDA_BODIES
 <!-- Action Items -->
 SV_ACTION_ITEMS
 
+[End of minutes] <br>
 <hr>
 
 <address>
@@ -3312,6 +3377,9 @@ SV_ACTION_ITEMS
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
+<div class="diagnostics">
+SV_DIAGNOSTICS
+</div>
 </body>
 </html>
 PlainTemplate-EOF
@@ -3382,6 +3450,7 @@ SV_AGENDA_BODIES
 <!-- Action Items -->
 SV_ACTION_ITEMS
 
+[End of minutes] <br>
 <hr>
 
 <address>
@@ -3389,6 +3458,9 @@ SV_ACTION_ITEMS
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
+<div class="diagnostics">
+SV_DIAGNOSTICS
+</div>
 </body>
 </html>
 PublicTemplate-EOF
@@ -3459,6 +3531,7 @@ SV_AGENDA_BODIES
 <!-- New Action Items -->
 SV_ACTION_ITEMS
 
+[End of minutes] <br>
 <hr>
 
 <address>
@@ -3466,6 +3539,9 @@ SV_ACTION_ITEMS
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
+<div class="diagnostics">
+SV_DIAGNOSTICS
+</div>
 </body>
 </html>
 MemberTemplate-EOF
@@ -3538,6 +3614,7 @@ SV_AGENDA_BODIES
 <!-- New Action Items -->
 SV_ACTION_ITEMS
 
+[End of minutes] <br>
 <hr>
 
 <address>
@@ -3545,6 +3622,9 @@ SV_ACTION_ITEMS
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
+<div class="diagnostics">
+SV_DIAGNOSTICS
+</div>
 </body>
 </html>
 TeamTemplate-EOF
@@ -3629,6 +3709,7 @@ href="http://lists.w3.org/Archives/Team/w3t-mit/">the w3t-mit archive</a> for
 <!-- Action Items -->
 SV_ACTION_ITEMS
 
+[End of minutes] <br>
 <hr>
 
 <address>
@@ -3636,6 +3717,9 @@ SV_ACTION_ITEMS
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
+<div class="diagnostics">
+SV_DIAGNOSTICS
+</div>
 </body>
 </html>
 

@@ -528,10 +528,27 @@ in the formatted output.<br>
 <dl>
   <dt><br>
   </dt>
-  <dd><br>
-  </dd>
-  <dt><a name="trustRRSAgent_option"></a>-trustRRSAgent</dt>
-  <dd>Take the action items from what RRSAgent says when it is
+  <dt><br>
+  </dt>
+-embedDiagnostics
+</dl>
+<div style="margin-left: 40px;">Embed scribe.perl's diagnostic output
+into the generated minutes.&nbsp; This is most useful when scribe.perl
+is run as part of an automated process that otherwise would not display
+the diagnostic output to the user.<br>
+</div>
+<br>
+-noEmbedDiagnostics<br>
+<div style="margin-left: 40px;">[DEFAULT] Write diagnostic output to
+the console (stderr).&nbsp; However, in the case of a fatal error,
+diagnostic output will still be written to stdout (instead of generated
+minutes), to avoid producing an empty and uninformative minutes file.<br>
+</div>
+<dl>
+  <li><br>
+  </li>
+  <li><a name="trustRRSAgent_option"></a>-trustRRSAgent</li>
+  <li>Take the action items from what RRSAgent says when it is
 dismissed ("<code>&lt;RRSAgent&gt;
 I see 9 open action items...</code>"), rather than from the original
 text that
@@ -551,19 +568,19 @@ have
 no effect, because RRSAgent doesn't process them.&nbsp; (2) Action
 items continuation lines (beginning with "...") are not
 recognized. (3) An action status that is on the line after the action
-item will not be recognized.</dd>
-  <dt><br>
-  </dt>
-  <dt>-noTrustRRSAgent</dt>
-  <dd>(DEFAULT) Turn off the -trustRRSAgent option.&nbsp; I.e.,&nbsp;
+item will not be recognized.</li>
+  <li><br>
+  </li>
+  <li>-noTrustRRSAgent</li>
+  <li>(DEFAULT) Turn off the -trustRRSAgent option.&nbsp; I.e.,&nbsp;
 get the
 action items from wherever they were initially written. This permits
 action items to be corrected using "s/old/new/" commands instead of
-RRSAgent commands.</dd>
-  <dt><br>
-  </dt>
-  <dt><br>
-  </dt>
+RRSAgent commands.</li>
+  <li><br>
+  </li>
+  <li><br>
+  </li>
 </dl>
 <h3>Template Options</h3>
 Scribe.perl uses templates for generating the formatted
