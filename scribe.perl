@@ -672,6 +672,10 @@ while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTM
 	$agenda{$itemNum} = $4;
 	$itemNum++;
 	}
+if (!scalar(keys %agenda)) 	# No "Topic:"s found?
+	{
+	warn "\nWARNING: No \"Topic: ...\" lines found!  \nResulting HTML may have an empty (invalid) <ol>...</ol>.\n\nExplanation: \"Topic: ...\" lines are used to indicate the start of \nnew discussion topics or agenda items, such as:\n<dbooth> Topic: Review of Amy's report\n\n";
+	}
 my $agenda = "";
 foreach my $item (sort keys %agenda)
 	{
