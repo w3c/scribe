@@ -56,19 +56,23 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # and http://www.w3.org/2003/12/09-mit-irc.txt )
 # (Also remember to watch out for zakim's continuation lines.)
 #
-# 4. Recognize [[ ...lines... ]] and treat them as a block by
+# 4. Add a -keepUrls option to retain IRC lines that were not written
+# by the scribe even when the -scribeOnly option is used.
+#
+# 5. Recognize [[ ...lines... ]] and treat them as a block by
 # allowing them to be continuation lines for the same speaker,
 # because they are probably pasted in.
 #
-# 5. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
+# 6. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
 # so that all formatting info is in the template.
 #
-# 6. Restructure the code to go through a big loop, processing one line
+# 7. Restructure the code to go through a big loop, processing one line
 # at a time, with look-ahead to join continuation lines.
 #
-# 7. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
+# 8. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
 # excuses itself
 #
+# 9. Delete extra stopList from GetNames.  (There is already a global one.)
 #
 
 ######################################################################
@@ -93,20 +97,46 @@ my $preTopicHTML = "<h3";
 my $postTopicHTML = "</h3>";
 
 # Other globals
-my $namePattern = '([\\w]([\\w\\d\\-]*))';
-# warn "namePattern: $namePattern\n";
 my $debug = 0;
-# Some important data/constants:
+my $namePattern = '([\\w]([\\w\\d\\-\\.]*))';
+# warn "namePattern: $namePattern\n";
+
+# These are the recognized commands.  Each command should be a
+# single word, so use underscores if you have a multi-word command.
+my @ucCommands = qw(Meeting Scribe Topic Chair Present Regrets Agenda 
+	IRC Log IRC_Log Previous_Meeting ACTION);
+# Make lower case and generate spelling variations
+@commands = &Uniq(&WordVariations(map {&LC($_)} @ucCommands));
+# Map to preferred spelling:
+my %commands = &WordVariationsMap(@ucCommands);
+# A pattern to match any of them.  (Be sure to use case-insensitive matching.)
+my $commandsPattern = &MakePattern(keys %commands);
+
+# These are the recognized action statuses.  Each status should be a
+# single word, so use underscores if you have a multi-word status.
+my @ucActionStatuses = qw(NEW PENDING IN_PROGRESS DONE DROPPED RETIRED UNKNOWN);
+# Generate spelling variations and lower case:
+my @actionStatuses = &Uniq(&WordVariations(map {&LC($_)} @ucActionStatuses));
+# Map to preferred spelling:
+my %actionStatuses = &WordVariationsMap(@ucActionStatuses);
+# A pattern to match any of them.  (Be sure to use case-insensitive matching.)
+my $actionStatusesPattern = &MakePattern(keys %actionStatuses);
+
 my @rooms = qw(MIT308 SophiaSofa DISA Fujitsu);
+
 # stopList are non-people.
 my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
 	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
 	AGREED Date queue no one in XachBot got it WARNING);
-@stopList = (@stopList, @rooms);
-@stopList = map {&LC($_)} @stopList;	# Make stopList lower case
-my %stopList = map {($_,$_)} @stopList;
+# @stopList = (@stopList, @rooms);
+@stopList = (@stopList, @commands, @actionStatuses);
+@stopList = &Uniq(&WordVariations(map {&LC($_)} @stopList));
+# Use a hash to quickly determine whether a word is in the list.
+my %stopList = &WordVariationsMap(@stopList);
+# A pattern to match any of them.  (Be sure to use case-insensitive matching.)
+my $stopListPattern = &MakePattern(keys %stopList);
 
 # Get options/args
 my $all = "";			# Input
@@ -460,71 +490,115 @@ $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
 ######### ACTION Item Processing
-# These are the recognized action statuses.  Each status should be a
-# single word, so use underscores if you have a multi-word status.
-my @actionStatuses = qw(NEW PENDING IN_PROGRESS DONE DROPPED RETIRED UNKNOWN);
-my %statusPatterns = ();	# Maps from a status to its regex.
-foreach my $s (@actionStatuses)
-	{
-	die if $s !~ m/[a-zA-Z\_]/; # Canonical status, only letters/underscore
-	my $p = quotemeta($s);
-	# For multi-word status,
-	# allow the user to write space or dash instead of underscore.
-	# Accept as equivalent: IN_PROGRESS, IN PROGRESS, IN-PROGRESS 
-	$p =~ s/\_/\[\\-\\_\\s\]\+/g; # Make _ into a pattern: [\_\-\s]+
-	# warn "s: $s p: $p\n";
-	$statusPatterns{$s} = $p;
-	}
-
-# Put all action items into a common format, to make them easier to process.
-foreach my $s (@actionStatuses)
+# First put all action items into a common format, to make them easier to process.
+my @lines = split(/\n/, $all);
+for (my $i=0; $i<(@lines-1); $i++)
 	{
 	# First move the status out from in front of ACTION,
 	# so that ACTION is always at the beginning.
 	# Convert lines like: 
 	#	[PENDING] ACTION: whatever
 	# into lines like:
-	#	ACTION: PENDING: whatever
-	my $p = $statusPatterns{$s};
-	while ($all =~ s/\n(\<[^\>]+\>)\s*\W*($p)\W+ACTION\s*\:\s*/\n$1 ACTION\: \[$s\] /i)
+	#	ACTION: [PENDING] whatever
+	if (1)
 		{
-		# warn "CONVERTED: $&\n";
+		my ($writer, $type, $value, $rest) = &ParseLine($lines[$i]);
+		my ($writer2, $type2, $value2, $rest2) = &ParseLine("<scribe> $rest");
+		while ($type2 eq "status")
+			{
+			# Ignore nested status:
+			#	[PENDING] [NEW] ACTION: whatever
+			($writer2, $type2, $value2, $rest2) = &ParseLine("<scribe> $rest2");
+			}
+		# $debugTypesSeen{$type}++;
+		# warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugTypesSeen{$type} < 3;
+		if ($type eq "status" && $type2 eq "command" && $value2 eq "ACTION")
+			{
+			$lines[$i] = "<$writer\> ACTION: \[$value\] $rest2";
+			# warn "MOVED: $lines[$i]\n";
+			}
 		}
-	# Now join ACTION continuation lines.  Convert lines like:
-	#	<dbooth> ACTION: Mary to buy
-	#	<dbooth>   the ingredients.
-	# to this:
-	#	<dbooth> ACTION: Mary to buy the ingredients.
-	# It would be better if the continuation line processing was
-	# done only once, globally, instead of doing it separately here
-	# for actions.
-	while ($all =~ s/\n(\<([^\>]+)\>\s*ACTION\s*\:\s*(.*?))\s*\n\<\2\>\s(\s+|(\s*\.\.+\s*))(.*?)\s*\n/\n\<$2\> ACTION\: $3 $6\n/i)
+
+	if (1)
 		{
-		# warn "ACTION JOINED: $&\n";
-		# die "all:\n$all\n";
+		# Now join ACTION continuation lines.  Convert lines like:
+		#	<dbooth> ACTION: Mary to buy
+		#	<dbooth>   the ingredients.
+		# to this:
+		#	<dbooth> ACTION: Mary to buy the ingredients.
+		# It might be better if the continuation line processing was
+		# done only once, globally, instead of doing it separately here
+		# for actions.
+		my ($writer, $type, $value, $rest) = &ParseLine($lines[$i]);
+		my ($writer2, $type2, $value2, $rest2) = &ParseLine($lines[$i+1]);
+		# $debugTypesSeen{$type}++;
+		# warn "LINETYPE writer: $writer type: $type value: $value rest: $rest\n" if $debugTypesSeen{$type} < 3;
+		if ($type eq "command" && $value eq "ACTION"
+			&& &LC($writer2) eq &LC($writer)
+			&& ($type2 eq "status" || $type2 eq "continuation"))
+			{
+			my $cont = "\[$value2\] $rest2"; # if type2 eq status
+			$cont = $rest2 if $type2 eq "continuation";
+			$lines[$i] = "";
+			$lines[$i+1] = "<$writer\> ACTION: $rest $cont";
+			# warn "JOINED: " . $lines[$i+1] . "\n";
+			}
 		}
-	# Now look for status on lines following ACTION lines.
-	# This only works if we are NOT using RRSAgent's recorded actions.
-	# Join line pairs like this:
-	#	<dbooth> ACTION: whatever
-	#	<dbooth> *DONE*
-	# to lines like this:
-	#	<dbooth> ACTION: whatever [DONE]
-	while ($all =~ s/\n((\<[^\>]+\>)\s*ACTION\s*\:\s*(.*?))\n\<[^\>]+\>\W*($p)\W*\n/\n$1 \[$s\]\n/i)
+
+	if (1)
 		{
-		# warn "STATUS JOINED: $&\n";
+		# Now look for status on lines following ACTION lines.
+		# This only works if we are NOT using RRSAgent's recorded actions.
+		# Join line pairs like this:
+		#	<dbooth> ACTION: whatever
+		#	<dbooth> *DONE*
+		# to lines like this:
+		#	<dbooth> ACTION: whatever [DONE]
+		my ($writer, $type, $value, $rest) = &ParseLine($lines[$i]);
+		if ($type eq "command" && $value eq "ACTION")
+			{
+			# warn "FOUND ACTION: $rest\n";
+			# Look ahead at the next line by the same writer.
+			for (my $j=$i+1; $j<@lines; $j++)
+				{
+				my ($writer2, $type2, $value2, $rest2) = &ParseLine($lines[$j]);
+				if (&LC($writer2) eq &LC($writer))
+					{
+					if ($type2 eq "status" && $rest2 eq "")
+						{
+						$lines[$i] = "<$writer\> ACTION: $rest \[$value2\]";
+						$lines[$j] = "";
+						# warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n";
+						}
+					last;
+					}
+				}
+			}
 		}
-	# Now grab the URL where the action was recorded.
-	# Join line pairs like this:
-	# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1]
-	# 	<RRSAgent>   recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24
-	# to lines like this:
-	# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1] [recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24]
-	while ($all =~ s/\n((\<RRSAgent\>)\s*ACTION\s*\:\s*(.*?))\n\<RRSAgent\>\s*(recorded in http\:\S+)\s*\n/\n$1 \[$4\]\n/i)
+
+	if (1)
 		{
-		# warn "URL JOINED: $&\n";
+		# Now grab the URL where the action was recorded.
+		# Join line pairs like this:
+		# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1]
+		# 	<RRSAgent>   recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24
+		# to lines like this:
+		# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1] [recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24]
+		my ($writer, $type, $value, $rest) = &ParseLine($lines[$i]);
+		my ($writer2, $type2, $value2, $rest2) = &ParseLine($lines[$i+1]);
+		if ($type eq "command" && $value eq "ACTION"
+			&& &LC($writer) eq "rrsagent" && 
+			&LC($writer2) eq &LC($writer)
+			&& $rest2 =~ m/\A\W*(recorded in http\:[^\s\[\]]+)(\s*\W*)\Z/i)
+			{
+			my $recorded = $1;
+			$lines[$i] = "";
+			$lines[$i+1] = "<$writer\> ACTION: $rest \[$recorded\]";
+			# warn "JOINED RECORDED: " . $lines[$i+1] . "\n";
+			}
 		}
 	}
+$all = "\n" . join("\n", grep {$_} @lines) . "\n";
 
 # Now it's time to collect the action items.
 # Grab the action items both ways (from RRSAgent, and not from RRSAgent),
@@ -554,7 +628,7 @@ for (my $i = 0; $i <= $#rrsagentLines; $i++) {
 my %otherActions = ();		# Actions found in text (not according to RRSAgent)
 foreach my $line (split(/\n/,  $all))
 	{
-	next if $line =~ m/^\<RRSAgent\>/;
+	next if $line =~ m/^\<RRSAgent\>/i;
 	next if $line !~ m/\A\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)\s*\Z/i;
 	my $action = $1;
 	# warn "OTHER ACTION: $action\n";
@@ -570,6 +644,19 @@ if ($trustRRSAgent) {
 } else {
 	%rawActions = %otherActions;
 }
+
+my %statusPatterns = ();	# Maps from a status to its regex.
+foreach my $s (@actionStatuses)
+	{
+	die if $s !~ m/[a-zA-Z\_]/; # Canonical status, only letters/underscore
+	my $p = quotemeta($s);
+	# For multi-word status,
+	# allow the user to write space or dash instead of underscore.
+	# Accept as equivalent: IN_PROGRESS, IN PROGRESS, IN-PROGRESS 
+	$p =~ s/\_/\[\\-\\_\\s\]\+/g; # Make _ into a pattern: [\_\-\s]+
+	# warn "s: $s p: $p\n";
+	$statusPatterns{$s} = $p;
+	}
 
 # Now clean up each action item and parse out its status and URL.
 my %actions = ();
@@ -592,7 +679,7 @@ foreach my $action ((keys %rawActions))
 		$olda = $a;
 		$a = &Trim($a);
 		next CHANGE if $a =~ s/\s*\[\d+\]?\s*\Z//;	# Delete action numbers: [4] [4
-		next CHANGE if $a =~ s/\AACTION\s*\:\s*//;	# Delete extra ACTION:
+		next CHANGE if $a =~ s/\AACTION\s*\:\s*//i;	# Delete extra ACTION:
 		# Grab URL from end of action.   
 		# Innermost URL takes precedence if specified more than once.
 		# This is not precisely the official URI pattern.
@@ -645,6 +732,7 @@ foreach my $key ((keys %actions))
 	my $a = &LC($key);
 	# warn "action:$a:\n";
 	# Skip completed action items.  Check the status.
+	die if !exists($actions{$key});
 	my $lcs = &LC($actions{$key});
 	my %completedStatuses = map {($_,$_)} 
 		qw(done finished dropped completed retired deleted);
@@ -699,13 +787,15 @@ my @formattedActionLines = ();
 foreach my $status (@actionStatuses)
 	{
 	my $n = 0;
-	# foreach my $action (sort keys %actions)
+	my $ucStatus = $actionStatuses{$status};
 	foreach my $action (&CaseInsensitiveSort(keys %actions))
 		{
-		next if $actions{$action} ne $status;
+		die if !exists($actions{$action});
+		die if !defined($status);
+		next if &LC($actions{$action}) ne &LC($status);
 		my $s = $actionTemplate;
 		$s =~ s/\$action/$action/;
-		$s =~ s/\$status/$status/;
+		$s =~ s/\$status/$ucStatus/;
 		push(@formattedActionLines, $s);
 		$n++;
 		delete($actions{$action});
@@ -717,13 +807,16 @@ foreach my $status (@actionStatuses)
 foreach my $status (sort values %actions)
 	{
 	my $n = 0;
+	my $ucStatus = $actionStatuses{$status};
 	# foreach my $action (sort keys %actions)
 	foreach my $action (&CaseInsensitiveSort(keys %actions))
 		{
-		next if $actions{$action} ne $status;
+		die if !exists($actions{$action});
+		die if !defined($status);
+		next if &LC($actions{$action}) ne &LC($status);
 		my $s = $actionTemplate;
 		$s =~ s/\$action/$action/;
-		$s =~ s/\$status/$status/;
+		$s =~ s/\$status/$ucStatus/;
 		push(@formattedActionLines, $s);
 		$n++;
 		delete($actions{$action});
@@ -742,14 +835,15 @@ foreach my $status (sort values %actions)
 
 my $formattedActions = join("", @formattedActionLines);
 # Make links from URLs in actions:
-$formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/g;
+$formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
 
 # Highlight ACTION items:
-$formattedActions =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/g;
+$formattedActions =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/ig;
 # Highlight in-line ACTION status:
 foreach my $status (@actionStatuses)
 	{
-	$formattedActions =~ s/\[$status\]/<strong>[$status]<\/strong>/g;
+	my $ucStatus = $actionStatuses{$status};
+	$formattedActions =~ s/\[$status\]/<strong>[$ucStatus]<\/strong>/ig;
 	}
 
 $all = &IgnoreGarbage($all);
@@ -824,6 +918,9 @@ while (@linesIn)
 		die "DIED FROM UNKNOWN LINE FORMAT: $line\n\n";
 		}
 	# Make lower case versions, for easier comparison
+	die if !defined($writer);
+	die if !defined($speaker);
+	die if !defined($prevSpeaker);
 	my $writerLC = &LC($writer);
 	my $speakerLC = &LC($speaker);
 	my $prevSpeakerLC = &LC($prevSpeaker);
@@ -922,14 +1019,15 @@ my @allLines = split(/\n/, $all);
 for (my $i=0; $i<@allLines; $i++)
 	{
 	next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
-	$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/;
+	$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/i;
 	}
 $all = "\n" . join("\n", @allLines) . "\n";
 
 # Highlight in-line ACTION status:
 foreach my $status (@actionStatuses)
 	{
-	$all =~ s/\[\s*$status\s*\]/<strong>[$status]<\/strong>/g;
+	my $ucStatus = $actionStatuses{$status};
+	$all =~ s/\[\s*$status\s*\]/<strong>[$ucStatus]<\/strong>/ig;
 	}
 
 # Format topic titles (i.e., collect agenda):
@@ -970,7 +1068,7 @@ $all =~ s/<br \/>((\s*<br \/>)+)/<br \/>/g;
 # Standardize continuation lines:
 # $all =~ s/\n\s*\.+/\n\.\.\./g;
 # Make links:
-$all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/g;
+$all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
 
 # Put into template:
 # $all =~ s/\A\s*<\/p>//;
@@ -1023,6 +1121,157 @@ print $result;
 exit 0;
 ################### END OF MAIN ######################
 
+###############################################################
+################# WordVariationsMap ###########################
+###############################################################
+sub WordVariationsMap
+{
+my @words = @_;	# Preferred mixed case words.
+my %map = ();	# Maps each lower case variation to preferred mixed case form.
+foreach my $w (@words)
+	{
+	die if (!defined($w)) || $w eq "";
+	my @variations = &WordVariations(&LC($w));
+	foreach my $v (@variations)
+		{
+		$map{$v} = $w;
+		}
+	}
+return(%map);
+}
+
+###################################################################
+####################### WordVariations #######################
+###################################################################
+# Generate variations of the given words, e.g.
+#	Previous_Minutes
+#	Previous-Minutes
+#	Previous Minutes
+#	PreviousMinutes
+sub WordVariations
+{
+my @old = @_;
+my @new = map { 
+		my @w=($_); 
+		# Allow variations of multiword words:
+		push(@w, $_) if ($_ =~ s/[_\-\ ]+/\_/g); # Previous_Minutes
+		push(@w, $_) if ($_ =~ s/[_\-\ ]+/\-/g); # Previous-Minutes
+		push(@w, $_) if ($_ =~ s/[_\-\ ]+/\ /g); # Previous Minutes
+		push(@w, $_) if ($_ =~ s/[_\-\ ]+//g);   # PreviousMinutes
+		# warn "VARIATIONS: @w\n";
+		&Uniq(@w);
+		} @old;
+return(@new);
+}
+
+###################################################################
+####################### Uniq #######################
+###################################################################
+# Return one copy of each thing in the given list.
+# Order is preserved.
+sub Uniq
+{
+my @words = @_;
+my %seen = ();
+my @result = ();
+foreach my $w (@words)
+	{
+	next if exists($seen{$w});
+	$seen{$w} = $w;
+	push(@result, $w);
+	}
+return(@result);
+}
+
+###################################################################
+####################### MakePattern #######################
+###################################################################
+# Generate a pattern matching any of the given words, e.g.:
+#	dog|cat|pig
+# No parentheses are used, so you should put parens around the
+# resulting pattern.
+sub MakePattern
+{
+@_ > 0 || die;
+my @words = grep {die if (!defined($_)) || $_ eq ""; $_} @_;
+my $pattern =  join("|", map {quotemeta($_)} @words);
+return $pattern;
+}
+
+
+###################################################################
+####################### ParseLine #######################
+###################################################################
+# Parse the line and return:
+#	$writer		E.g. dbooth from "<dbooth> ..."
+#	$type		One of: command status speaker continuation plain ""
+#	$value		Either: the command; the speaker; the continuation
+#			pattern; the status; or empty (if $type is plain).
+#	$rest		The rest of the line
+# (I.e., $type is "" if no writer.)
+sub ParseLine
+{
+@_ == 1 || die;
+my ($line) = @_;
+my ($writer, $type, $value, $rest) = ("", "", "", "");
+if ($line !~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
+	{
+	$rest = &Trim($line);
+	return ($writer, $type, $value, $rest);
+	}
+# "<dbooth> " has now been removed from the $line
+$writer = $2;
+# Action status?
+if ($line =~ m/\A\W*($actionStatusesPattern)\W*/i)
+	{
+	$type = "status";
+	$value = $1;
+	$rest = &Trim($');
+	# die "LINETYPE a s type: $type value: $value rest: $rest\n";
+	$value = $actionStatuses{&LC($value)}; # in_progress --> IN_PROGRESS
+	}
+# Command?
+# This pattern allows up to two extra leading spaces for commands
+elsif ($line =~ m/\A(\s?(\s?))($commandsPattern)(\s?)\:\s*/i)
+	{
+	$type = "command";
+	$value = $3;
+	$rest = &Trim($');
+	# Put command in canonical form (no spaces or underscore):
+	# die if !exists($commands{$value});
+	$value = $commands{&LC($value)}; # previous_meeting --> Previous_Meeting
+	}
+# Speaker statement?
+# This pattern allows up to two extra leading spaces for speaker statements
+elsif ($line =~ m/\A(\s?)(\s?)([_\w\-\.]+)(\s?)\:\s*/)
+	{
+	$value = $3;
+	$rest = &Trim($');
+	# Make sure it's not in the stopList (non-name).
+	if (!exists($stopList{&LC($value)}))
+		{
+		# Must be a speaker statement.
+		$type = "speaker";
+		}
+	}
+# Continuation line?
+if ((!$type) && $line =~ m/\A((\s)|(\s?(\s?)\.\.+(\s?)(\s?)))/)
+	{
+	$type = "continuation";
+	$value = $&;
+	$rest = &Trim($');
+	if ($value =~ m/\./) { $value = "... "; } # Standardize
+	else { $value = " "; }
+	}
+if (!$type)
+	{
+	# Must be plain line
+	$value = "";
+	$rest = &Trim($line);
+	$type = "plain";
+	}
+return ($writer, $type, $value, $rest);
+}
 
 ###################################################################
 ####################### CaseInsensitiveSort #######################
@@ -1275,8 +1524,8 @@ my $nLines = scalar(@lines);
 my @scribeLines = ();
 foreach my $line (@lines)
 	{
-	# Ignore /me lines
-	next if $line =~ m/\A\s*\*/;
+	# Ignore /me lines.  Up to 3 leading spaces before "*".
+	next if $line =~ m/\A(\s?)(\s?)(\s?)\*/;
 	next if $line =~ m/\A\<$namePattern\>(\s?)(\s?)(\s?)\*/i;
 	# Select only <speaker> lines
 	next if $line !~ m/\A\<$namePattern\>/i;
@@ -1380,9 +1629,9 @@ my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 foreach my $line (@lines)
 	{
 	# * unlogged comment
-	if ($line =~ m/\A\s*\*\s/) { $n++; }
+	if ($line =~ m/\A(\s?)(\s?)(\s?)\*\s/) { $n++; }
 	# <ericn> Discussion on how to progress
-	elsif ($line =~ m/\A\<$namePattern\>\s/) { $n++; }
+	elsif ($line =~ m/\A\<$namePattern\>\s/i) { $n++; }
 	# warn "LINE: $line\n";
 	}
 # warn "Mirc_Text_Format n matches: $n\n";
@@ -1420,19 +1669,19 @@ while (@lines)
 	if (0) {}
 	# Keep normal lines:
 	# 2003-12-18T15:27:36-0500 <hugo> Hello.
-	elsif ($line =~ s/\A$timestampPattern\s+(\<$namePattern\>)/$11/)
+	elsif ($line =~ s/\A$timestampPattern\s+(\<$namePattern\>)/$11/i)
 		{ $n++; push(@linesOut, $line); }
 	# Also keep comment lines.  They'll be removed later.
 	# 2003-12-18T16:56:06-0500  * RRSAgent records action 4
-	elsif ($line =~ s/\A$timestampPattern\s+(\*)/$11/)
+	elsif ($line =~ s/\A$timestampPattern\s+(\*)/$11/i)
 		{ $n++; push(@linesOut, $line); }
 	# Recognize, but discard:
 	# 2003-12-18T15:26:57-0500 !mcclure.w3.org hugo invited Zakim into channel #ws-arch.
-	elsif ($line =~ m/\A$timestampPattern\s+\!/)
+	elsif ($line =~ m/\A$timestampPattern\s+\!/i)
 		{ $n++; } 
 	# Recognize, but discard:
 	# 2003-12-18T15:27:30-0500 -!- dbooth [dbooth@18.29.0.30] has joined #ws-arch
-	elsif ($line =~ m/\A$timestampPattern\s+\-\!\-/)
+	elsif ($line =~ m/\A$timestampPattern\s+\-\!\-/i)
 		{ $n++; } 
 	else	{
 		# warn "UNRECOGNIZED LINE: $line\n";
@@ -1464,7 +1713,7 @@ my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
 foreach my $line (@lines)
 	{
 	# 20:41:27 <ericn> Review of minutes 
-	$n++ if $line =~ s/\A$timePattern\s+(\<$namePattern\>\s)/$5/;
+	$n++ if $line =~ s/\A$timePattern\s+(\<$namePattern\>\s)/$5/i;
 	# warn "LINE: $line\n";
 	}
 $all = "\n" . join("\n", @lines) . "\n";
@@ -1488,7 +1737,7 @@ my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
 foreach my $line (@lines)
 	{
 	# <dt id="T14-35-34">14:35:34 [dbooth]</dt><dd>Gudge: why not sufficient?</dd>
-	if ($line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/)
+	if ($line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/i)
 		{
 		$n++;
 		# warn "MATCHED: $line\n";
@@ -1536,11 +1785,11 @@ while ($i < (@lines-1))
 	# This format uses line pairs:
 	# 	14:43:30 [Arthur]
 	# 	If it's abstract, it goes into portType 
-	# if ($linePair =~ s/\A($timePattern)\s+\[($namePattern)\][\ \t]*\n/\<$6\> /)
+	# if ($linePair =~ s/\A($timePattern)\s+\[($namePattern)\][\ \t]*\n/\<$6\> /i)
 	my $name = "";
 	if ($line1 =~ m/\A($timePattern)\s+\[($namePattern)\]\Z/
 		&& ($name = $6)	# Assignment!  Save that value!
-		&& $line2 !~ m/\A($timePattern)\s+\[($namePattern)\]/)
+		&& $line2 !~ m/\A($timePattern)\s+\[($namePattern)\]/i)
 		{
 		# warn "MATCH: name: $name line2: $line2\n";
 		$done .= "<$name> $line2\n";
@@ -1549,7 +1798,7 @@ while ($i < (@lines-1))
 		}
 	elsif ($line1 eq ""
 		|| $line1 eq "Timestamps are in UTC."
-		|| $line1 =~ m/\AIRC log of /) 
+		|| $line1 =~ m/\AIRC log of /i) 
 		{ 
 		# warn "IGNORING: line: $lines[$i]\n";
 		$n++; 
@@ -1580,7 +1829,7 @@ my $n = 0;
 my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 foreach my $line (@lines)
 	{
-	$n++ if $line =~ s/\A($namePattern)\:\s/\<$1\> /;
+	$n++ if $line =~ s/\A($namePattern)\:\s/\<$1\> /i;
 	# warn "LINE: $line\n";
 	}
 $all = "\n" . join("\n", @lines) . "\n";
@@ -1610,14 +1859,14 @@ for (my $i=0; $i<@lines; $i++)
 	{
 	# Lines should NOT have timestamps:
 	# 	20:41:27 <ericn> Review of minutes 
-	next if $lines[$i] =~ m/$timePattern\s+/;
+	next if $lines[$i] =~ m/$timePattern\s+/i;
 	# Lines should NOT contain <speakerName>:
 	# 	<ericn> Review of minutes 
-	next if $lines[$i] =~ m/(\<$namePattern\>\s)/;
+	next if $lines[$i] =~ m/(\<$namePattern\>\s)/i;
 	# Line should NOT have [name] unless it pertains to an action item.
 	# Check the current line and previous line for the word ACTION,
 	# because the action status [PENDING] could follow the ACTION line.
-	next if $lines[$i] =~ m/(\[$namePattern\]\s)/
+	next if $lines[$i] =~ m/(\[$namePattern\]\s)/i
 		&&  $lines[$i] !~ m/\bACTION\b/i
 		&&  ($i == 0 || ($lines[$i] !~ m/\bACTION\b/i));
 	# warn "LINE: $lines[$i]\n";
@@ -1747,7 +1996,7 @@ for (my $i=0; $i<@lines; $i++)
 	# 	<scribe> Amy: ... for all good men and women
 	next if ($rest =~ m/\A\s*\.\./);
 	# <scribe> ACTION: ...
-	if ($rest =~ m/\AACTION\b/)
+	if ($rest =~ m/\AACTION\b/i)
 		{
 		$inContinuation = 0;
 		next;
@@ -1764,7 +2013,7 @@ for (my $i=0; $i<@lines; $i++)
 		}
 	# 	<scribe> Amy: Now is the time
 	# 	<scribe> ACTION: ...
-	if ($rest =~ m/\A([a-zA-Z0-9\-_\.]+)( ?):/)
+	if ($rest =~ m/\A([a-zA-Z0-9\-_\.]+)( ?):/i)
 		{
 		# Not a continuation line.  Either new speaker or stop word.
 		my $speaker = $1;
@@ -1845,7 +2094,7 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	@date = ($day0, $mon0, $year, $tmon);
 	}
 # Figure out date from IRC log name:
-elsif ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/)
+elsif ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/i)
 	{
 	my $year = $2;
 	my $mon = $3;
@@ -1964,7 +2213,7 @@ my $t; # Temp
 $t = $all;
 my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 # warn "namePattern: $namePattern\n";
-while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /)
+while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /i)
 	{
 	my $n = $1;
 	$names{$n} = $n;
@@ -1983,7 +2232,7 @@ while($t =~ s/\n\<((\w|\-)+)\>(\ +)((\w|\-)+)\:/\n/i)
 
 #	<Steven> Hello 
 $t = $all;
-while($t =~ s/\n\<((\w|\-)+)\>/\n/)
+while($t =~ s/\n\<((\w|\-)+)\>/\n/i)
 	{
 	my $n = $1;
 	next if exists($names{$n});
@@ -1994,7 +2243,7 @@ while($t =~ s/\n\<((\w|\-)+)\>/\n/)
 
 #	Zakim sees 4 items remaining on the agenda
 $t = $all;
-while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
+while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/i)
 	{
 	my $match = &Trim($&);
 	# warn "DELETED: $match\n";
@@ -2012,12 +2261,12 @@ while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
 #
 # Delete "on the speaker queue" from the ends of the lines,
 # to prevent those words being mistaken for names.
-while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/)
+while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/i)
         {
         warn "Deleted 'on the speaker queue'\n";
         }
 # Collect names
-while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/)
+while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/i)
 	{
 	my $list = &Trim($9);
 	my @names = split(/[^\w\-]+/, $list);
@@ -2063,8 +2312,8 @@ foreach my $n (keys %names)
 	# Filter out names not starting with a letter
 	elsif ($names{$n} !~ m/\A[a-zA-Z]/) { delete $names{$n}; }
 	# Filter out "scribe" and "chair"
-	elsif ($n =~ m/\Ascribe\Z/) { delete $names{$n}; }
-	elsif ($n =~ m/\Achair\Z/) { delete $names{$n}; }
+	elsif ($n =~ m/\Ascribe\Z/i) { delete $names{$n}; }
+	elsif ($n =~ m/\Achair\Z/i) { delete $names{$n}; }
 	}
 
 # Make a list of unique names for the attendee list:
@@ -2207,7 +2456,7 @@ my $t; # Temp
 $t = $all;
 my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 # warn "namePattern: $namePattern\n";
-while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /)
+while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /i)
 	{
 	my $n = $1;
 	$names{$n} = $n;
@@ -2226,7 +2475,7 @@ while($t =~ s/\n\<((\w|\-)+)\>(\ +)((\w|\-)+)\:/\n/i)
 
 #	<Steven> Hello 
 $t = $all;
-while($t =~ s/\n\<((\w|\-)+)\>/\n/)
+while($t =~ s/\n\<((\w|\-)+)\>/\n/i)
 	{
 	my $n = $1;
 	next if exists($names{$n});
@@ -2237,10 +2486,10 @@ while($t =~ s/\n\<((\w|\-)+)\>/\n/)
 
 #	Zakim sees 4 items remaining on the agenda
 $t = $all;
-while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
+while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/i)
 	{
 	my $match = &Trim($&);
-	$match =~ &Trim($match);
+	$match = $match;
 	# warn "DELETED: $match\n";
 	}
 
@@ -2256,12 +2505,12 @@ while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
 #
 # Delete "on the speaker queue" from the ends of the lines,
 # to prevent those words being mistaken for names.
-while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/)
+while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/i)
         {
         warn "Deleted 'on the speaker queue'\n";
         }
 # Collect names
-while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/)
+while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/i)
 	{
 	my $list = &Trim($9);
 	my @names = split(/[^\w\-]+/, $list);
