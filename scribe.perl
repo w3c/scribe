@@ -8,7 +8,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ';
 
 
-# Generate minutes in HTML from a text IRC/chat Log.
+# Generate minutes in HTML from a text IRC/chat Log. 
 #
 # Author: David Booth <dbooth@w3.org> 
 # License: GPL
