@@ -4032,7 +4032,7 @@ my $template = <<'PlainTemplate-EOF'
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang='en'>
 <head>
-  <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
+  <title>SV_MEETING_TITLE &mdash; SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
   <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/public.css">
   <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
