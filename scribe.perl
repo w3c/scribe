@@ -266,9 +266,9 @@ while($restartForEmbeddedOptions)
 			}
 		elsif ($a eq "-debug") 
 			{ $debug = 1; }
-		elsif ($a eq "-noUseZakimTopics") 
+		elsif ($a eq "-noUseZakimTopics" || $a eq "-noZakimTopics") 
 			{ $useZakimTopics = 0; }
-		elsif ($a eq "-useZakimTopics") 
+		elsif ($a eq "-useZakimTopics" || $a eq "-zakimTopics") 
 			{ $useZakimTopics = 1; }
 		elsif ($a eq "-implicitContinuations"
 			|| $a eq "implicitContinuation") 
@@ -279,6 +279,8 @@ while($restartForEmbeddedOptions)
 			{ $inputFormat = shift @ARGV; }
 		elsif ($a eq "-dashTopics" || $a eq "-philippe" || $a eq "-plh") 
 			{ $dashTopics = 1; }
+		elsif ($a eq "-noDashTopics" || $a eq "-noPhilippe" || $a eq "-noPlh") 
+			{ $dashTopics = 0; }
 		elsif ($a eq "-scribe" || $a eq "-scribeName") 
 			{ $scribeName = shift @ARGV; }
 		elsif ($a eq "-tidy") 
