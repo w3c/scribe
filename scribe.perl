@@ -1315,6 +1315,7 @@ my $t = join("\n", grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all));
 $t =~ s/\n\.\.\.\.*\s*/ /g;
 # die "t:\n$t\n" . ('=' x 70) . "\n\n";
 @zakimLines = split(/\n/, $t);
+my $isAlreadyDefined = 0;
 foreach my $line (@zakimLines)
 	{
 	if ($line =~ m/Attendees\s+were\s+/i)
@@ -1322,11 +1323,12 @@ foreach my $line (@zakimLines)
 		my $raw = $';
 		my @people = map {$_ = &Trim($_); s/\s+/_/g; $_} split(/\,/, $raw);
 		next if !@people;
-		if (@present)
+		if (@present && $isAlreadyDefined)
 			{
 			warn "\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n";
 			}
 		@present = @people;
+		$isAlreadyDefined = 1;
 		}
 	}
 return(@present);
