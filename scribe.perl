@@ -162,12 +162,6 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # 1. Add a normalizer function for the format from hugo's log in
 # http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
 #
-# 2. Grab the list of attendees automatically from zakim bot's
-# message about who was on the call:
-#	<Zakim> WS_DescWG()11:00AM has ended
-#	<Zakim> Attendees were A_Ryman, Dbooth, Dietmar_Gaertner, Plh, GlenD, Youenn, WilliamV, JacekK, DOrchard, Prasad_Yendluri, Jonathan_Marsh, PaulD, J_Thrasher, T_Jordahl, S_Kumar, Allen,
-#	<Zakim> ... IgorS, J.Mischkinsky, Lily, Umit, sanjiva, bijan, JeffM, Erik_Ackerman
-#	* dbooth cheers zakim bot!
 
 ######################################################################
 #
@@ -407,13 +401,38 @@ for (my $i=0; $i<@allLines; $i++)
 $all = "\n" . join("\n", @allLines) . "\n";
 
 # Get the list of people present.
+my @present = ();			# People present at the meeting
+# First see if zakim reported who is present, and use that as the default.
+#	<Zakim> Attendees were A_Ryman, Dbooth, Dietmar_Gaertner, Plh, GlenD, Youenn, WilliamV, JacekK, DOrchard, Prasad_Yendluri, Jonathan_Marsh, PaulD, J_Thrasher, T_Jordahl, S_Kumar, Allen,
+#	<Zakim> ... IgorS, J.Mischkinsky, Lily, Umit, sanjiva, bijan, JeffM, Erik_Ackerman
+{
+my @zakimLines = grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all);
+my $t = join("\n", grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all)); 
+# Join zakim continuation lines
+$t =~ s/\n\.\.\.\.*\s*/ /g;
+@zakimLines = split(/\n/, $t);
+foreach my $line (@zakimLines)
+	{
+	if ($line =~ m/attendees\s+were\s+/i)
+		{
+		my $raw = $';
+		my @people = map {s/\A\s+//; s/\s+\Z//; s/\s+/_/g; $_} split(/\,/, $raw);
+		next if !@people;
+		if (@present)
+			{
+			warn "WARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n";
+			}
+		@present = @people;
+		}
+	}
+}
+
 # <dbooth> Present: Amy Frank Joe Carol
 # <dbooth> Present: David Booth, Frank G, Joe Camel, Carol King
 # <dbooth> Present+: Justin
 # <dbooth> Present+ Silas
 # <dbooth> Present-: Amy
 my @possiblyPresent = @uniqNames;	# People present at the meeting
-my @present = ();			# People present at the meeting
 my @newAllLines = ();	# Collect remaining lines
 # push(@allLines, "<dbooth> Present: David Booth, Frank G, Joe Camel, Carol King"); # test
 # push(@allLines, "<dbooth> Present: Amy Frank Joe Carol"); # test
