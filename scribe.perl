@@ -67,7 +67,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # SCRIBE CONVENTIONS:
 # This program expects certain conventions in the IRC log as follows.
-# Identify the scribe (Note that names must not contain spaces):
+# Identify the IRC name of the scribe (Note that names must not contain spaces):
 #	<dbooth> Scribe: dbooth
 # Identify the meeting chair:
 #	<dbooth> Chair: Jonathan
@@ -292,7 +292,7 @@ $scribeName = $1 if $all =~ s/\<([^\>\ ]+)\>\s*I\s+am\s+scribing.*//i;
 warn "Scribe: $scribeName\n";
 
 # Get attendee list, and normalize names within the document:
-my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+my $namePattern = '([\\w]([\\w\\d\\-]*))';
 # warn "namePattern: $namePattern\n";
 my @uniqNames = ();
 my $allNameRefsRef;
@@ -1027,10 +1027,10 @@ my($all, $scribe) = @_;
 my @rooms = qw(MIT308 SophiaSofa DISA);
 
 my @stopList = qw(a q on items Zakim Topic muted and agenda Regrets http the
-	RRSAgent Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
-	Scribe 00AM 00PM P IRC Topics Keio DROPPED 
+	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
+	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
-	AGREED Date);
+	AGREED Date speaker queue no one in XachBot got it WARNING);
 @stopList = (@stopList, @rooms);
 @stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
 my %stopList = map {($_,$_)} @stopList;
@@ -1105,17 +1105,6 @@ $all = "\n" . $all . "\n";
 my %names =  ();
 my $t; # Temp
 
-#	<Zakim> +Janet
-#	<Zakim> +Carine, Yves; got it
-$t = $all;
-while($t =~ s/\+((\w|\-)+)((\,\ +)?)/\+/)
-	{
-	my $n = $1;
-	next if exists($names{$n});
-	# warn "Matched #	<Zakim> +$n\n";
-	$names{$n} = $n;
-	}
-
 # 	  ...something.html Simon's two minutes
 $t = $all;
 my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
@@ -1161,49 +1150,28 @@ while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
 #	<Zakim> I see no one on the speaker queue
 #	<Zakim> I see Hugo, Yves, Philippe on the speaker queue
 #	<Zakim> I see MIT308, Ivan, Marie-Claire, Steven, Janet, EricM
-my $count= 0;
-# Chop off "on the speaker queue":
-warn "Chopped \"$4\"\n" if $t =~ s/(\n\<Zakim\>\ I\ see(\ +)(.*))(on\ +the\ +speaker\ +queue)\ *\n/$1\n/g;
-# Delete "<Zakim> I see no one":
-warn "Chopped \"$1\"\n" if $t =~ s/\n(\<Zakim\>\ I\ see no one)\ *\n/\n/g;
-# Now process:
+#	<Zakim> On the phone I see Joseph, m3mSEA, MIT308, Marja
+#	<Zakim> On IRC I see Nobu, SusanL, RRSAgent, ht, Ian, ericP
+#	<Zakim> ... simonMIT, XachBot
 #	<Zakim> I see MIT308, Ivan, Marie-Claire, Steven, Janet, EricM
-while($t =~ s/\n\<Zakim\>\ I\ see(\ +)(.*)\n/\n/)
+#	<Zakim> MIT308 has Martin, Ted, Ralph, Alan, EricP, Vivien
+#	<Zakim> +Carine, Yves, Hugo; got it
+#
+# The stopList will later eliminate "no one" or "on the speaker queue",
+# so we don't need to worry about them here.
+while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/)
 	{
-	my $list = $2;
+	my $list = $9;
 	$list =~ s/\A\s+//;
 	$list =~ s/\s+\Z//;
 	my @names = split(/[^\w\-]+/, $list);
 	@names = map {s/\A\s+//; s/\s+\Z//; $_} @names;
 	@names = grep {$_} @names;
-	my $n = $1;
 	# warn "Matched #       <Zakim> I see: @names\n";
 	foreach my $n (@names)
 		{
 		next if exists($names{$n});
 		$names{$n} = $n;
-		}
-	}
-
-# Expand rooms:
-foreach my $room (@rooms)
-	{
-	#	<Zakim> MIT308 has Ralph, DavidB, Amy
-	$t = $all;
-	my $count= 0;
-	my $qr = quotemeta($room);
-	while($t =~ s/\n\<Zakim\>\ $qr\ has(\ +)(.*)\n/\n/)
-		{
-		my @names = split(/[^\w\-]+/, $2);
-		@names = map {s/\A\s+//; s/\s+\Z//; $_} @names;
-		@names = grep {$_} @names;
-		my $n = $1;
-		# warn "Matched #	<Zakim> $room has @names\n";
-		foreach my $n (@names)
-			{
-			next if exists($names{$n});
-			$names{$n} = $n;
-			}
 		}
 	}
 
