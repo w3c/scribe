@@ -173,17 +173,22 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 # 1. Recognize "next agendum" instead of "Topic:..."
 #
-# 2. Recognize [[ ...lines... ]] and treat them as a block by
+# 2. Allow the scribe to change.  Process multiple "Scribe: dbooth" commands.
+#
+# 3. Recognize [[ ...lines... ]] and treat them as a block by
 # allowing them to be continuation lines for the same speaker,
 # because they are probably pasted in.
 #
-# 3. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
+# 4. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
 # so that all formatting info is in the template.
 #
-# 4. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
+# 5. Restructure the code to go through a big loop, processing one line
+# at a time, with look-ahead to join continuation lines.
+#
+# 6. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
 # excuses itself
 #
-# 5. Add a normalizer function for the format from hugo's log in
+# 7. Add a normalizer function for the format from hugo's log in
 # http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
 #
 
@@ -221,7 +226,7 @@ my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	yes no abstain Consensus Participants Question RESOLVED strategy
 	AGREED Date queue no one in XachBot got it WARNING);
 @stopList = (@stopList, @rooms);
-@stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
+@stopList = map {&LC($_)} @stopList;	# Make stopList lower case
 my %stopList = map {($_,$_)} @stopList;
 
 # Get options/args
@@ -234,6 +239,7 @@ my $trustRRSAgent = 0;		# Trust RRSAgent?
 my $breakActions = 1;		# Break long action lines?
 my $implicitContinuations = 0;	# Option: -implicitContinuations
 my $scribeName = "UNKNOWN"; 	# Example: -scribe dbooth
+my $useZakimTopics = 0; 	# Treat zakim agenda take-up as Topic change?
 
 my @args = ();
 my $template = &DefaultTemplate();
@@ -285,6 +291,10 @@ while (@ARGV)
 		}
 	elsif ($a eq "-debug") 
 		{ $debug = 1; }
+	elsif ($a eq "-noUseZakimTopics") 
+		{ $useZakimTopics = 0; }
+	elsif ($a eq "-useZakimTopics") 
+		{ $useZakimTopics = 1; }
 	elsif ($a eq "-implicitContinuations") 
 		{ $implicitContinuations = 1; }
 	elsif ($a eq "-scribe" || $a eq "-scribeName") 
@@ -400,6 +410,19 @@ if ($canonicalizeNames)
 	$all =~ s/(\w+)\-iMac\b/$1/ig;
 	}
 
+if ($useZakimTopics)
+	{
+	# Treat zakim statements like:
+	#	<Zakim> agendum 2. "UTF16 PR issue" taken up [from MSMscribe]
+	# as equivalent to:
+	#	<scribe> Topic: UTF16 PR issue
+	$all = "\n$all\n";
+	while ($all =~ s/\n\<Zakim\>\s*agendum\s*\d+\.\s*\"(.+)\"\s*taken up\s*((\[from (.*?)\])?)\s*\n/\n\<scribe\> Topic\: $1\n/i)
+		{
+		# warn "Zakim Topic: $1\n";
+		}
+	}
+
 if ($normalizeOnly)
 	{
 	# This isn't really very good.  I thought this would be a
@@ -464,151 +487,17 @@ my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
 my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # warn "speakerPattern: $speakerPattern\n";
 
-# Canonicalize Scribe continuation lines so that the speaker's name is on every line:
-#	<dbooth> Scribe: dbooth
-#	<dbooth> SusanW: We had a mtg on July 16.
-#	<DanC_> pointer to minutes?
-#	<dbooth> SusanW: I'm looking.
-#	<dbooth> ... The minutes are on the admin timeline page.
-my @allLines = split(/\n/, $all);
-my $currentSpeaker = "UNKNOWN_SPEAKER";
-for (my $i=0; $i<@allLines; $i++)
-	{
-	# warn "$allLines[$i]\n" if $allLines[$i] =~ m/Liam/;
-	if ($allLines[$i] =~ m/\A\<Scribe\>\s*($speakerPattern)\s*\:/i)
-		{
-		$currentSpeaker = $1;
-		}
-	elsif ($allLines[$i] =~ s/\A\<Scribe\>\s*\.\.+\s*/\<Scribe\> $currentSpeaker: /i)
-		{
-		# warn "Scribe NORMALIZED: $& --> $allLines[$i]\n";
-		warn "\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line; <Zakim> +someone\n\n" if $currentSpeaker eq "UNKNOWN_SPEAKER";
-		}
-	elsif ($allLines[$i] =~ m/\A\<Scribe\>\s*($namePattern)\s*\:/i)
-		{
-		# This doesn't work right.  It matches "Topic:" and known names.
-		# warn "Possibly need to add speaker \"$1\" by adding line:\n<Zakim> +$1\n";
-		}
-	}
-$all = "\n" . join("\n", @allLines) . "\n";
-# die "all:\n$all\n" . ('=' x 70) . "\n\n";
-
 # Get the list of people present.
-my @present = ();			# People present at the meeting
-# First see if zakim reported who is present, and use that as the default.
-#	<Zakim> Attendees were A_Ryman, Dbooth, Dietmar_Gaertner, Plh, GlenD, Youenn, WilliamV, JacekK, DOrchard, Prasad_Yendluri, Jonathan_Marsh, PaulD, J_Thrasher, T_Jordahl, S_Kumar, Allen,
-#	<Zakim> ... IgorS, J.Mischkinsky, Lily, Umit, sanjiva, bijan, JeffM, Erik_Ackerman
-{
-my @zakimLines = grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all);
-my $t = join("\n", grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all)); 
-# Join zakim continuation lines
-$t =~ s/\n\.\.\.\.*\s*/ /g;
-# die "t:\n$t\n" . ('=' x 70) . "\n\n";
-@zakimLines = split(/\n/, $t);
-foreach my $line (@zakimLines)
-	{
-	if ($line =~ m/attendees\s+were\s+/i)
-		{
-		my $raw = $';
-		my @people = map {$_ = &Trim($_); s/\s+/_/g; $_} split(/\,/, $raw);
-		next if !@people;
-		if (@present)
-			{
-			warn "\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n";
-			}
-		@present = @people;
-		}
-	}
-}
-
-# <dbooth> Present: Amy Frank Joe Carol
-# <dbooth> Present: David Booth, Frank G, Joe Camel, Carol King
-# <dbooth> Present+: Justin
-# <dbooth> Present+ Silas
-# <dbooth> Present-: Amy
-my @possiblyPresent = @uniqNames;	# People present at the meeting
-my @newAllLines = ();	# Collect remaining lines
-# push(@allLines, "<dbooth> Present: David Booth, Frank G, Joe Camel, Carol King"); # test
-# push(@allLines, "<dbooth> Present: Amy Frank Joe Carol"); # test
-# push(@allLines, "<dbooth> Present+: Justin"); # test
-# push(@allLines, "<dbooth> Present+ Silas"); # test
-# push(@allLines, "<dbooth> Present-: Amy"); # test
-foreach my $line (@allLines)
-	{
-	$line =~ s/\s+\Z//; # Remove trailing spaces.
-	if ($line !~ m/\A\<[^\>]+\>\s*Present\s*(\:|((\+|\-)\s*\:?))\s*(.*)\Z/i)
-		{
-		push(@newAllLines, $line);
-		next;
-		}
-	my $plus = $1;
-	my $present = $4;
-	my @p = ();
-	if ($present =~ m/\,/)
-		{
-		# Comma-separated list
-		@p = grep {$_ && $_ ne "and"} 
-				map {$_ = &Trim($_); s/\s+/_/g; $_} 
-				split(/\,/,$present);
-		}
-	else	{
-		# Space-separated list
-		@p = grep {$_} split(/\s+/,$present);
-		}
-	if ($plus =~ m/\+/)
-		{
-		my %seen = map {($_,$_)} @present;
-		my @newp = grep {!exists($seen{$_})} @p;
-		push(@present, @newp);
-		}
-	elsif ($plus =~ m/\-/)
-		{
-		my %seen = map {($_,$_)} @present;
-		foreach my $p (@p)
-			{
-			delete $seen{$p} if exists($seen{$p});
-			}
-		@present = sort keys %seen;
-		}
-	else	{
-		warn "\nWARNING: Replacing previous list of people present.\nUse 'Present+: ... ' if you meant to add people without replacing the list with: " . join(',', @p) . "\n\n" if @present;
-		@present = @p;
-		}
-	}
-@allLines = @newAllLines;
-$all = "\n" . join("\n", @allLines) . "\n";
-if (@present == 0)	
-	{
-	warn "\nWARNING: No \"Present: ... \" found!\n";
-	warn "Possibly Present: @possiblyPresent\n"; 
-	warn "You can indicate the people present like this:
-<dbooth> Present: dbooth jonathan mary
-<dbooth> Present+ amy\n\n";
-	}
-else	{
-	warn "Present: @present\n"; 
-	warn "\nWARNING: Fewer than 3 people found present!\n\n" if @present < 3;
-	}
+# First look for zakim output, as the default:
+my @present = &GetPresentFromZakim($all); 
+# Now look for explicit "Present: ... " commands:
+die if !defined($all);
+($all, @present) = &GetPresentOrRegrets("Present", 3, $all, @present); 
+die if !defined($all);
 
 # Get the list of regrets:
 my @regrets = ();	# People who sent regrets
-####### This pattern is wrong!  It will also match *within* a line.
-if ($all =~ s/\s+Regrets\s*\:\s*(.*)//i)
-	{
-	my $regrets = $1;
-	if ($regrets =~ m/\,/)
-		{
-		# Comma-separated list
-		@regrets = grep {$_ && $_ ne "and"} 
-				map {&Trim($_)} 
-				split(/\,/, $regrets);
-		}
-	else	{
-		# Space-separated list
-		@regrets = grep {$_} split(/\s+/,$regrets);
-		}
-	}
-warn "Regrets: @regrets\n" if @regrets;
+($all, @regrets) = &GetPresentOrRegrets("Regrets", 0, $all, ()); 
 
 # Grab meeting name:
 my $title = "SV_MEETING_TITLE";
@@ -659,7 +548,7 @@ $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
 ######### ACTION Item Processing
-# These are the reconized action statuses.  Each status should be a
+# These are the recognized action statuses.  Each status should be a
 # single word, so use underscores if you have a multi-word status.
 my @actionStatuses = qw(NEW PENDING IN_PROGRESS DONE DROPPED RETIRED UNKNOWN);
 my %statusPatterns = ();	# Maps from a status to its regex.
@@ -828,9 +717,8 @@ foreach my $action ((keys %rawActions))
 my %actionPeople = ();
 foreach my $key ((keys %actions))
 	{
-	my $a = $key;
+	my $a = &LC($key);
 	# warn "action:$a:\n";
-	$a =~ tr/A-Z/a-z/; # Lower case
 	# Remove leading date:
 	#	ACTION: 2003-10-09: Bijan to look into message extensibility Issues
 	#	ACTION: 10/09/03: Bijan to look into message extensibility Issues
@@ -842,17 +730,17 @@ foreach my $key ((keys %actions))
 	if ($a =~ m/\s+(to)\s+/i)
 		{
 		my $list = $`;
-		@names = grep {$_ ne "and"} split(/[^a-zA-Z0-9\-\_]+/, $list);
+		@names = grep {$_ ne "and"} split(/[^a-zA-Z0-9\-\_\.]+/, $list);
 		# warn "names: @names\n";
 		foreach my $n (@names)
 			{
 			next if $n eq "";
-			$n =~ tr/A-Z/a-z/;
+			$n = &LC($n);
 			push(@good, $n) if !exists($stopList{$n});
 			}
 		@good = () if @good != @names; # Fail
 		}
-	if ((!@good) && $a =~ m/\A([a-zA-Z0-9\-\_]+)/)
+	if ((!@good) && $a =~ m/\A([a-zA-Z0-9\-\_\.]+)/)
 		{
 		my $n = $1;
 		@names = ($n);
@@ -948,6 +836,8 @@ else	{
 		}
 	}
 
+$all = &PutSpeakerOnEveryLine($all);
+
 # Convert from:
 #	<dbooth> DanC: something
 #	<dbooth> DanC: something
@@ -968,9 +858,13 @@ my $prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
 my $prevPattern; # Initialized below
 my @linesIn = split(/\n/, $all);
 my @linesOut = ();
+my $pewter = 0;
 while (@linesIn)
 	{
 	my $line = shift @linesIn;
+	$debug = 1 if $line =~ m/at XML 2003/;
+	$pewter++ if $debug;
+	$debug = 0 if $pewter >= 10;
 	warn "LINE (BEFORE): $line\n" if $debug;
 	# Ignore empty lines
 	if ($line =~ m/\A\s*\Z/)
@@ -982,32 +876,33 @@ while (@linesIn)
 	my $writer = "";
 	my $speaker = "";
 	my $text = "";
-	# <writer> speaker: ...
-	if ($line =~ m/\A\<([a-zA-Z0-9\-_]+)\>\s*([a-zA-Z0-9\-_]+)\s*\:\s*(.*?)\s*\Z/i )
+	# <writer> speaker: text
+	if ($line =~ m/\A\<([a-zA-Z0-9\-_\.]+)\>\s*([a-zA-Z0-9\-_\.]+)\s*\:\s*(.*?)\s*\Z/i )
 		{
 		$writer = $1;
 		$speaker = $2;
 		$text = $3;
+		warn "FIRST match 1:$1 2:$2 3:$3 LINE: $line\n" if $debug;
 		}
-	# <writer> ...
-	elsif ($line =~ m/\A\<([a-zA-Z0-9\-_]+)\>\s*(.*?)\s*\Z/i )
+	# <writer> text
+	elsif ($line =~ m/\A\<([a-zA-Z0-9\-_\.]+)\>\s*(.*?)\s*\Z/i )
 		{
 		$writer = $1;
 		$speaker = "";
 		$text = $2;
+		warn "SECOND match\n" if $debug;
 		}
 	else	{
 		die "DIED FROM UNKNOWN LINE FORMAT: $line\n\n";
 		}
 	# Make lower case versions, for easier comparison
-	my $writerLC = $writer;
-	my $speakerLC = $speaker;
-	my $prevSpeakerLC = $prevSpeaker;
-	$writerLC =~ tr/A-Z/a-z/;
-	$speakerLC =~ tr/A-Z/a-z/;
-	$prevSpeakerLC =~ tr/A-Z/a-z/;
+	my $writerLC = &LC($writer);
+	my $speakerLC = &LC($speaker);
+	my $prevSpeakerLC = &LC($prevSpeaker);
 	$prevPattern = quotemeta($prevSpeaker);
 	warn "writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if $debug;
+	warn "PHILIPPE: writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if &Trim($speaker) eq "philippe";
+	warn "EMPTY TEXT: writerLC: $writerLC speakerLC: $speakerLC text: $text\n" if &Trim($text) eq "";
 	# Process the various commands
 	if (0) {}
 	# Topic: ... 
@@ -1034,8 +929,11 @@ while (@linesIn)
 		my $dashes = '=' x 30;
 		$line = $dashes;
 		}
+	# Dots continuation line.
+	# This commented out version is intended for when the "..." is
+	# already on the line when we get here:
+	# elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)//i) 
 	elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)\s*/ ... /i) 
-	# elsif ($speaker eq $prevSpeaker)
 		{
 		# $line = " ... $text";
 		warn "  SAME SPEAKER: $line\n" if $debug;
@@ -1092,7 +990,7 @@ $all =~ s/\>/\&gt\;/g;
 # $all =~ s/\"/\&quot\;/g;
 
 # Highlight in-line ACTION items:
-@allLines = split(/\n/, $all);
+my @allLines = split(/\n/, $all);
 for (my $i=0; $i<@allLines; $i++)
 	{
 	next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
@@ -1180,7 +1078,7 @@ $result =~ s/SCRIBEPERL_VERSION/$CVS_VERSION/;
 my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
 if ($logURL eq "SV_MEETING_IRC_URL")
 	{
-	warn "**** Missing IRC LOG!!!! ****\n";
+	warn "\nWARNING: Missing IRC LOG!\n\n";
 	$formattedLogURL = "";
 	}
 $formattedLogURL = "" if $logURL =~ m/\ANone\Z/i;
@@ -1195,6 +1093,201 @@ $result =~ s/SV_FORMATTED_AGENDA_LINK/$formattedAgendaLocation/g;
 
 print $result;
 exit 0;
+################### END OF MAIN ######################
+
+
+###################################################################
+####################### GetPresentFromZakim ##########################
+###################################################################
+# Get the list of people present, as reported by zakim bot:
+#	<Zakim> Attendees were Dbooth, Dietmar_Gaertner, Plh, GlenD,
+#	<Zakim> ... IgorS, J.Mischkinsky, Lily, Umit, sanjiva, bijan,
+sub GetPresentFromZakim
+{
+@_ == 1 || die;
+my ($all) = @_;
+die if !defined($all);
+my @present = ();			# People present at the meeting
+my @zakimLines = grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all);
+my $t = join("\n", grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all)); 
+# Join zakim continuation lines
+$t =~ s/\n\.\.\.\.*\s*/ /g;
+# die "t:\n$t\n" . ('=' x 70) . "\n\n";
+@zakimLines = split(/\n/, $t);
+foreach my $line (@zakimLines)
+	{
+	if ($line =~ m/attendees\s+were\s+/i)
+		{
+		my $raw = $';
+		my @people = map {$_ = &Trim($_); s/\s+/_/g; $_} split(/\,/, $raw);
+		next if !@people;
+		if (@present)
+			{
+			warn "\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n";
+			}
+		@present = @people;
+		}
+	}
+return(@present);
+}
+
+###################################################################
+####################### GetPresentOrRegrets ##########################
+###################################################################
+# Look for explicit "Present: ..." or "Regrets: ..." commands.
+# Arguments: $keyword, $minPeople, $all, @present (default)
+# Returns: ($all, @present)
+# $all is modified by removing any "Present: ..." commands.
+sub GetPresentOrRegrets
+{
+@_ >= 3 || die;
+my (	$keyword, 	# What we're looking for: "Present" or "Regrets"
+	$minPeople, 	# Min number of people to avoid a warning
+	$all, 		# The input
+	@present	# Default people present at the meeting
+	) = @_;
+die if !defined($all);
+my @allLines = split(/\n/, $all);
+# <dbooth> Present: Amy Frank Joe Carol
+# <dbooth> Present: David Booth, Frank G, Joe Camel, Carole King
+# <dbooth> Present+: Justin
+# <dbooth> Present+ Silas
+# <dbooth> Present-: Amy
+my @possiblyPresent = @uniqNames;	# People present at the meeting
+my @newAllLines = ();	# Collect remaining lines
+# push(@allLines, "<dbooth> Present: David Booth, Frank G, Joe Camel, Carole King"); # test
+# push(@allLines, "<dbooth> Present: Amy Frank Joe Carole"); # test
+# push(@allLines, "<dbooth> Present+: Justin"); # test
+# push(@allLines, "<dbooth> Present+ Silas"); # test
+# push(@allLines, "<dbooth> Present-: Amy"); # test
+foreach my $line (@allLines)
+	{
+	$line =~ s/\s+\Z//; # Remove trailing spaces.
+	if ($line !~ m/\A\<[^\>]+\>\s*$keyword\s*(\:|((\+|\-)\s*\:?))\s*(.*)\Z/i)
+		{
+		push(@newAllLines, $line);
+		next;
+		}
+	my $plus = $1;
+	my $present = $4;
+	my @p = ();
+	if ($present =~ m/\,/)
+		{
+		# Comma-separated list
+		@p = grep {$_ && $_ ne "and"} 
+				map {$_ = &Trim($_); s/\s+/_/g; $_} 
+				split(/\,/,$present);
+		}
+	else	{
+		# Space-separated list
+		@p = grep {$_} split(/\s+/,$present);
+		}
+	if ($plus =~ m/\+/)
+		{
+		my %seen = map {($_,$_)} @present;
+		my @newp = grep {!exists($seen{$_})} @p;
+		push(@present, @newp);
+		}
+	elsif ($plus =~ m/\-/)
+		{
+		my %seen = map {($_,$_)} @present;
+		foreach my $p (@p)
+			{
+			delete $seen{$p} if exists($seen{$p});
+			}
+		@present = sort keys %seen;
+		}
+	else	{
+		warn "\nWARNING: Replacing previous list of people present.\nUse '$keyword+: ... ' if you meant to add people without replacing the list with: " . join(',', @p) . "\n\n" if @present;
+		@present = @p;
+		}
+	}
+@allLines = @newAllLines;
+$all = "\n" . join("\n", @allLines) . "\n";
+if (@present == 0)	
+	{
+	warn "\nWARNING: No \"$keyword\: ... \" found!\n";
+	warn "Possibly Present: @possiblyPresent\n"; 
+	warn "You can indicate people for the $keyword list like this:
+<dbooth> $keyword\: dbooth jonathan mary
+<dbooth> $keyword\+ amy\n\n";
+	}
+else	{
+	warn "$keyword\: @present\n"; 
+	warn "\nWARNING: Fewer than $minPeople people found for $keyword list!\n\n" if @present < 3;
+	}
+return ($all, @present);
+}
+
+#######################################################################
+################## PutSpeakerOnEveryLine ######################
+#######################################################################
+# Canonicalize Scribe continuation lines so that the speaker's name is 
+# on every line.  Convert:
+#	<dbooth> Scribe: dbooth
+#	<dbooth> SusanW: We had a mtg on July 16.
+#	<DanC_> pointer to minutes?
+#	<dbooth> SusanW: I'm looking.
+#	<dbooth> ... The minutes are on
+#	<dbooth>  the admin timeline page.
+# to:
+#	<dbooth> Scribe: dbooth
+#	<dbooth> SusanW: We had a mtg on July 16.
+#	<DanC_> pointer to minutes?
+#	<dbooth> SusanW: I'm looking.
+#	<dbooth> SusanW: The minutes are on
+#	<dbooth> SusanW: the admin timeline page.
+# Unfortunately, I don't remember why I did this.  I assume it was to
+# make subsequent processing easier, but now I don't know why it is needed.
+sub PutSpeakerOnEveryLine
+{
+@_ == 1 || die;
+my ($all) = @_;
+my @allLines = split(/\n/, $all);
+my $currentSpeaker = "UNKNOWN_SPEAKER";
+for (my $i=0; $i<@allLines; $i++)
+	{
+	# warn "$allLines[$i]\n" if $allLines[$i] =~ m/Liam/;
+	if ($allLines[$i] =~ m/\A\<Scribe\>(\s?\s?)($speakerPattern)\s*\:/i)
+		{
+		# The $speakerPattern in the pattern match above is
+		# constructed from all of the known speaker names, so 
+		# it will NOT match "Topic" or other keywords.
+		# But to be safe, let's check it against the %stopList anyway.
+		my $cs = $2;
+		my $lccs = &LC($cs);
+		$currentSpeaker = $cs if !exists($stopList{$lccs});
+		}
+	# Dot continuation line: "<dbooth> ... The minutes are on".
+	# I'm not sure the following is right.  If there is a continuation
+	# line after a non-speaker line, such as "Topic: whatever", then
+	# I think this will act as a continuation of the previous speaker
+	# line, which may not be the right thing to do.
+	# (Rather, it probably should be a continuation line of the topic.)
+	# I think the code for this program should be restructured, to
+	# act globally on one line at a time, with look-ahead used to
+	# join continuation lines on to the current line.
+	# The following commented out version is for when the code is changed
+	# to not remove (and later replace) the "...":
+	# elsif ($allLines[$i] =~ s/\A\<Scribe\>(\s?)\.\./\<Scribe\> $currentSpeaker: ../i)
+	elsif ($allLines[$i] =~ s/\A\<Scribe\>(\s?)\.\.+(\s?)/\<Scribe\> $currentSpeaker: /i)
+		{
+		# warn "Scribe NORMALIZED: $& --> $allLines[$i]\n";
+		warn "\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line: <Zakim> +someone\n\n" if $currentSpeaker eq "UNKNOWN_SPEAKER";
+		}
+	# Leading-blank continuation line: "<dbooth>  the admin timeline page.".
+	elsif ($allLines[$i] =~ s/\A\<Scribe\>\s\s/\<Scribe\> $currentSpeaker:  /i)
+		{
+		# warn "Scribe NORMALIZED: $& --> $allLines[$i]\n";
+		warn "\nWARNING: UNKNOWN SPEAKER: $allLines[$i]\nPossibly need to add line: <Zakim> +someone\n\n" if $currentSpeaker eq "UNKNOWN_SPEAKER";
+		}
+	else	{
+		}
+	}
+$all = "\n" . join("\n", @allLines) . "\n";
+# die "all:\n$all\n" . ('=' x 70) . "\n\n";
+return $all;
+}
 
 #################################################################
 ################# GuessScribeName #################
@@ -1215,8 +1308,7 @@ foreach my $line (@lines)
 		{
 		$nLines++;
 		my $mix = $1;	# Liam
-		my $who = $mix;	# liam
-		$who =~ tr/A-Z/a-z/;
+		my $who = &LC($mix);	# liam
 		$nameCounts{$who}++;
 		$mixedCaseNames{$who} = $mix; # liam -> Liam
 		}
@@ -1267,6 +1359,7 @@ foreach my $line (@lines)
 	next if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
 	next if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
 	next if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
+	next if $line =~ m/\A\<$namePattern\>\s*queue\s*[\+\-\=\?]/i;
 	next if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
 	# Ignore RRSAgent lines
 	next if $line =~ m/\A\<RRSAgent\>/i;
@@ -1552,18 +1645,18 @@ my @t = @lines;
 @t = grep {!m/\bACTION\b/i} @t;
 # Don't count empty statements
 # 	<dbooth> 
-# @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>\s*\Z/} @t;
+# @t = grep {!m/\A\<[a-zA-Z0-9\-_\.]+\>\s*\Z/} @t;
 @t = grep {!m/\A\<scribe\>\s*\Z/i} @t;
 my $nTotal = scalar(@t);
  # 	<dbooth> Amy: Now is the time (EXPLICIT SPEAKER)
- # @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s?\s?)[a-zA-Z0-9\-_]+\s*\:/i} @t;
- @t = grep {!m/\A\<scribe\>(\s?\s?)[a-zA-Z0-9\-_]+\s*\:/i} @t;
+ # @t = grep {!m/\A\<[a-zA-Z0-9\-_\.]+\>(\s?\s?)[a-zA-Z0-9\-_\.]+\s*\:/i} @t;
+ @t = grep {!m/\A\<scribe\>(\s?\s?)[a-zA-Z0-9\-_\.]+\s*\:/i} @t;
 my $nSpeaker = $nTotal - scalar(@t);
  # 	<dbooth>  for all good men and women  (EXPLICIT CONTINUATION)
- # @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s\s\s*)/} @t;
+ # @t = grep {!m/\A\<[a-zA-Z0-9\-_\.]+\>(\s\s\s*)/} @t;
  @t = grep {!m/\A\<scribe\>(\s\s\s*)/i} @t;
  # 	<dbooth> ... for all good men and women  (EXPLICIT CONTINUATION)
- # @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s*)\.\./} @t;
+ # @t = grep {!m/\A\<[a-zA-Z0-9\-_\.]+\>(\s*)\.\./} @t;
  @t = grep {!m/\A\<scribe\>(\s*)\.\./i} @t;
 my $nExpCont = $nTotal - ($nSpeaker + scalar(@t));
  # Remaining lines are potentially implicit continuation lines.
@@ -1645,15 +1738,19 @@ for (my $i=0; $i<@lines; $i++)
 		}
 	# 	<scribe> Amy: Now is the time
 	# 	<scribe> ACTION: ...
-	if ($rest =~ m/\A([a-zA-Z0-9\-_]+)( ?):/)
+	if ($rest =~ m/\A([a-zA-Z0-9\-_\.]+)( ?):/)
 		{
 		# Not a continuation line.  Either new speaker or stop word.
 		my $speaker = $1;
-		$lines[$i] = "<scribe> $speaker\:$rest";
+		my $newRest = $';
+		$lines[$i] = "<scribe> $speaker\:$newRest";
 		# New speaker starts a statement.
 		# Stop word is a non-speaker, and thus terminates 
 		# a continuing statement.
-		$inStatement = !exists($stopList{$speaker});
+		my $lcSpeaker = &LC($speaker);
+		$inStatement = $lcSpeaker eq "chair" 
+				|| $lcSpeaker eq "scribe"
+				|| !exists($stopList{$lcSpeaker});
 		next;
 		}
 	# Exactly one extra blank?  
@@ -2223,11 +2320,22 @@ foreach my $n (keys %synonyms)
 	}
 # warn "nExpanded: $nExpanded\n";
 
-my $lcScribe = $scribe;
-$lcScribe =~ tr/A-Z/a-z/;
+my $lcScribe = &LC($scribe);
 $scribe = $synonyms{$lcScribe} if exists($synonyms{$lcScribe});
 my @sortedUniqNames = sort values %uniqNames;
 return($expandedIRC, $scribe, \@allNameRefs, @sortedUniqNames);
+}
+
+##################################################################
+################ LC ####################
+##################################################################
+# Lower Case.  Return a lower case version of the given string.
+sub LC
+{
+@_ == 1 || die;
+my ($s) = @_;
+$s =~ tr/A-Z/a-z/;
+return $s;
 }
 
 ##################################################################
