@@ -602,7 +602,7 @@ elsif (( $dashTopics) && ( $nDashTopics) && (!@topicLines))
 	{ }
 elsif (( $dashTopics) && ( $nDashTopics) && ( @topicLines))
 	{ }
-else { die "Internal logic error "; }
+else { die "INTERNAL ERROR: Internal logic error "; }
 # Finally, apply the $dashTopics option if enabled.
 if ($dashTopics)
 	{
@@ -1443,6 +1443,8 @@ my $diagnosticsHTML = "<html><head><title>Scribe.perl: Fatal error</title></head
 </html>
 ";
 print STDOUT $diagnosticsHTML;
+close(STDOUT);
+close(STDERR);
 exit 1;
 }
 
