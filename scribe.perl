@@ -852,9 +852,19 @@ $all = join("\n", @lines);
 $all = "\n" . $all . "\n";	# Easier pattern matching
 
 ##############  Escape < > as &lt; &gt; ################
+# From now on, we're treating the text as HTML.
 # Escape < and >:
 $all =~ s/\</\&lt\;/g;
 $all =~ s/\>/\&gt\;/g;
+
+# Highlight in-line ACTION items:
+@allLines = split(/\n/, $all);
+for (my $i=0; $i<@allLines; $i++)
+	{
+	next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
+	$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/;
+	}
+$all = "\n" . join("\n", @allLines) . "\n";
 
 # Format topic titles (i.e., collect agenda):
 my %agenda = ();
@@ -876,10 +886,6 @@ foreach my $item (sort keys %agenda)
 
 # Break into paragraphs:
 $all =~ s/\n(([^\ \.\<].*)(\n\ *\.\.+.*)*)/\n$preParagraphHTML\n$1\n$postParagraphHTML\n/g;
-
-# Highlight in-line ACTION items:
-$all =~ s/(\n)ACTION\:/$1\<strong\>ACTION\:\<\/strong\>/g;
-$all =~ s/(\n\&lt\;$namePattern\&gt\;\ +)ACTION\:/$1\<strong\>ACTION\:\<\/strong\>/g;
 
 # Bold or <strong> speaker name:
 # Change "<speaker> ..." to "<b><speaker><b> ..."
