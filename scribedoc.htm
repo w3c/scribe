@@ -35,7 +35,7 @@ Scribe.perl</a><br>
 <a href="#running">Running scribe.perl</a><br>
 <a href="#options">Options<br>
 </a><a href="#one_time_commands">Commands<br>
-</a><a href="#correcting_mistakes">Correcting Mistakes While Scribing</a><br>
+</a><a href="#editing_the_log">Editing the Log</a><br>
 <a href="#input_formats">Input Formats</a><br>
 <a
  href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#Environment_Variables">Environment
@@ -458,11 +458,19 @@ It can also be <a href="http://www.w3.org/2002/03/RRSAgent#minutes">invoked
 by RRSAgent</a> from IRC (provided you're using RRSAgent):<br>
 <pre>rrsagent, draft minutes</pre>
 <pre><code><span style="font-style: italic;"></span></code></pre>
+
 <h2><a name="options"></a>Options</h2>
+Options described below are grouped in several categories:
+<ul>
+<li><a href="options_input_style">Input Style Options</a></li>
+<li><a href="options_output_format">Output Format Options</a></li>
+<li><a href="options_template">Template Options</a></li>
+<li><a href="options_scribe_identification">Scribe Identification Options</a></li>
+<li><a href="options_misc">Miscellaneous Options</a></li>
+</ul>
+<h3><a name="options_input_style"></a>Input Style Options</h3>
 These options are used to accommodate the different input syntaxes and
-scribing styles.<br>
-<span style="font-style: italic;"></span>
-<h3><span style="font-style: italic;"></span>Input Style Options</h3>
+scribing styles.<br><br>
 -dashTopics<br>
 <div style="margin-left: 40px;">Indicate that dash lines are used to
 indicate that the next line is the
@@ -515,7 +523,7 @@ be guessed.<br>
   <dt><br>
   </dt>
 </dl>
-<h3>Output Format Options</h3>
+<h3><a name="options_output_format"></a>Output Format Options</h3>
 These options control the output format.<br>
 <br>
 -tidy<br>
@@ -603,7 +611,7 @@ RRSAgent commands.</li>
   <li><br>
   </li>
 </dl>
-<h3>Template Options</h3>
+<h3><a name="options_template"></a>Template Options</h3>
 Scribe.perl uses templates for generating the formatted
 output.&nbsp; There are a few built in, but you can specify your own if
 you wish.<br>
@@ -647,7 +655,7 @@ template.)</dd>
   <dt><br>
   </dt>
 </dl>
-<h3>Scribe Identification Options</h3>
+<h3><a name="options_scribe_identification"></a>Scribe Identification Options</h3>
 <dl>
   <dt><br>
   </dt>
@@ -668,7 +676,7 @@ out which lines were written by the scribe.&nbsp;</dd>
   <dt><br>
   </dt>
 </dl>
-<h3>Miscellaneous Options</h3>
+<h3><a name="options_misc"></a>Miscellaneous Options</h3>
 -minutes <span style="font-style: italic;">http://example.org/2005/01-baking-club-minutes</span><br>
 <div style="margin-left: 40px;">Specify the final URL of the generated
 minutes.&nbsp; This allows each ACTION item to include a pointer to its
@@ -691,6 +699,85 @@ is used.</dd>
 </dl>
 <br>
 <h2><a name="one_time_commands"></a>Commands</h2>
+Commands are interspersed with other minuted text in your IRC log,
+except that each command must be on a line by itself.  Commands
+may be issued by anyone -- not only the scribe.  Syntax is shown 
+below by example, with italicized portions variable.   <br>
+<br>
+
+<h3><a name="correcting_mistakes"></a>Editing Commands</h3>
+These editing commands are usually the easiest way to correct simple mistakes
+or add clarifications.
+(Of course, they don't take effect until you run scribe.perl on
+your IRC log.)
+<br>
+<br>
+<span style="font-weight: bold;">s/</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">/</span><br>
+<span style="font-weight: bold;">s/</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
+ style="font-style: italic;">new</span><br>
+Replace the most recent occurrence of <span style="font-style: italic;">old
+</span>with <span style="font-style: italic;">new</span>.&nbsp; <span
+ style="font-style: italic;">Old</span> is currently treated as a
+literal string
+(it will be escaped using quotemeta(...)) -- <span
+ style="font-weight: bold;">not a regular
+expression</span>.&nbsp; These are processed in order, first to
+last.&nbsp; NOTE: If you correct an action item using s/old/new/, then
+you
+should not use the -trustRRSAgent option.&nbsp; Conversely, if you use
+"ACTION=..." to correct an action item using RRSAgent, then you should
+use the -trustRRSAgent option.&nbsp; For further explanation, see the <a
+ href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#trustRRSAgent_option">-trustRRSAgent
+option</a>.<br>
+<br>
+<span style="font-weight: bold;">s/</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">/g</span>&nbsp;
+<br>
+Replace globally from this point backward.<br>
+<br>
+<span style="font-weight: bold;">s/</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">/G</span>&nbsp;
+<br>
+Replace globally, both forward and backward.<br>
+<br>
+<span style="font-weight: bold;">i/</span><span
+ style="font-style: italic;">locationString</span><span
+ style="font-weight: bold;">/</span><span style="font-style: italic;">newLine</span><br>
+Insert line <span style="font-style: italic;">newLine </span>before
+the line containing <span style="font-style: italic;">locationString</span>,
+which is currently treated as a
+literal string
+(it will be escaped using quotemeta(...)), <span
+ style="font-weight: bold;">not a regular
+expression</span>.&nbsp; This is most helpful if you forgot to insert a
+"Topic: " command.<br>
+<br>
+<div style="margin-left: 40px;">For example, the following use of the <span
+ style="font-weight: bold;">i//</span> command:<br>
+</div>
+<div style="margin-left: 80px;"><tt>&lt;Arthur&gt; Finished with issue
+LC71; on to LC82.</tt><br>
+<tt>&lt;Arthur&gt; Frank: This is about syntax</tt><br>
+<tt>&lt;Arthur&gt; ... Do we care about syntax?</tt><br>
+<tt>&lt;dbooth&gt; i/Frank: This is about/Topic: Issue LC82 </tt><br>
+</div>
+<div style="margin-left: 40px;"><tt></tt><br>
+is converted to:<br>
+</div>
+<div style="margin-left: 80px;"><tt>&lt;Arthur&gt; Finished with issue
+LC71; on to LC82.</tt><br>
+<tt>&lt;inserted&gt; Topic: Issue LC82</tt><br>
+<tt>&lt;Arthur&gt; Frank: This is about syntax</tt><br>
+<tt>&lt;Arthur&gt; ... Do we care about syntax?</tt><br>
+</div>
+<br>
+
+<h3><a name="commands_general"></a>General Commands</h3>
 <big><code><span style="font-weight: bold;">Meeting: <span
  style="font-style: italic;">Baking Club</span></span></code></big><br
  style="font-weight: bold;">
@@ -791,71 +878,32 @@ minutes, such as:<br>
 <div style="margin-left: 40px;">&lt;a name="foo"&gt;<br>
 </div>
 <br>
-<h2><a name="correcting_mistakes"></a>Correcting Mistakes</h2>
-<span style="font-weight: bold;">s/</span><span
- style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
- style="font-style: italic;">new</span><span style="font-weight: bold;">/</span><br>
-<span style="font-weight: bold;">s/</span><span
- style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
- style="font-style: italic;">new</span><br>
-Replace the most recent occurrence of <span style="font-style: italic;">old
-</span>with <span style="font-style: italic;">new</span>.&nbsp; <span
- style="font-style: italic;">Old</span> is currently treated as a
-literal string
-(it will be escaped using quotemeta(...)) -- <span
- style="font-weight: bold;">not a regular
-expression</span>.&nbsp; These are processed in order, first to
-last.&nbsp; NOTE: If you correct an action item using s/old/new/, then
-you
-should not use the -trustRRSAgent option.&nbsp; Conversely, if you use
-"ACTION=..." to correct an action item using RRSAgent, then you should
-use the -trustRRSAgent option.&nbsp; For further explanation, see the <a
- href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#trustRRSAgent_option">-trustRRSAgent
-option</a>.<br>
+
+<h2><a name="editing_the_log"></a>Editing the Log</h2>
+In addition to the "realtime" <a href="#correcting_mistakes">editing commands</a> above, you may manually edit your
+IRC log with a text editor (by mimicking the log format) before running
+scribe.perl.  This is most useful for commands that have a broad effect on
+the generated HTML.  
+For most log formats (except HTML), you can leave off the timestamps on
+lines that you insert.<br>
 <br>
-<span style="font-weight: bold;">s/</span><span
- style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
- style="font-style: italic;">new</span><span style="font-weight: bold;">/g</span>&nbsp;
+Here is an example snippet of an IRC log
+in which the commands "<code>ScribeNick: tw</code>" and
+"<code>Topic: Fire Alarms</code>" are have been inserted using a text editor.
+<blockquote>
+<pre>
+20:11:21 &lt;tw&gt; Scribe: TedWilliams
+&lt;tw&gt; ScribeNick: tw
+20:11:34 &lt;tw&gt; Topic: Printers
+20:11:49 &lt;tw&gt; alan: Printers are working now
+&lt;tw&gt; Topic: Fire Alarms
+20:12:27 &lt;tw&gt; ralph: Fire marshall assured us that the system is working.
+</pre>
+</blockquote>
+(Note that the IRC name <code>&lt;scribe&gt;</code> <i>is</i> required, 
+though for most commands it does not matter what IRC name is specified.)
 <br>
-Replace globally from this point backward.<br>
-<br>
-<span style="font-weight: bold;">s/</span><span
- style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
- style="font-style: italic;">new</span><span style="font-weight: bold;">/G</span>&nbsp;
-<br>
-Replace globally, both forward and backward.<br>
-<br>
-<span style="font-weight: bold;">i/</span><span
- style="font-style: italic;">locationString</span><span
- style="font-weight: bold;">/</span><span style="font-style: italic;">newLine</span><br>
-Insert line <span style="font-style: italic;">newLine </span>before
-the line containing <span style="font-style: italic;">locationString</span>,
-which is currently treated as a
-literal string
-(it will be escaped using quotemeta(...)), <span
- style="font-weight: bold;">not a regular
-expression</span>.&nbsp; This is most helpful if you forgot to insert a
-"Topic: " command.<br>
-<br>
-<div style="margin-left: 40px;">For example, the following use of the <span
- style="font-weight: bold;">i//</span> command:<br>
-</div>
-<div style="margin-left: 80px;"><tt>&lt;Arthur&gt; Finished with issue
-LC71; on to LC82.</tt><br>
-<tt>&lt;Arthur&gt; Frank: This is about syntax</tt><br>
-<tt>&lt;Arthur&gt; ... Do we care about syntax?</tt><br>
-<tt>&lt;dbooth&gt; i/Frank: This is about/Topic: Issue LC82 </tt><br>
-</div>
-<div style="margin-left: 40px;"><tt></tt><br>
-is converted to:<br>
-</div>
-<div style="margin-left: 80px;"><tt>&lt;Arthur&gt; Finished with issue
-LC71; on to LC82.</tt><br>
-<tt>&lt;inserted&gt; Topic: Issue LC82</tt><br>
-<tt>&lt;Arthur&gt; Frank: This is about syntax</tt><br>
-<tt>&lt;Arthur&gt; ... Do we care about syntax?</tt><br>
-</div>
-<br>
+
 <h2><a name="input_formats"></a>Input Formats<br>
 </h2>
 Several log formats are accepted.&nbsp; Scribe.perl guesses which
