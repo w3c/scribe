@@ -25,13 +25,10 @@ use strict;
 ######################################################################
 # FEATURE WISH LIST / BUG LIST:
 #
-# 00. BUG: URLs written like <http://...> are formatted as IRC statements.
+# 0. BUG: URLs written like <http://...> are formatted as IRC statements.
 # See the text pasted inside [[ ... ]] at
 # http://www.w3.org/2004/11/04-ws-desc-minutes.htm#item06
 # The relevant code below may be around line 3581.
-#
-# 0. Reduce the number of warnings, because they obscure the important ones.
-# Maybe use options to control which warnings are issued.
 #
 # 1. integration between scribe.perl and mit-2 minutes extractor
 #
@@ -229,6 +226,8 @@ my $template = &DefaultTemplate();	# Template for minutes
 my $bestName = "";  		# Name of input format normalizer guessed
 
 # Get options/args
+my $warnIfNoRegrets = 0;	# Warn if no "Regrets:" command found?
+my $warnIfNoAgenda = 0;		# Warn if no "Agenda:" command found?
 my $ralphLinks = 1;		# Convert: -> http://foo text
 				# to: <a href="http://foo">text</a> ?
 my $embedDiagnostics = 0;	# Embed diagnostics in the generated minutes?
@@ -459,12 +458,14 @@ while($restartForEmbeddedOptions)
 
 	# Perform s/old/new/ substitutions.
 	# 5/11/04: dbooth changed this to be first to last, because that's
-	# what user's expect.
-	while($all =~ m/\A((.|\n)*?)(\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n)/i)
+	# what users expect.
+	my $magicFailedString = "FaIlEd_suBstiTutIon";
+	while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n)/i)
 		{
-		my $old = $4;
-		my $new = $5;
-		my $global = $8;
+		my $who = $4;
+		my $old = $5;
+		my $new = $6;
+		my $global = $9;
 		$global = "" if !defined($global);
 		my $pre = $1;
 		my $match = $3;
@@ -498,10 +499,62 @@ while($restartForEmbeddedOptions)
 		else	{
 			&Warn("\nWARNING: FAILED: s/$told/$tnew/$global\n\n");
 			$match = &Trim($match);
-			$all = $pre . "\n[scribe.perl auto substitution failed:] " . $match . "\n" . $post;
+			# $all = $pre . "\n<scribe> [FAILED substitution: " . $match . " ]\n" . $post;
+			# Prevent the substitution from being attempted in an 
+			# endless loop.
+			# Change: s/foo/fum/
+			# to: magicFailedString/foo/fum/
+			$all = $pre . "\n$who $magicFailedString/$old/$new/$global\n" . $post;
 			}
 		&Warn("\nWARNING: Multiline substitution!!! (Is this correct?)\n\n") if $tnew ne $new || $told ne $old;
 		}
+	# Reinstate failed substitutions:
+	$all =~ s/$magicFailedString/s/g;
+
+	# Perform i/locationString/newLine/ insertions.
+	# This inserts a new line before the line containing the most
+	# recent locationString.
+	while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*i\/([^\/]+)\/(.*)\n)/)
+		{
+		my $who = $4;
+		my $locationString = $5; # Where to insert the new line
+		my $newLine = $6;	# Line to be inserted
+		my $pre = $1;		# Has no \n at end
+		my $match = $3;		# Has \n at beginning and end
+		my $post = $';		# Has no \n at beginning
+		$newLine =~ s/\/\Z//;	# Remove any trailing /
+		my $locationPattern = quotemeta($locationString);
+		# warn "Found match: $match\n";
+		my $told = $locationString;
+		$told = $& . "...(truncated)...." if ($locationString =~ m/\A.*\n/);
+		my $tnew = $newLine;
+		$tnew = $& . "...(truncated)...." if ($newLine =~ m/\A.*\n/);
+		my $succeeded = 0;
+		my $tall = $pre . "\n" . $post;
+		if ($pre =~ m/\A((.|\n)*\n)((.*)($locationPattern)(.*))(\n((.|\n)*?))\Z/)
+			{
+			my $preLines = $1;	# Ends with \n
+			my $postLines = $7;	# Starts with \n
+			my $matchingLine = $3; 	# Has no \n
+			&Warn("Succeeded: i/$told/$tnew\n");
+			$all = $preLines . "<inserted> $newLine\n$matchingLine" . $postLines . "\n" . $post;
+			}
+		else	{
+			&Warn("\nWARNING: FAILED: i/$told/$tnew/\n\n");
+			$match = &Trim($match);
+			# Prevent the insertion from being attempted in an 
+			# endless loop.
+			# Change: i/foo/fum/
+			# to: magicFailedString/foo/fum/
+			$all = $pre . "\n$who $magicFailedString/$locationString/$newLine\n" . $post;
+			}
+		&Warn("\nWARNING: Multiline i// insertion!!! (Is this correct?)\n\n") if $tnew ne $newLine || $told ne $locationString;
+		}
+	# Reinstate failed insertion:
+	$all =~ s/$magicFailedString/i/g;
+	# print $all;
+	# die;
+
 	# Look for embedded options, and restart if we find some.
 	# (Except we do NOT re-read the input.  We keep $all as is.)
 	while ($all =~ s/\n\<[^\<\>]+\>\s*ScribeOption(s?)\s*\:(.*)\n/\n/i)
@@ -684,9 +737,12 @@ if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/\S+)\n/\n/i)
 	  &Warn("Agenda: $agendaLocation\n");
       }
 else 	{ 
-	&Warn("\nWARNING: No agenda location found (optional).
+	if ($warnIfNoAgenda)
+		{
+		&Warn("\nWARNING: No agenda location found (optional).
 If you wish, you may specify the agenda like this:
 <dbooth> Agenda: http://www.example.com/agenda.html\n\n");
+		}
 	}
 
 # Grab Previous meeting URL:
@@ -2166,11 +2222,14 @@ foreach my $line (@allLines)
 $all = "\n" . join("\n", @allLines) . "\n";
 if (@present == 0)	
 	{
-	&Warn("\nWARNING: No \"$keyword\: ... \" found!\n");
-	&Warn("Possibly Present: @possiblyPresent\n") if $keyword eq "Present"; 
-	&Warn("You can indicate people for the $keyword list like this:
-<dbooth> $keyword\: dbooth jonathan mary
-<dbooth> $keyword\+ amy\n\n");
+	if ($keyword ne "Regrets" || $warnIfNoRegrets)
+		{
+		&Warn("\nWARNING: No \"$keyword\: ... \" found!\n");
+		&Warn("Possibly Present: @possiblyPresent\n") if $keyword eq "Present"; 
+		&Warn("You can indicate people for the $keyword list like this:
+	<dbooth> $keyword\: dbooth jonathan mary
+	<dbooth> $keyword\+ amy\n\n");
+		}
 	}
 else	{
 	&Warn("$keyword\: @present\n"); 
