@@ -501,7 +501,7 @@ warn "People with action items: ",join(" ", keys %actionPeople), "\n";
 # my $actionTemplate = "<strong>ACTION:</strong> \$action <strong>[\$status]</strong> <br />\n";
 my $actionTemplate = "<strong>[\$status]</strong> <strong>ACTION:</strong> \$action <br />\n";
 my $formattedActions = "";
-foreach my $status (qw(NEW PENDING DONE DROPPED))
+foreach my $status (qw(PENDING NEW DROPPED DONE))
 	{
 	foreach my $action (keys %actions)
 		{
