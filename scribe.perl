@@ -367,9 +367,6 @@ if ($all =~ s/\s+Regrets\s*\:\s*(.*)//i)
 	}
 warn "Regrets: @regrets\n" if @regrets;
 
-# Grab and remove date from $all
-my ($day0, $mon0, $year, $monthAlpha) = &GetDate();
-
 # Grab meeting name:
 my $title = "SV_MEETING_TITLE";
 $title = $4 if $all =~ s/\n\<$namePattern\>\s*(Meeting|Title)\s*\:\s*(.*)\n/\n/i;
@@ -382,12 +379,16 @@ $previousURL = $4 if $all =~ s/\n\<$namePattern\>\s*(Previous|PreviousMeeting|Pr
 my $chair = "SV_MEETING_CHAIR";
 $chair = $5 if $all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i;
 
-# Grab IRC Log URL:
+# Grab IRC Log URL.  Do this before looking for the date, because
+# we can figure out the date from the IRC log name.
 my $logURL = "SV_MEETING_IRC_URL";
 # <RRSAgent>   recorded in http://www.w3.org/2002/04/05-arch-irc#T15-46-50
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(http\:([^\s\#]+))/i;
 $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC(\s*)Log))\s*\:\s*(.*)\n/\n/i;
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
+
+# Grab and remove date from $all
+my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
 # Totally kludgy, but look for DONE action items in order to subtract them
 # from new/pending action items.
@@ -893,10 +894,11 @@ return $template;
 ##################################################################
 ######################## GetDate ####################
 ##################################################################
-# Grab date from $all or default to today's date.
-# Global: $namePattern
+# Grab date from $all or IRC log name or default to today's date.
 sub GetDate
 {
+@_ == 3 || die;
+my ($all, $namePattern, $logURL) = @_;
 my @days = qw(Sun Mon Tue Wed Thu Fri Sat); 
 @days == 7 || die;
 my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
@@ -926,8 +928,23 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	my $mon0 = sprintf("%0d", $mon);
 	@date = ($day0, $mon0, $year, $tmon);
 	}
+# Figure out date from IRC log name:
+elsif ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/)
+	{
+	my $year = $2;
+	my $mon = $3;
+	my $mday = $4;
+	($mon > 0 && $mon < 13) || die;
+	($year > 2000 && $year < 2100) || die;
+	($mday > 0 && $mday < 32) || die;
+	my $day0 = sprintf("%0d", $mday);
+	my $mon0 = sprintf("%0d", $mon);
+	@date = ($day0, $mon0, $year, $months[$mon-1]);
+	warn "Got date from IRC log name: $day0 " . $months[$mon-1] . " $year\n";
+	}
 else
 	{
+	warn "WARNING: No date found.  Assuming today.  (Hint: Specify the IRC log, and the date will be determined from that.)\n";
 	# Assume today's date by default.
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	$mon++;	# put in range [1..12] instead of [0..11].
