@@ -159,8 +159,31 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 
 ######################################################################
 # FEATURE WISH LIST:
+#
 # 1. Add a normalizer function for the format from hugo's log in
 # http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
+#
+# 2. Auto recognize the scribing format.  For example:
+#		<dbooth> Frank: Four score and seven
+#		<dbooth> years ago, our fathers
+#		<dbooth> brought forth ...
+# and also:
+#		<dbooth> Frank: Four score and seven
+#		<dbooth> ... years ago, our fathers
+#		<dbooth> ... brought forth ...
+# or (note leading space on continuation lines):
+#		<dbooth> Frank: Four score and seven
+#		<dbooth>  years ago, our fathers
+#		<dbooth>  brought forth ...
+#
+# 3. Recognize "next agendum" instead of "Topic:..."
+#
+# 4. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
+# so that all formatting info is in the template.
+#
+# 5. Auto-guess the scribe, based on who wrote the most.  (May need
+# to ignore something pasted in all at once.  No, just let it guess wrong.)
+# Generate warning if scribe name is "scribe".
 #
 
 ######################################################################
