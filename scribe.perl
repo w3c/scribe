@@ -9,8 +9,6 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # Generate minutes in HTML from a text IRC/chat Log.
 #
 # Author: David Booth <dbooth@w3.org> 
-# This is: http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
-# $Revision$ of $Date$ by $Author$
 #
 # Take a raw W3C IRC log, tidy it up a bit, and put it into HTML
 # to create meeting minutes.  Reads stdin, writes stdout.
