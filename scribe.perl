@@ -358,12 +358,31 @@ for (my $i=0; $i<@allLines; $i++)
 	}
 $all = "\n" . join("\n", @allLines) . "\n";
 
-# Get the list of people present:
+# Get the list of people present.
+# <dbooth> Present: Amy Frank Joe Carol
+# <dbooth> Present: David Booth, Frank G, Joe Camel, Carol King
+# <dbooth> Present+: Justin
+# <dbooth> Present+ Silas
+# <dbooth> Present-: Amy
 my @possiblyPresent = @uniqNames;	# People present at the meeting
 my @present = ();			# People present at the meeting
-while ($all =~ s/\s+Present\s*\:\s*(.*)//i)
+my @newAllLines = ();	# Collect remaining lines
+push(@allLines, "<dbooth> Present: David Booth, Frank G, Joe Camel, Carol King"); # test
+push(@allLines, "<dbooth> Present: Amy Frank Joe Carol"); # test
+push(@allLines, "<dbooth> Present+: Justin"); # test
+push(@allLines, "<dbooth> Present+ Silas"); # test
+push(@allLines, "<dbooth> Present-: Amy"); # test
+foreach my $line (@allLines)
 	{
-	my $present = $1;
+	$line =~ s/\s+\Z//; # Remove trailing spaces.
+	# warn "line: $line\n";
+	if ($line !~ m/\A\<[^\>]+\>\s*Present\s*(\:|((\+|\-)\s*\:?))\s*(.*)\Z/i)
+		{
+		push(@newAllLines, $line);
+		next;
+		}
+	my $plus = $1;
+	my $present = $4;
 	my @p = ();
 	if ($present =~ m/\,/)
 		{
@@ -376,20 +395,29 @@ while ($all =~ s/\s+Present\s*\:\s*(.*)//i)
 		# Space-separated list
 		@p = grep {$_} split(/\s+/,$present);
 		}
-	if (scalar(@p) < scalar(@present))
+	if ($plus =~ m/\+/)
 		{
-		warn "\nWARNING: Combining \"$present\"
-with previous list of people present.\n\n";
 		my %seen = map {($_,$_)} @present;
 		my @newp = grep {!exists($seen{$_})} @p;
 		push(@present, @newp);
 		}
+	elsif ($plus =~ m/\-/)
+		{
+		my %seen = map {($_,$_)} @present;
+		foreach my $p (@p)
+			{
+			delete $seen{$p} if exists($seen{$p});
+			}
+		@present = sort keys %seen;
+		}
 	else	{
-		warn "\nWARNING: Replacing previous list of people present.\n\n" if @present;
+		warn "\nWARNING: Replacing previous list of people present.\nUse 'Present+: ... ' if you meant to add people without replacing the list.\n" if @present;
 		@present = @p;
 		}
 	warn "Present: @present\n"; 
 	}
+@allLines = @newAllLines;
+$all = "\n" . join("\n", @allLines) . "\n";
 if (@present < 3) 
 	{ 
 	if (@present > 0)  { warn "WARNING: Fewer than 3 people found present!\n\n"; }
@@ -403,6 +431,7 @@ if (@present < 3)
 
 # Get the list of regrets:
 my @regrets = ();	# People who sent regrets
+####### This pattern is wrong!  It will also match *within* a line.
 if ($all =~ s/\s+Regrets\s*\:\s*(.*)//i)
 	{
 	my $regrets = $1;
