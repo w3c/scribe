@@ -250,6 +250,13 @@ attributed to Mary,
 instead of being a scribe comment:
     <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br>&lt;dbooth&gt; (Group agrees)<br></code></pre>
   </dd>
+  <dt>-useZakimTopics</dt>
+  <dd>Use Zakim bot to change topics, such as "zakim, take up next
+agendum". Specifically, treat Zakim statements like:
+    <pre><code>&lt;Zakim&gt; agendum 2. "UTF16 PR issue" taken up [from MSMscribe]</code></pre>
+as equivalent to the command:
+    <pre><code>&lt;scribe&gt; Topic: UTF16 PR issue </code></pre>
+  </dd>
   <dt><br>
   </dt>
   <dt>-public</dt>
