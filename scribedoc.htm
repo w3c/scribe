@@ -523,7 +523,7 @@ as the template for generating the minutes.</dd>
 template.)<br>
     <br>
   </dd>
-  <dt>-trustRRSAgent</dt>
+  <dt><a name="trustRRSAgent_option"></a>-trustRRSAgent</dt>
   <dd>Take the action items from what RRSAgent says, ("<code>&lt;RRSAgent&gt;
 I see 9 open action items...</code>") rather than directly from the
 text that
@@ -535,7 +535,7 @@ Pros:</span>
 (1) It enables scribe.perl to add "[recorded in http://...]" to action
 items.&nbsp; (2) Changes to action items that were made through
 RRSAgent commands ("ACTION 4 = whatever") are reflected in action items
-that are output.. <span style="font-weight: bold;"><br>
+that are output. <span style="font-weight: bold;"><br>
     <br>
 Cons:</span>
 (1) Changes to action items that were made with "s/old/new/" commands
@@ -547,8 +547,9 @@ item will not be recognized.</dd>
   <dt><br>
   </dt>
   <dt>-noTrustRRSAgent</dt>
-  <dd>(DEFAULT) Turn off the -trustRRSAgent option.&nbsp; I.e.,&nbsp; get the
-action items from wherever they were initially written.  This permits
+  <dd>(DEFAULT) Turn off the -trustRRSAgent option.&nbsp; I.e.,&nbsp;
+get the
+action items from wherever they were initially written. This permits
 action items to be corrected using "s/old/new/" commands instead of
 RRSAgent commands.</dd>
   <dt><br>
@@ -653,6 +654,11 @@ Replace globally from this point backward.<br>
 <br>
 Replace globally, both forward and backward.<br>
 <br>
+NOTE: If you correct an action item using this technique, then you
+should not use the -trustRRSAgent option.&nbsp; Conversely, if you use
+"ACTION=..." to correct an action item using RRSAgent, then you should
+use the -trustRRSAgent option.&nbsp; For further explanation, see the <a
+ href="#trustRRSAgent_option">-trustRRSAgent option</a>.<br>
 <br>
 <h2><a name="input_formats"></a>Input Formats<br>
 </h2>
