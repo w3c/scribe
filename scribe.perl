@@ -217,8 +217,10 @@ my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 my $minScribeLines = 40;	# Min lines to be guessed as scribe.
 my $dashTopics = 0;		# Treat "---" as starting a new topic
 my $runTidy = 0;		# Pipe the output through "tidy -c"
-my $preferredContinuation = "..."; # Either "... " or " ".
+my $allowSpaceContinuation = 1;	# Leading space indicates continuation line?
+my $preferredContinuation = "... "; # Either "... " or " ".
 my $embeddedScribeOptions = "";	# Any "ScribeOptions: ..." from input
+die if $preferredContinuation eq " " && !$allowSpaceContinuation;
 
 # Loop to get options and input.  The reason this is a loop is that there
 # may be options embedded in the input (using "ScribeOptions: ...").
@@ -303,6 +305,10 @@ while($restartForEmbeddedOptions)
 		elsif ($a eq "-implicitContinuations"
 			|| $a eq "implicitContinuation") 
 			{ $implicitContinuations = 1; }
+		elsif ($a eq "-allowSpaceContinuation") 
+			{ $allowSpaceContinuation = 1; }
+		elsif ($a eq "-disallowSpaceContinuation") 
+			{ $allowSpaceContinuation = 0; }
 		elsif ($a eq "-minScribeLines") 
 			{ $minScribeLines = shift @ARGV; }
 		elsif ($a eq "-inputFormat") 
@@ -1773,13 +1779,14 @@ elsif ($line =~ m/\A(\s?)(\s?)([_\w\-\.]+)(\s?)\:\s*/)
 		}
 	}
 # Continuation line?
-if ((!$type) && $line =~ m/\A((\s)|(\s?(\s?)\.\.+(\s?)(\s?)))/)
+# if ((!$type) && $line =~ m/\A((\s)|(\s?(\s?)\.\.+(\s?)(\s?)))/)
+if (((!$type) && $line =~ m/\A(\s?(\s?)\.\.+(\s?)(\s?))/)
+	|| ($allowSpaceContinuation && (!$type) && $line =~ m/\A(\s)/))
 	{
 	$type = "CONTINUATION";
-	$value = $&;
+	# $value = $&;
 	$rest = $';
-	if ($value =~ m/\./) { $value = "... "; } # Standardize
-	else { $value = " "; }
+	$value = $preferredContinuation; # Standardize
 	}
 if (!$type)
 	{
