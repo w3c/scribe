@@ -1,19 +1,15 @@
 #! perl -w
 
-# Generate minutes in HTML from a text IRC Log.
+# Generate minutes in HTML from a text IRC/chat Log.
+#
 # Author: David Booth <dbooth@w3.org> 
 # This is: http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # $Revision$ of $Date$ by $Author$
 #
 # Take a raw W3C IRC log, tidy it up a bit, and put it into HTML
 # to create meeting minutes.  Reads stdin, writes stdout.
-#
-# INPUT FORMAT:
-# The IRC log can be with or without timestamps.  However, it MUST
-# be in PLAIN TEXT format -- not HTML.  (By default, w3.org serves
-# the IRC logs as HTML.  To get one in plain text, add ".txt" to the end 
-# of the URL, such as: http://www.w3.org/2003/02/06-ws-arch-irc.txt .)
-# See "SCRIBE CONVENTIONS" below.
+# Several input formats are accepted (see below).
+# Input must follow certain conventions (see below).
 # 
 # USAGE: 
 #	perl scribe.perl [options] ircLogFile.txt > minutesFile.htm
@@ -95,6 +91,25 @@
 # or:
 #	<dbooth> Log: http://www.w3.org/2002/11/07-ws-arch-irc
 #
+# INPUT FORMATS ACCEPTED:
+#   MIRC buffer style:
+#	<ericn> Where is our next F2F?
+#	<dbooth> Rennes France.
+#   RRSAgent Text style:
+#	20:41:27 <ericn> Where is our next F2F?
+#	20:41:37 <dbooth> Rennes France.
+#   RRSAgent HTML style:
+#	<dt id="T20-41-27">20:41:27 [ericn]</dt><dd>Where is our next F2F? </dd>
+#	<dt id="T20-41-37">20:41:37 [dbooth]</dt><dd>Rennes France. </dd>
+#   RRSAgent HTML Text style (text copied and pasted from the browser):
+#	20:41:27 [ericn]
+#	     Where is our next F2F?
+#	20:41:37 [dbooth]
+#	     Rennes France.
+#   Yahoo IM style:
+#	ericn: Where is our next F2F?
+#	dbooth: Rennes France.
+#
 # WARNING: The code is a horrible mess.  (Sorry!)  Please hold your nose if 
 # you look at it.  If you have something better, or fix this up at all, 
 # please let me know.  Perhaps it's a good example of Fred Brooke's advice
@@ -175,13 +190,38 @@ if (!$all)
 	}
 # Delete control-M's if any.
 $all =~ s/\r//g;
-# Join continued lines:
-$all =~ s/\n\ \ //g;
-# Fix split URLs:
-# 	<RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2002Mar/00
-# 	  46.html Simon's two minutes
-# while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
-# while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
+
+# Normalize input format.
+# Try different formats, and see which one matches best.
+my $bestScore = 0;
+my $bestAll = "";
+my $bestName = "";
+# These are functions we'll be calling:
+foreach my $f (qw(
+		NormalizerMircTxt
+		NormalizerRRSAgentTimeAngle 
+		NormalizerRRSAgentHtml 
+		NormalizerRRSAgentHTMLText
+		NormalizerYahoo
+		))
+	{
+	my ($score, $newAll) = &$f($all);
+	# warn "$f: $score\n";
+	if ($score > $bestScore)
+		{
+		$bestScore = $score;
+		$bestAll = $newAll;
+		$bestName = $f;
+		}
+	}
+my $bestScoreString = sprintf("%4.2f", $bestScore);
+warn "Input format (score $bestScoreString): $bestName\n";
+die "ERROR: Could not determine input format.\n" if $bestScore == 0;
+warn "WARNING: Low confidence ($bestScoreString) on input format.  Guessing: $bestName\n"
+	if $bestScore < 0.7;
+$all = $bestAll;
+
+
 # Remove timestamps, if there are any:
 $all =~ s/\n\d\d\:\d\d\:\d\d[\ \t]+/\n/g;
 
@@ -667,6 +707,163 @@ $result =~ s/SCRIBE_VAR_MEETING_IRC_URL/$logURL/g;
 
 print $result;
 exit 0;
+
+##################################################################
+########################## NormalizerMircTxt #########################
+##################################################################
+# Format from saving MIRC buffer.
+sub NormalizerMircTxt
+{
+die if @_ != 1;
+my ($all) = @_;
+my @lines = split(/\n/, $all);
+my $n = 0;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+foreach my $line (@lines)
+	{
+	# <ericn> Discussion on how to progress
+	$n++ if $line =~ m/\A\<$namePattern\>\s/;
+	# warn "LINE: $line\n";
+	}
+# warn "NormalizerMircTxt n matches: $n\n";
+my $score = $n / @lines;
+# Join continued lines:
+$all =~ s/\n\ \ //g;
+# Fix split URLs:
+# 	<RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2002Mar/00
+# 	  46.html Simon's two minutes
+# while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
+# while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
+return($score, $all);
+}
+
+##################################################################
+########################## NormalizerRRSAgentTimeAngle #########################
+##################################################################
+# Example: http://www.w3.org/2003/03/03-ws-desc-irc.txt
+sub NormalizerRRSAgentTimeAngle
+{
+die if @_ != 1;
+my ($all) = @_;
+my @lines = split(/\n/, $all);
+my $n = 0;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
+foreach my $line (@lines)
+	{
+	# 20:41:27 <ericn> Review of minutes 
+	$n++ if $line =~ s/\A$timePattern\s+(\<$namePattern\>\s)/$5/;
+	# warn "LINE: $line\n";
+	}
+# warn "NormalizerRRSAgentTimeAngle n matches: $n\n";
+my $score = $n / @lines;
+# Join continued lines:
+$all =~ s/\n\ \ //g;
+# Fix split URLs:
+# 	<RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2002Mar/00
+# 	  46.html Simon's two minutes
+# while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
+# while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
+return($score, $all);
+}
+
+##################################################################
+########################## NormalizerRRSAgentHtml #########################
+##################################################################
+# Example: http://www.w3.org/2003/03/03-ws-desc-irc.html
+sub NormalizerRRSAgentHtml
+{
+die if @_ != 1;
+my ($all) = @_;
+my @lines = split(/\n/, $all);
+my $n = 0;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
+foreach my $line (@lines)
+	{
+	# <dt id="T14-35-34">14:35:34 [scribe]</dt><dd>Gudge: why not sufficient?</dd>
+	$n++ if $line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/;
+	# warn "LINE: $line\n";
+	}
+$all = join("\n", @lines);
+# warn "NormalizerRRSAgentHtml n matches: $n\n";
+my $score = $n / @lines;
+# Unescape &entity;
+$all =~ s/\&amp\;/\&/g;
+$all =~ s/\&lt\;/\</g;
+$all =~ s/\&gt\;/\>/g;
+$all =~ s/\&quot\;/\"/g;
+return($score, $all);
+}
+
+##################################################################
+########################## NormalizerRRSAgentHTMLText #########################
+##################################################################
+# This is for the format that is displayed in the browser from HTML.
+# I.e., when you display the HTML in a browser, and then copy and paste
+# the text from the browser window.
+sub NormalizerRRSAgentHTMLText
+{
+die if @_ != 1;
+my ($all) = @_;
+my $n = 0;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
+my $done = "";
+while($all =~ s/\A((.*\n)(.*\n))//)	# Grab next two lines
+	{
+	my $linePair = $1;
+	my $line1 = $2;
+	my $line2 = $3;
+	# This format uses line pairs:
+	# 	14:43:30 [Arthur]
+	# 	If it's abstract, it goes into portType 
+	if ($linePair =~ s/\A($timePattern)\s+\[($namePattern)\][\ \t]*\n/\<$6\> /)
+		{
+		$n++;
+		# warn "LINE: $line\n";
+		$done .= $linePair;
+		}
+	else	{
+		$done .= $line1;
+		$all = $line2 . $all;
+		}
+	}
+$done .= $all;
+$all = $done;
+# warn "NormalizerRRSAgentHTMLText n matches: $n\n";
+my @lines = split(/\n/, $all);
+my $score = $n / @lines;
+return($score, $all);
+}
+
+##################################################################
+########################## NormalizerYahoo #########################
+##################################################################
+sub NormalizerYahoo
+{
+die if @_ != 1;
+my ($all) = @_;
+my @lines = split(/\n/, $all);
+my $n = 0;
+my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
+foreach my $line (@lines)
+	{
+	$n++ if $line =~ s/\A($namePattern)\:\s/\<$1\> /;
+	# warn "LINE: $line\n";
+	}
+$all = join("\n", @lines);
+# warn "NormalizerYahoo n matches: $n\n";
+my $score = $n / @lines;
+# Join continued lines:
+# $all =~ s/\n\ \ //g;
+# Fix split URLs:
+# 	<RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2002Mar/00
+# 	  46.html Simon's two minutes
+# while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
+# while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
+return($score, $all);
+}
 
 ##################################################################
 ##################### GetTemplate ####################
