@@ -250,6 +250,16 @@ syntax for recording action status.</span><br>
       </td>
     </tr>
     <tr>
+      <td style="vertical-align: top;"><code><span
+ style="font-weight: bold;">RESOLUTION:</span> <span
+ style="font-style: italic;">Accept Frank's proposal</span><span
+ style="font-style: italic;"><br>
+      </span></code></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">Indicate
+how an issue or topic was resolved.</span><br>
+      </td>
+    </tr>
+    <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code
  style="font-weight: bold;">s/</code><code><span
  style="font-style: italic;">Mary</span></code><code
@@ -283,6 +293,17 @@ all previous occurrences of "Mary" to "Marie".</span></td>
       <td style="vertical-align: top;"><span style="font-style: italic;">Change
 all previous and future occurrences of "Mary" to "Marie" (within this
 document).</span></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><code style="font-weight: bold;">i/</code><code><span
+ style="font-style: italic;">Time to vote</span></code><code
+ style="font-weight: bold;">/</code><code><span
+ style="font-style: italic;">Topic: Vote on Feature Y</span></code><code
+ style="font-weight: bold;"></code></td>
+      <td style="vertical-align: top;"><span style="font-style: italic;">Insert
+a "Topic: Vote on Feature Y" line before the line containing the
+literal string "Time to vote" (not a regex).<br>
+      </span></td>
     </tr>
   </tbody>
 </table>
@@ -716,6 +737,24 @@ Indicate who sent regrets (optional).<br>
 Fix the meeting date.&nbsp; Not usually needed, because the default is
 auto set from the IRC log name or the current date.<br>
 <br>
+<big style="font-weight: bold;"><code>ACTION: <span
+ style="font-style: italic;">Frank, Mary and Kate</span> to <span
+ style="font-style: italic;">propose solution for issue 42<br>
+</span></code></big><span style="font-weight: bold;"><big
+ style="font-weight: bold;"><code>ACTION:</code></big><span
+ style="font-style: italic;"><big style="font-weight: bold;"><code> <span
+ style="font-style: italic;"><span style="font-family: monospace;">David</span></span></code></big></span><big
+ style="font-weight: bold;"><code> to </code></big><span
+ style="font-style: italic;"><big style="font-weight: bold;"><code><span
+ style="font-style: italic;">clean the kitchen [PENDING]</span></code></big></span></span><br>
+Give an action item.&nbsp; Action recipients should be listed before
+the word "to".&nbsp; Action status may be given at the end or on the
+next line: [DONE], [PENDING], or [DROPPED].<br>
+<br>
+<big style="font-weight: bold;"><code>RESOLUTION: <span
+ style="font-style: italic;">Issue 42 closed as duplicate of issue 21</span></code></big><br>
+Indicate a decision that the group has made.<br>
+<br>
 <big style="font-weight: bold;"><code>Log: <span
  style="font-style: italic;">http://www.w3.org/2002/11/07-ws-arch-irc</span></code></big><br>
 Explicitly indicate the IRC log location.&nbsp; Not usually needed,
@@ -743,7 +782,14 @@ Replace the most recent occurrence of <span style="font-style: italic;">old
 literal string
 (it will be escaped using quotemeta(...)) -- <span
  style="font-weight: bold;">not a regular
-expression</span>.&nbsp; These are processed in order, first to last.<br>
+expression</span>.&nbsp; These are processed in order, first to
+last.&nbsp; NOTE: If you correct an action item using s/old/new/, then
+you
+should not use the -trustRRSAgent option.&nbsp; Conversely, if you use
+"ACTION=..." to correct an action item using RRSAgent, then you should
+use the -trustRRSAgent option.&nbsp; For further explanation, see the <a
+ href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#trustRRSAgent_option">-trustRRSAgent
+option</a>.<br>
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
@@ -757,11 +803,17 @@ Replace globally from this point backward.<br>
 <br>
 Replace globally, both forward and backward.<br>
 <br>
-NOTE: If you correct an action item using this technique, then you
-should not use the -trustRRSAgent option.&nbsp; Conversely, if you use
-"ACTION=..." to correct an action item using RRSAgent, then you should
-use the -trustRRSAgent option.&nbsp; For further explanation, see the <a
- href="#trustRRSAgent_option">-trustRRSAgent option</a>.<br>
+<span style="font-weight: bold;">i/</span><span
+ style="font-style: italic;">locationString</span><span
+ style="font-weight: bold;">/</span><span style="font-style: italic;">newLine</span><br>
+Insert a new line <span style="font-style: italic;">newLine </span>before
+the line containing <span style="font-style: italic;">locationString</span>,
+which is currently treated as a
+literal string
+(it will be escaped using quotemeta(...)) -- <span
+ style="font-weight: bold;">not a regular
+expression</span>.&nbsp; This is most helpful if you forgot to insert a
+"Topic: " command.<br>
 <br>
 <h2><a name="input_formats"></a>Input Formats<br>
 </h2>
