@@ -219,6 +219,7 @@ my $postTopicHTML = "</h3>";
 # Other globals
 my $namePattern = '([\\w]([\\w\\d\\-]*))';
 # warn "namePattern: $namePattern\n";
+my $debug = 0;
 
 # Get options/args
 my $all = "";			# Input
@@ -277,6 +278,8 @@ while (@ARGV)
 			}
 		$template = $t;
 		}
+	elsif ($a eq "-debug") 
+		{ $debug = 1; }
 	elsif ($a =~ m/\A\-/)
 		{ die "ERROR: Unknown option: $a\n"; }
 	else	
@@ -295,7 +298,7 @@ if (!$all)
 $all =~ s/\r//g;
 
 # Normalize input format.  To do so, we need to guess the input format.
-# Try each known formats, and see which one matches best.
+# Try each known format, and see which one matches best.
 my $bestScore = 0;
 my $bestAll = "";
 my $bestName = "";
@@ -304,7 +307,8 @@ my $bestName = "";
 # Just add another to the list if you want to recognize another format.
 # Each function takes $all (the input text) as input and returns
 # a pair: ($score, $newAll). 
-#	$score is a value [0,1] indicating how well it matched.
+#	$score is a value [0,1] indicating how well it matched (fraction
+#		of lines conforming to this format).
 #	$newAll is the normalized input.
 foreach my $f (qw(
 		NormalizerMircTxt
@@ -417,10 +421,11 @@ my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # warn "speakerPattern: $speakerPattern\n";
 
 # Canonicalize Scribe continuation lines so that the speaker's name is on every line:
-#	<Scribe> SusanW: We had a mtg on July 16.
+#	<dbooth> Scribe: dbooth
+#	<dbooth> SusanW: We had a mtg on July 16.
 #	<DanC_> pointer to minutes?
-#	<Scribe> SusanW: I'm looking.
-#	<Scribe> ... The minutes are on the admin timeline page.
+#	<dbooth> SusanW: I'm looking.
+#	<dbooth> ... The minutes are on the admin timeline page.
 my @allLines = split(/\n/, $all);
 my $currentSpeaker = "UNKNOWN_SPEAKER";
 for (my $i=0; $i<@allLines; $i++)
@@ -442,6 +447,7 @@ for (my $i=0; $i<@allLines; $i++)
 		}
 	}
 $all = "\n" . join("\n", @allLines) . "\n";
+# die "all:\n$all\n" . ('=' x 70) . "\n\n";
 
 # Get the list of people present.
 my @present = ();			# People present at the meeting
@@ -453,6 +459,7 @@ my @zakimLines = grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all);
 my $t = join("\n", grep {s/\A\<Zakim\>\s*//i;} split(/\n/, $all)); 
 # Join zakim continuation lines
 $t =~ s/\n\.\.\.\.*\s*/ /g;
+# die "t:\n$t\n" . ('=' x 70) . "\n\n";
 @zakimLines = split(/\n/, $t);
 foreach my $line (@zakimLines)
 	{
@@ -531,8 +538,8 @@ if (@present == 0)
 	warn "\nWARNING: No \"Present: ... \" found!\n";
 	warn "Possibly Present: @possiblyPresent\n"; 
 	warn "You can indicate the people present like this:
-<scribe> Present: dbooth jonathan mary
-<scribe> Present+ amy\n\n";
+<dbooth> Present: dbooth jonathan mary
+<dbooth> Present+ amy\n\n";
 	}
 else	{
 	warn "Present: @present\n"; 
@@ -566,7 +573,7 @@ if ($all =~ s/\n\<$namePattern\>\s*(Meeting|Title)\s*\:\s*(.*)\n/\n/i)
 else 	{ 
 	warn "\nWARNING: No meeting title found!
 You should specify the meeting title like this:
-<scribe> Meeting: Weekly Baking Club Meeting\n\n";
+<dbooth> Meeting: Weekly Baking Club Meeting\n\n";
 	}
 
 # Grab agenda URL:
@@ -578,7 +585,7 @@ if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/\S+)\n/\n/i)
 else 	{ 
 	warn "\nWARNING: No agenda location found!
 You may specify the agenda like this:
-<scribe> Agenda: http://www.example.com/agenda.html\n\n";
+<dbooth> Agenda: http://www.example.com/agenda.html\n\n";
 	}
 
 # Grab Previous meeting URL:
@@ -593,7 +600,7 @@ if ($all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i)
 else 	{ 
 	warn "\nWARNING: No meeting chair found!
 You should specify the meeting chair like this:
-<scribe> Chair: dbooth\n\n";
+<dbooth> Chair: dbooth\n\n";
 	}
 
 # Grab IRC Log URL.  Do this before looking for the date, because
@@ -865,13 +872,13 @@ foreach my $status (@actionStatuses)
 $all = &IgnoreGarbage($all);
 
 # Convert from:
-#	<Scribe> DanC: something
-#	<Scribe> DanC: something
+#	<dbooth> DanC: something
+#	<dbooth> DanC: something
 #	<DanC> something
 #	<DanC> something
-#	<Scribe> DanC: something
-#	<Scribe> ----
-#	<Scribe> Whatever
+#	<dbooth> DanC: something
+#	<dbooth> ----
+#	<dbooth> Whatever
 # to:
 #	DanC: something
 #	 ... something
@@ -879,43 +886,48 @@ $all = &IgnoreGarbage($all);
 #	 ... something
 #	DanC: something
 #	----------------------------------------
-#	<Scribe> Whatever
+#	<dbooth> Whatever
 my $prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
 my $prevPattern = quotemeta($prevSpeaker);
 my @lines = split(/\n/, $all);
 foreach my $line (@lines)
 	{
-	# warn "$line";
+	warn "LINE (BEFORE): $line\n" if $debug;
 	if (0) {}
 	# Ignore empty lines
 	elsif ($line =~ m/\A\s*\Z/)
 		{
+		warn "  BLANK: $line\n" if $debug;
 		next;
 		}
 	# Topic: ...
 	elsif ($line =~ m/\A\<$namePattern\>\s*Topic\s*\:/i )
 		{
+		warn "  TOPIC: $line\n" if $debug;
 		# New topic.
 		# Force the speaker name to be repeated next time
 		$prevSpeaker = "UNKNOWN_SPEAKER:";	# "DanC:" or "<DanC>"
 		$prevPattern = quotemeta($prevSpeaker);
 		}
 	# Separator:
-	#	<Scribe> ----
+	#	<dbooth> ----
 	elsif ($line =~ m/\A(\<$namePattern\>)\s*\-\-\-\-+\s*\Z/i)
 		{
+		warn "  SEPARATOR1: $line\n" if $debug;
 		my $dashes = '-' x 30;
 		$line = $dashes;
 		}
 	# Separator:
-	#	<Scribe> ====
+	#	<dbooth> ====
 	elsif ($line =~ m/\A(\<$namePattern\>)\s*\=\=\=\=+\s*\Z/i)
 		{
+		warn "  SEPARATOR2: $line\n" if $debug;
 		my $dashes = '=' x 30;
 		$line = $dashes;
 		}
 	elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)\s*/ ... /i) 
 		{
+		warn "  SAME SPEAKER: $line\n" if $debug;
 		}
 	# BUG: The \s* before the ":" in the pattern below doesn't work right,
 	# because the ":" is stored as part of $prevSpeaker, so it
@@ -923,18 +935,22 @@ foreach my $line (@lines)
 	# encountered.
 	elsif ($line =~ s/\A\<Scribe\>\s*(($speakerPattern)\:)\s*/$1 /i )
 		{
+		warn "  NEW SPEAKER: $line\n" if $debug;
 		# New speaker
 		$prevSpeaker = "$1";
 		$prevPattern = quotemeta($prevSpeaker);
 		}
 	elsif ($line =~ m/\A$prevPattern\s*.*\bACTION\s*\:/i)
 		{
+		warn "  ACTION: $line\n" if $debug;
 		}
 	elsif ($line =~ s/\A$prevPattern\s*/ ... /i)
 		{
+		warn "  SCRIBE CONTINUES: $line\n" if $debug;
 		}
 	elsif ($line =~ s/\A(\<Scribe\>)\s*/Scribe\: /i )
 		{
+		warn "  SCRIBE SPEAKS: $line\n" if $debug;
 		# Scribe speaks
 		$prevSpeaker = $1;
 		$prevPattern = quotemeta($prevSpeaker);
@@ -942,12 +958,14 @@ foreach my $line (@lines)
 		}
 	elsif ($line =~ m/\A(\<$namePattern\>)/i)
 		{
+		warn "  IRC COMMENT: $line\n" if $debug;
 		$prevSpeaker = $1;
 		$prevPattern = quotemeta($prevSpeaker);
 		}
 	else	{
 		die "DIED FROM UNKNOWN LINE FORMAT: $line\n$all\n";
 		}
+	warn "LINE (AFTER): $line\n" if $debug;
 	}
 
 $all = join("\n", @lines);
@@ -1108,7 +1126,7 @@ foreach my $line (@lines)
 	next if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
 	# Remove off the record comments:
 	next if $line =~ m/\A\<$namePattern\>\s*\[\s*off\s*\]/i;
-	# Select only <scribe> lines?
+	# Select only <Scribe> lines?
 	next if $scribeOnly && $line !~ m/\A\<Scribe\>/i;
 	# warn "KEPT: $line\n";
 	push(@scribeLines, $line);
@@ -1236,7 +1254,7 @@ my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';
 foreach my $line (@lines)
 	{
-	# <dt id="T14-35-34">14:35:34 [scribe]</dt><dd>Gudge: why not sufficient?</dd>
+	# <dt id="T14-35-34">14:35:34 [dbooth]</dt><dd>Gudge: why not sufficient?</dd>
 	$n++ if $line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/;
 	# warn "LINE: $line\n";
 	}
@@ -1342,11 +1360,11 @@ for (my $i=0; $i<@lines; $i++)
 	# warn "LINE: $lines[$i]\n";
 	$n++;
 	}
-# Now add "<scribe> " to the beginning of each line, to make it like
+# Now add "<Scribe> " to the beginning of each line, to make it like
 # the standard format.
 for (my $i=0; $i<@lines; $i++)
 	{
-	$lines[$i] = "<scribe> " . $lines[$i];
+	$lines[$i] = "<Scribe> " . $lines[$i];
 	}
 $all = "\n" . join("\n", @lines) . "\n";
 # warn "NormalizerPlainText n matches: $n\n";
