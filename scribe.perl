@@ -1,34 +1,56 @@
 #! perl -w
 
-# Generate minutes from an IRC Log.
+# Generate minutes in HTML from a text IRC Log.
 # Author: David Booth <dbooth@w3.org> 
 # $Revision$ of $Date$ by $Author$
-
+#
 # Take a raw W3C IRC log, tidy it up a bit, and put it into HTML
 # to create meeting minutes.  Reads stdin, writes stdout.
 # The IRC log can be with or without timestamps.
+# 
+# Usage: 
+#	perl scribe.perl [options] ircLogFile.txt > minutesFile.htm
+#	perl scribe.perl -sampleInput
+#	perl scribe.perl -sampleOutput
+#	perl scribe.perl -sampleTemplate
 #
 # Options:
+#	-sampleInput		Show me some sample input, so I can
+#				learn how to use this program.
+#
+#	-sampleOutput		Show me some sample output.
+#
 #	-scribeOnly		Only keep scribe statements.  (Otherwise
 #				everyone's statements are kept.)
+#
+#	-template tfile		Use tfile as the template file for
+#				generating the HTML.  Without this option,
+#				the program will default to an embedded
+#				template, which you can see by using
+#				the "-sampleTemplate" option.
+#
+#	-sampleTemplate		Show me a sample template file.
 #
 # The best way to use this program is:
 #	1. Make a backup of your IRC log.
 #	2. Modify the IRC log to conform to the formats that this
-#	   program expects.
-#	3. Run this program 
+#	   program expects (described below).
+#	3. Run this program as described above.
 #	4. View the output in a browser.
-#	5. Go back to step 2 to make modifications.  Once the
-# 	   output looks good enough, then . . .
-#	6. Manually edit the resulting HTML.
+#	5. Go back to step 2 to make modifications, and repeat.
+#	   Once the output looks good enough, then . . .
+#	6. Manually edit the resulting HTML for any remaining fixes.
+#	   (E.g., Usually the list of people present needs editing.)
 #
 # This program expects certain conventions in the IRC log as follows.
-# Identify the scribe:
+# Identify the scribe (Note that names must not contain spaces):
 #	<dbooth> Scribe: dbooth
 # Identify the meeting chair:
 #	<dbooth> Chair: Jonathan
 # Identify the meeting itself:
 #	<dbooth> Meeting: Weekly Baking Club Meeting
+# Fix the meeting date (default is today if there is no "Date:" line):
+#	<dbooth> Date: 05 Dec 2002
 # Identify the current topic.  You should insert one of
 # these lines before the start of EACH topic:
 #	<dbooth> Topic: Review of Action Items
@@ -47,11 +69,11 @@
 #	<dbooth> rrsagent, where am i?
 #	<RRSAgent> See http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36
 #
-# For sample input, see the SampleInput function below.
+# WARNING: The code is a horrible mess.  (Sorry!)  Please hold your nose if 
+# you look at it.  If you have something better, or fix this up at all, 
+# please let me know.  Thanks!
 #
-# WARNING: This code is a horrible mess.  (Sorry!)  Please hold your nose if you
-# look at it.  If you have something better, or fix this up at all, 
-# please let me know.
+######################################################################
 
 my $scribeName = "UNKNOWN"; # Default
 
@@ -66,6 +88,7 @@ my $preTopicHTML = "<h3>";
 my $postTopicHTML = "</h3>";
 
 # Get options/args
+my $all = "";			# Input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
 my $scribeOnly = 0;		# Only select scribe lines
@@ -76,6 +99,12 @@ while (@ARGV)
 	{
 	my $a = shift @ARGV;
 	if (0) {}
+	elsif ($a eq "-sampleInput") 
+		{ print STDOUT &SampleInput(); exit 0; }
+	elsif ($a eq "-sampleOutput") 
+		{ $all = &SampleInput(); }
+	elsif ($a eq "-sampleTemplate") 
+		{ print STDOUT &DefaultTemplate(); exit 0; }
 	elsif ($a eq "-scribeOnly") 
 		{ $scribeOnly = 1; }
 	elsif ($a eq "-canon") 
@@ -102,11 +131,10 @@ while (@ARGV)
 @ARGV = @args;
 
 # Get input:
-my $all =  join("",<>);
+$all =  join("",<>) if !$all;
 if (!$all)
 	{
-	warn "WARNING: No input found.  Defaulting to sample input\n";
-	$all = &SampleInput();
+	warn "WARNING: Empty input.\n";
 	}
 # Delete control-M's if any.
 $all =~ s/\r//g;
@@ -681,9 +709,10 @@ my($all, $scribe) = @_;
 my @rooms = qw(MIT308 SophiaSofa DISA);
 
 my @stopList = qw(a q on items Zakim Topic muted and agenda Regrets http the
-	n3bugs RRSAgent Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
-	Scribe 00AM P P5 P6 IRC Discovery test Topics Keio DROPPED Admin
-	yes no abstain Consensus Participants Question RESOLVED strategy);
+	RRSAgent Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
+	Scribe 00AM 00PM P IRC Topics Keio DROPPED 
+	yes no abstain Consensus Participants Question RESOLVED strategy
+	AGREED);
 @stopList = (@stopList, @rooms);
 @stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
 my %stopList = map {($_,$_)} @stopList;
@@ -1041,12 +1070,14 @@ my $sampleInput = <<'SampleInput-EOF'
 <dbooth> Scribe: dbooth
 <dbooth> Chair: Jonathan
 <dbooth> Meeting: Weekly Baking Club Meeting
+<dbooth> Date: 05 Dec 2002
 <dbooth> Topic: Review of Action Items
 <Philippe> PENDING ACTION: Barbara to bake 3 pies 
 <Philippe> DONE ACTION: David to make ice cream 
 <dbooth> Topic: What to Eat for Dessert
 <dbooth> Joseph: I think that we should all eat cake
-<dbooth> ... with ice cream.
+<dbooth> ... with ice creme.
+<dbooth> s/creme/cream/
 <Philippe> That's a good idea
 <dbooth> ACTION: dbooth to send a message to himself about action items
 <dbooth> Topic: Next Week's Meeting
