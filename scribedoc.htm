@@ -86,9 +86,12 @@ the meeting:
  style="font-weight: bold;">Scribe:</span> <span
  style="font-style: italic;">dbooth</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>dbooth</code>
-is scribe today.&nbsp; Scribe name will be guessed if this line is
-omitted.&nbsp; Name must match scribe's IRC nickname!&nbsp;
-HINT: Do <span style="text-decoration: underline;">not</span> change
+is scribe today.&nbsp; If the name does not match the scribe's IRC
+nickname, then you should also use the ScribeNick command (below) to
+indicate the scribe's IRC nickname.&nbsp;
+Scribe name will be guessed if this line is
+omitted.&nbsp; HINT: Do <span style="text-decoration: underline;">not</span>
+change
 your IRC nickname to "scribe".<br>
       </td>
     </tr>
@@ -155,13 +158,9 @@ contain spaces! </td>
       </td>
       <td style="vertical-align: top; font-style: italic;"><span
  style="font-family: monospace;">Mike's statement continues.&nbsp;
-(NOTE: At present, continuation lines can also be indented by at least
-one space.&nbsp; This can be convenient when pasting in action items
-that are being carried forward from one meeting to the next.&nbsp; I'm
-considering changing to this as the preferred convention for indicating
-a continuation line, since it involves less typing than "... ".&nbsp;
-Feedback, anyone?&nbsp; In any case, at present both forms work.)</span>
-      </td>
+(NOTE: Do not use blank space indentation to indicate continuation
+lines.&nbsp; That syntax was previously permitted, but was found to be
+too error prone, particularly when text was pasted.)</span> </td>
     </tr>
     <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code><span
@@ -213,7 +212,8 @@ syntax for recording action status.</span><br>
  style="font-style: italic;">Marie</span></code><code
  style="font-weight: bold;">/</code><code style="font-weight: bold;"></code></td>
       <td style="vertical-align: top;"><span style="font-style: italic;">Change
-most recent occurrence of "Mary" to "Marie".</span><br>
+most recent occurrence of "Mary" to "Marie".&nbsp; Fixed strings -- not
+regex'es.</span><br>
       </td>
     </tr>
     <tr>
@@ -259,7 +259,7 @@ Step 4: Finish the meeting:<br>
       </code></td>
       <td style="vertical-align: top; font-style: italic;">Dismiss
 zakim bot, which will generate a list of attendees.&nbsp; Use "Present:
-..." if you aren't using zakim bot.<br>
+..." (described below) if you aren't using zakim bot.<br>
       </td>
     </tr>
     <tr>
@@ -350,13 +350,15 @@ remaining details.
 <p>The <code>SCRIBEOPTIONS</code> environment variable holds the
 default options that one wants to use. Example for a Bourne-style shell:</p>
 <pre>export SCRIBEOPTIONS="-trustRRSAgent"</pre>
-<span style="font-style: italic;">I'm not sure what HTML format to use,
-for listing the options below.&nbsp; Any suggestions?&nbsp; I'm using
+<span style="font-style: italic;">[</span><span
+ style="font-style: italic;">For listing the options below </span><span
+ style="font-style: italic;">I'm not sure what HTML format to
+use.&nbsp; Any suggestions?&nbsp; I'm using
 the&nbsp; mozilla HTML editor.&nbsp; Thus far I've been trying out a
 definition list, but I haven't been able to figure out how to create
 definition lists in the Mozilla editor without resorting to manually
 inserting the &lt;dt&gt; tags, which is a pain.&nbsp; Any ideas?&nbsp;
--- dbooth@w3.org</span><br>
+-- dbooth@w3.org]</span><br>
 <br>
 -dashTopics<br>
 Indicate that dash lines are used to indicate that the next line is the
@@ -486,45 +488,61 @@ These commands should be done once.&nbsp; If the data for any of these
 changes during the meeting (for example, if the scribe changes), the
 easiest solution is to break the log into two files and generate two
 sets of minutes.<br>
-<dl>
-  <dt><strong>Meeting: <span style="font-style: italic;">Baking Club</span></strong></dt>
+<br>
+<big><code><span style="font-weight: bold;">Meeting: <span
+ style="font-style: italic;">Baking Club</span></span></code></big><br
+ style="font-weight: bold;">
 Use Baking Club for the title of the meeting minutes.<br>
-</dl>
-<dl>
-  <dt><strong>Chair: <span style="font-style: italic;">Jonathan</span></strong></dt>
+<br>
+<big><code><span style="font-weight: bold;">Chair: <span
+ style="font-style: italic;">Jonathan</span></span></code></big><br
+ style="font-weight: bold; font-style: italic;">
 Jonathan was the meeting chair.<br>
-</dl>
-<dl>
-  <dt><strong>Scribe: <span style="font-style: italic;">Mary</span></strong></dt>
-Mary was the scribe.<br>
-  <br>
-</dl>
-<dl>
-  <dt><code>Present: <span style="font-style: italic;">Jonathan, Mary,
-Barbara, Steve</span></code></dt>
-</dl>
-Regrets:<br>
 <br>
-Date:<br>
-# Fix the meeting date (default is auto set from IRC log name or today
-if<br>
-# there is no "Date:" line):<br>
-#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; Date: 05 Dec 2002<br>
+<big><code><span style="font-weight: bold;">Scribe: <span
+ style="font-style: italic;">Mary</span></span></code></big><br
+ style="font-weight: bold; font-style: italic;">
+Mary was the scribe.&nbsp; If you also use the ScribeNick command
+(below), then you can use this to give the full name of the scribe,
+rather than the IRC nickname.<br>
 <br>
-Log: <br>
-# Identify the IRC log produced by RRSAGENT (this also sets the date):<br>
+<big><code><span style="font-weight: bold;">ScribeNick: <span
+ style="font-style: italic;">MaryScr</span></span></code></big><br
+ style="font-weight: bold; font-style: italic;">
+MaryScr was the IRC nickname used by the scribe.&nbsp; Use this (and
+the "Scribe:" command above) if the scribe's IRC nickname was cryptic.<br>
+<br>
+<big style="font-weight: bold;"><code></code></big><big><code><span
+ style="font-weight: bold;">Agenda: <span style="font-style: italic;">Mary</span></span></code></big><br
+ style="font-weight: bold; font-style: italic;">
+Specify the agenda URL (optional).<br>
+<br>
+<big style="font-weight: bold;"><code></code></big><big
+ style="font-weight: bold;"><code>Present: <span
+ style="font-style: italic;">Jonathan, Mary, Barbara, Steve</span></code></big><br>
+Explicitly indicate who was present.&nbsp; If you're using Zakim bot
+you probably will not need to do this, because the script is usually
+able to figure out who was present.<br>
+<br>
+<big><code><span style="font-weight: bold;">Regrets: <span
+ style="font-style: italic;">Nathan, Emma</span></span></code></big><br>
+Indicate who sent regrets (optional).<br>
+<br>
+<big style="font-weight: bold;"><code>Date: <span
+ style="font-style: italic;">05 Dec 2002</span></code></big><br>
+Fix the meeting date.&nbsp; Not usually needed, because the default is
+auto set from the IRC log name or the current date.<br>
+<br>
+<big style="font-weight: bold;"><code>Log: <span
+ style="font-style: italic;">http://www.w3.org/2002/11/07-ws-arch-irc</span></code></big><br>
+Explicitly indicate the IRC log location.&nbsp; Not usually needed,
+because the script normally infers it from statements like:<br>
 #&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; rrsagent, where am
 i?<br>
 #&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;RRSAgent&gt; See
 http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36<br>
-# or:<br>
-#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; Log:
-http://www.w3.org/2002/11/07-ws-arch-irc<br>
 <br>
-Separator:<br>
-# Separator (at least 4 dashes or equal signs):<br>
-#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; ----<br>
-<br>
+<span style="font-weight: bold;"></span>
 <h2><a name="correcting_mistakes"></a>Correcting Mistakes</h2>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
@@ -536,15 +554,7 @@ Replace the most recent occurrence of <span style="font-style: italic;">old
 </span>with <span style="font-style: italic;">new</span>.&nbsp; <span
  style="font-style: italic;">Old</span> is treated as a fixed string
 (it will be escaped using quotemeta(...)) -- not a regular
-expression.&nbsp; These are processed last first, so you can even
-correct a previous substitution.&nbsp; To disable a previous
-substitution such as<br>
-<pre>	&lt;dbooth&gt; s/the/THE/</pre>
-you can do something like:<br>
-<pre>	&lt;dbooth&gt; s/&lt;dbooth&gt; s/&lt;dbooth&gt; * s/</pre>
-which will cause the previous substitution to be treated as a
-non-logged comment, and ignored.&nbsp; In this example, it becomes:<br>
-<pre>	&lt;dbooth&gt; * s/the/THE/</pre>
+expression.&nbsp; These are processed first to last.<br>
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
@@ -604,8 +614,6 @@ occasions
 when the scribe doesn't have access to IRC, and simply takes notes in a
 text editor.<br>
 <pre><code></code><code>M</code><code>ike: Feature X would benefit users</code><code>.</code><code><br></code><code>... and implementation would be easy</code><code></code><code>.<br>Eric agrees.</code></pre>
-<br>
-<h2>Usage Hints</h2>
 <br>
 <br>
 <br>
