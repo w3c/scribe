@@ -12,15 +12,16 @@
  alt="W3C" border="0" height="48" width="72"></a>&nbsp;</p>
 <h1>Scribe.perl - Generate Meeting Minutes from an IRC Log</h1>
 <span style="font-style: italic;">This documentation is
-unfinished.&nbsp; See the opening comment in <a
+unfinished.&nbsp; See the <a
  href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">the
-scribe.perl source code</a> for complete information.&nbsp; Also,
+scribe.perl source code</a> if this isn't enough.&nbsp; Also,
 please feel free to make improvements to this document and the source
 code and check them into CVS.&nbsp; Thanks!&nbsp; -- dbooth</span><br>
 <h2>General Description</h2>
 <a href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">Scribe.perl</a>
 is a crude perl script for generating meeting minutes from an IRC, IM
-or other log that has been written to follow some simple conventions. <br>
+or other log that has been written to follow some simple minuting
+conventions. <br>
 <h2>Quick Start</h2>
 <table cellpadding="2" cellspacing="2" border="1"
  style="text-align: left; width: 100%;">
@@ -65,7 +66,8 @@ the meeting:</td>
  style="font-weight: bold;">Scribe:</span> <span
  style="font-style: italic;">dbooth</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>dbooth</code>
-is scribe today.&nbsp; Name must match scribe's IRC nickname!&nbsp;
+is scribe today.&nbsp; Scribe name will be guessed if this line is
+omitted.&nbsp; Name must match scribe's IRC nickname!&nbsp;
 HINT: Do <span style="text-decoration: underline;">not</span> change
 your IRC nickname to "scribe".<br>
       </td>
@@ -110,7 +112,8 @@ start of each agenda topic<br>
       </td>
       <td style="vertical-align: top; font-style: italic;"><span
  style="font-family: monospace;">Record what Mike said</span>.&nbsp;
-NOTE: Speaker's name must not contain spaces! </td>
+NOTE: Speaker's name must <span style="text-decoration: underline;">not</span>
+contain spaces! </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code><span
@@ -139,8 +142,8 @@ action.<br>
  style="font-weight: bold;">to</span><span style="font-style: italic;">
 write spec</span> <span style="font-weight: bold;">[</span><span
  style="font-style: italic;">PENDING</span><span
- style="font-weight: bold;">]</span></code><code><span
- style="font-weight: bold;"><br>
+ style="font-weight: bold;">]<br>
+      </span></code><code><span style="font-weight: bold;"><br>
 [</span><span style="font-style: italic;">PENDING</span><span
  style="font-weight: bold;">] ACTION:</span> <span
  style="font-style: italic;">Mary </span><span
@@ -150,7 +153,9 @@ write spec</span></code><code><br>
       <td style="vertical-align: top; font-style: italic;">Record old
 action and status: <br>
       <code><span style="font-weight: bold;">DONE, PENDING,</span> </code>or
-      <code style="font-weight: bold;">DROPPED</code><br>
+      <code style="font-weight: bold;">DROPPED<br>
+      </code>The action status may also be on the line immediately
+following the action item.<br>
       </td>
     </tr>
     <tr>
@@ -270,12 +275,18 @@ instead of being a scribe comment:
     <pre><code><br>&lt;dbooth&gt; Mary: Now is the time<br>&lt;dbooth&gt; for all good men and women<br>&lt;dbooth&gt; to come to the aid of their party.<br>&lt;dbooth&gt; (Group agrees)<br></code></pre>
   </dd>
   <dt>-useZakimTopics</dt>
-  <dd>Use Zakim bot to change topics, such as "zakim, take up next
+  <dd>[Default] Use Zakim bot to change topics, such as "zakim, take up
+next
 agendum". Specifically, treat Zakim statements like:
     <pre><code>&lt;Zakim&gt; agendum 2. "UTF16 PR issue" taken up [from MSMscribe]</code></pre>
 as equivalent to the command:
     <pre><code>&lt;scribe&gt; Topic: UTF16 PR issue </code></pre>
   </dd>
+  <dt>-noUseZakimTopics</dt>
+  <dd>Turn off the -useZakimTopics option. </dd>
+  <dt><br>
+  </dt>
+  <br>
   <dt>-inputFormat <span style="font-style: italic;">NameOfFormat</span></dt>
   <dd>Force input to be treated as <span style="font-style: italic;">NameOfFormat</span>,
 which must be one of the formats listed in <a href="#input_formats">Input
@@ -320,13 +331,21 @@ template.)<br>
 I see 9 open action items...") rather than directly from the text that
 was written in IRC when the action was recorded ("&lt;dbooth&gt;
 ACTION: ...").&nbsp; <br>
-This option has pros and cons.&nbsp; <span style="font-weight: bold;">Pros:</span>
-It enables scribe.perl to add "[recorded in http://...]" to action
-items.&nbsp; Also, changes to action items that were made through
+This option has pros and cons.&nbsp; <span style="font-weight: bold;"><br>
+    <br>
+Pros:</span>
+(1) It enables scribe.perl to add "[recorded in http://...]" to action
+items.&nbsp; (2) Changes to action items that were made through
 RRSAgent commands ("ACTION 4 = whatever") are reflected in action items
-that are output.. <span style="font-weight: bold;">Cons:</span>
-Changes to action items that were made with "s/old/new/" commands have
-no effect, because RRSAgent doesn't process them.<br>
+that are output.. <span style="font-weight: bold;"><br>
+    <br>
+Cons:</span>
+(1) Changes to action items that were made with "s/old/new/" commands
+have
+no effect, because RRSAgent doesn't process them.&nbsp; (2) Action
+items continuation lines (indented by an extra space) are not
+recognized. (3) An action status that is on the line after the action
+item will not be recognized.<br>
 &nbsp;</dd>
   <dt>-sampleInput</dt>
   <dd>Show me some sample input, so I can learn how to use this
@@ -360,8 +379,26 @@ Mary was the scribe.<br>
 Barbara, Steve</span></code></dt>
 </dl>
 Regrets:<br>
+<br>
 Date:<br>
+# Fix the meeting date (default is auto set from IRC log name or today
+if<br>
+# there is no "Date:" line):<br>
+#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; Date: 05 Dec 2002<br>
+<br>
 Log: <br>
+# Identify the IRC log produced by RRSAGENT (this also sets the date):<br>
+#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; rrsagent, where am
+i?<br>
+#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;RRSAgent&gt; See
+http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36<br>
+# or:<br>
+#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; Log:
+http://www.w3.org/2002/11/07-ws-arch-irc<br>
+<br>
+Separator:<br>
+# Separator (at least 4 dashes or equal signs):<br>
+#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; ----<br>
 <br>
 <h2><a name="correcting_mistakes"></a>Correcting Mistakes</h2>
 <span style="font-weight: bold;">s/</span><span
@@ -417,13 +454,12 @@ browser,
 and then copy and paste the text from the browser window, only the
 displayed text is copied -- not the raw HTML tags.<br>
 <pre><code>20:41:27 [</code><code>dbooth</code><code>]<br>     </code><code>Mike: Feature X would benefit users.</code><code><br>20:41:37 [dbooth]<br>     </code><code>... and implementation would be easy</code><code>.<br></code><code>20:41:47 [</code><code>ericn</code><code>]<br>     I agree.</code><code><br></code></pre>
-<h3>(RRSAgent_RDF_Format -- NOT IMPLEMENTED)</h3>
-<br>
 <h3>Mirc_Text_Format</h3>
 The format produced by mIRC when you do Buffer--&gt;Save As.<br>
 <pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;ericn&gt; I agree.<br></code></pre>
-<h3>Hugo_Log_Text_Format</h3>
-The format produced by Hugo's logger.<br>
+<h3>Irssi_ISO8601_Log_Text_Format</h3>
+The format produced by Irssi logging with Hugo's suggested timestamp
+prefixes.<br>
 <pre><code></code>2003-12-18T15:27:21-0500 &lt;dbooth&gt; <code>M</code><code>ike: Feature X would benefit users</code><code>.</code><br>2003-12-18T15:27:36-0500 &lt;dbooth&gt; <code>... and implementation would be easy</code><code></code><code></code>.<br>2003-12-18T15:27:36-0500 &lt;ericn&gt; I agree.<br><code></code></pre>
 <h3>Yahoo_IM_Format</h3>
 The format produced when you save a Yahoo IM session.<br>
