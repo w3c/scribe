@@ -122,7 +122,10 @@ contain spaces! </td>
  style="font-style: italic;">and easy to implement.</span></code><br>
       </td>
       <td style="vertical-align: top; font-style: italic;"><span
- style="font-family: monospace;">Mike's statement continues</span> </td>
+ style="font-family: monospace;">Mike's statement continues.&nbsp;
+(NOTE: At present, continuation lines can also be indented by at least
+one space.&nbsp; This can be convenient when pasting in action items
+that are being carried forward from one meeting to the next.)</span> </td>
     </tr>
     <tr>
       <td style="vertical-align: top;"><code><span
@@ -346,8 +349,14 @@ have
 no effect, because RRSAgent doesn't process them.&nbsp; (2) Action
 items continuation lines (indented by an extra space) are not
 recognized. (3) An action status that is on the line after the action
-item will not be recognized.<br>
-&nbsp;</dd>
+item will not be recognized.</dd>
+  <dt><br>
+  </dt>
+  <dt>-noTrustRRSAgent</dt>
+  <dd>Turn off the -trustRRSAgent option.&nbsp; I.e.,&nbsp; get the
+action items from wherever they were initially written.</dd>
+  <dt><br>
+  </dt>
   <dt>-sampleInput</dt>
   <dd>Show me some sample input, so I can learn how to use this
 program.&nbsp; Input is ignored if this option is used.</dd>
