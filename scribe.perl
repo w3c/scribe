@@ -171,36 +171,19 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 1. Auto recognize the scribing format.  For example:
-#		<dbooth> Frank: Four score and seven
-#		<dbooth> years ago, our fathers
-#		<dbooth> brought forth ...
-# and also:
-#		<dbooth> Frank: Four score and seven
-#		<dbooth> ... years ago, our fathers
-#		<dbooth> ... brought forth ...
-# or (note leading space on continuation lines):
-#		<dbooth> Frank: Four score and seven
-#		<dbooth>  years ago, our fathers
-#		<dbooth>  brought forth ...
+# 1. Recognize "next agendum" instead of "Topic:..."
 #
-# 5. Auto-guess the scribe, based on who wrote the most.  (May need
-# to ignore something pasted in all at once.  Hmm, no, just let it guess wrong.)
-# Generate warning if scribe name is "scribe".
-#
-# 3. Recognize "next agendum" instead of "Topic:..."
-#
-# 4. Recognize [[ ...lines... ]] and treat them as a block by
+# 2. Recognize [[ ...lines... ]] and treat them as a block by
 # allowing them to be continuation lines for the same speaker,
 # because they are probably pasted in.
 #
-# 4. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
+# 3. Get $actionTemplate and $preSpeakerHTML, etc. from the HTML template,
 # so that all formatting info is in the template.
 #
-# 5. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
+# 4. (From Hugo) Have RRSAgent run scribe.perl automatically when it 
 # excuses itself
 #
-# 6. Add a normalizer function for the format from hugo's log in
+# 5. Add a normalizer function for the format from hugo's log in
 # http://lists.w3.org/Archives/Member/w3c-ws-arch/2003Dec/0014.html
 #
 
@@ -214,7 +197,6 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #
 ######################################################################
 
-my $scribeName = "UNKNOWN"; # Default
 
 # Formatting:
 # my $preSpeakerHTML = "<strong>";
@@ -251,6 +233,7 @@ my $scribeOnly = 0;		# Only select scribe lines
 my $trustRRSAgent = 0;		# Trust RRSAgent?
 my $breakActions = 1;		# Break long action lines?
 my $implicitContinuations = 0;	# Option: -implicitContinuations
+my $scribeName = "UNKNOWN"; 	# Example: -scribe dbooth
 
 my @args = ();
 my $template = &DefaultTemplate();
@@ -304,6 +287,8 @@ while (@ARGV)
 		{ $debug = 1; }
 	elsif ($a eq "-implicitContinuations") 
 		{ $implicitContinuations = 1; }
+	elsif ($a eq "-scribe" || $a eq "-scribeName") 
+		{ $scribeName = shift @ARGV; }
 	elsif ($a =~ m/\A\-/)
 		{ die "ERROR: Unknown option: $a\n"; }
 	else	
@@ -361,12 +346,6 @@ warn "\nWARNING: Low confidence ($bestScoreString) on guessing input format: $be
 	if $bestScore < 0.7;
 $all = $bestAll;
 
-if ((!$implicitContinuations) && &ProbablyUsesImplicitContinuations($all))
-	{
-	warn "\nWARNING: Input appears to use implicit continuation lines.\n";
-	warn "You may need the \"-implicitContinuations\" option.\n\n";
-	}
-
 # Perform s/old/new/ substitutions.
 while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 	{
@@ -405,8 +384,7 @@ while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 		}
 	else	{
 		warn "\nWARNING: FAILED: s/$told/$tnew/$global\n\n";
-		$match =~ s/\A\s+//;
-		$match =~ s/\s+\Z//;
+		$match = &Trim($match);
 		$all = $pre . "\n[scribe.perl auto substitution failed:] " . $match . "\n" . $post;
 		}
 	warn "\nWARNING: Multiline substitution!!! (Is this correct?)\n\n" if $tnew ne $new || $told ne $old;
@@ -434,8 +412,23 @@ if ($normalizeOnly)
 	}
 
 # Determine scribe name if possible:
-# $scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*([\w\-]+).*?\n/\n/i;
 $scribeName = $1 if $all =~ s/\n\<[^\>\ ]+\>\s*Scribe\s*\:\s*(.+?)s*\n/\n/i;
+if ($scribeName eq "UNKNOWN")
+	{
+	if ($bestName eq "NormalizerPlainText")
+		{
+		# Cannot guess the scribe when NormalizerPlainText format is used.
+		warn "\nWARNING: Scribe name not specified!!!\n";
+		}
+	else	{
+		$scribeName = &GuessScribeName($all);
+		warn "\nWARNING: Scribe name not specified.  Guessing Scribe: $scribeName\n";
+		}
+	warn "Use the \"-scribe Hugo\" option or add a line like the following\n";
+	warn "to explicitly indicate that Hugo is scribe (for example):\n";
+	warn "Scribe: Hugo\n\n";
+	}
+$scribeName = &Trim($scribeName);
 warn "Scribe: $scribeName\n";
 
 # Get attendee list, and canonicalize names within the document:
@@ -444,7 +437,27 @@ my $allNameRefsRef;
 ($all, $scribeName, $allNameRefsRef, @uniqNames) = &GetNames($all, $scribeName);
 my @allNames = map { ${$_} } @{$allNameRefsRef};
 my $scribePattern = quotemeta($scribeName);
-$all =~ s/\<$scribePattern\>/\<Scribe\>/ig;
+# warn "scribePattern: $scribePattern\n";
+# Replace scribe name with "scribe".  I.e., change
+#	<dbooth> Minutes approved
+# to
+#	<scribe> Minutes approved
+$all = "\n$all\n";
+{
+my $t = $all;
+# Warning: Pattern match (annoyingly) returns "" if no match -- not 0.
+my $nScribeLines = ($t =~ s/\n\<scribe\>/\n\<Scribe\>/ig);
+$nScribeLines = 0 if $nScribeLines eq ""; # Make 0 if no match
+# warn "nScribeLines: $nScribeLines\n";
+my $nScribePatterns = ($all =~ s/\n\<$scribePattern\>/\n\<Scribe\>/ig);
+$nScribePatterns = 0 if $nScribePatterns eq ""; # Make 0 if no match
+# warn "nScribePatterns: $nScribePatterns\n";
+if ($nScribeLines < 6 && $nScribePatterns <= 0)
+	{
+	warn "\nWARNING: No lines matching scribe name <$scribeName> found.\n";
+	warn "Scribe name should match the scribe's IRC handle.\n\n";
+	}
+}
 $scribePattern = "Scribe";
 push(@allNames,"Scribe");
 my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
@@ -461,7 +474,7 @@ my @allLines = split(/\n/, $all);
 my $currentSpeaker = "UNKNOWN_SPEAKER";
 for (my $i=0; $i<@allLines; $i++)
 	{
-	# warn "$allLines[$i]\n";
+	# warn "$allLines[$i]\n" if $allLines[$i] =~ m/Liam/;
 	if ($allLines[$i] =~ m/\A\<Scribe\>\s*($speakerPattern)\s*\:/i)
 		{
 		$currentSpeaker = $1;
@@ -497,7 +510,7 @@ foreach my $line (@zakimLines)
 	if ($line =~ m/attendees\s+were\s+/i)
 		{
 		my $raw = $';
-		my @people = map {s/\A\s+//; s/\s+\Z//; s/\s+/_/g; $_} split(/\,/, $raw);
+		my @people = map {$_ = &Trim($_); s/\s+/_/g; $_} split(/\,/, $raw);
 		next if !@people;
 		if (@present)
 			{
@@ -535,7 +548,7 @@ foreach my $line (@allLines)
 		{
 		# Comma-separated list
 		@p = grep {$_ && $_ ne "and"} 
-				map {s/\A\s+//; s/\s+\Z//; s/\s+/_/g; $_} 
+				map {$_ = &Trim($_); s/\s+/_/g; $_} 
 				split(/\,/,$present);
 		}
 	else	{
@@ -587,8 +600,8 @@ if ($all =~ s/\s+Regrets\s*\:\s*(.*)//i)
 		{
 		# Comma-separated list
 		@regrets = grep {$_ && $_ ne "and"} 
-				map {s/\As+//; s/s\+\Z//; $_} 
-				split(/\,/,$regrets);
+				map {&Trim($_)} 
+				split(/\,/, $regrets);
 		}
 	else	{
 		# Space-separated list
@@ -614,8 +627,8 @@ if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/\S+)\n/\n/i)
 	  warn "Agenda: $agendaLocation\n";
       }
 else 	{ 
-	warn "\nWARNING: No agenda location found!
-You may specify the agenda like this:
+	warn "\nWARNING: No agenda location found (optional).
+If you wish, you may specify the agenda like this:
 <dbooth> Agenda: http://www.example.com/agenda.html\n\n";
 	}
 
@@ -763,8 +776,7 @@ foreach my $action ((keys %rawActions))
 		# warn "OLD a: $olda\n";
 		# warn "NEW a: $a\n\n";
 		$olda = $a;
-		next CHANGE if $a =~ s/\A\s+//;
-		next CHANGE if $a =~ s/\s+\Z//;
+		$a = &Trim($a);
 		next CHANGE if $a =~ s/\s*\[\d+\]?\s*\Z//;	# Delete action numbers: [4] [4
 		next CHANGE if $a =~ s/\AACTION\s*\:\s*//;	# Delete extra ACTION:
 		# Grab URL from end of action.   
@@ -922,6 +934,20 @@ foreach my $status (@actionStatuses)
 
 $all = &IgnoreGarbage($all);
 
+if ($implicitContinuations)
+	{
+	# warn "Scribing style: -implicitContinuations\n";
+	$all = &ExpandImplicitContinuations($all);
+	}
+else	{
+	# warn "Scribing style: -explicitContinuations\n";
+	if (&ProbablyUsesImplicitContinuations($all))
+		{
+		warn "\nWARNING: Input appears to use implicit continuation lines.\n";
+		warn "You may need the \"-implicitContinuations\" option.\n\n";
+		}
+	}
+
 # Convert from:
 #	<dbooth> DanC: something
 #	<dbooth> DanC: something
@@ -994,7 +1020,6 @@ while (@linesIn)
 		}
 	# Separator:
 	#	<dbooth> ----
-	# elsif ($line =~ m/\A(\<$namePattern\>)\s*\-\-\-\-+\s*\Z/i)
 	elsif ($text =~ m/\A\-\-\-+\Z/ && !$speaker)
 		{
 		warn "  SEPARATOR1: $line\n" if $debug;
@@ -1003,7 +1028,6 @@ while (@linesIn)
 		}
 	# Separator:
 	#	<dbooth> ====
-	# elsif ($line =~ m/\A(\<$namePattern\>)\s*\=\=\=\=+\s*\Z/i)
 	elsif ($text =~ m/\A\=\=\=+\Z/ && !$speaker)
 		{
 		warn "  SEPARATOR2: $line\n" if $debug;
@@ -1173,13 +1197,50 @@ print $result;
 exit 0;
 
 #################################################################
+################# GuessScribeName #################
+#################################################################
+# Guess the scribe name based on who wrote the most in the log.
+sub GuessScribeName
+{
+@_ == 1 || die;
+my ($all) = @_;
+$all = &IgnoreGarbage($all);
+my @lines = split(/\n/, $all);
+my $nLines = 0;	# Total number of "<someone> something " lines.
+my %nameCounts = (); # Count of the number of lines written per person.
+my %mixedCaseNames = (); # Map from lower case name to mixed case name
+foreach my $line (@lines)
+	{
+	if ($line =~ m/\A\<([^\>]+)\>/)
+		{
+		$nLines++;
+		my $mix = $1;	# Liam
+		my $who = $mix;	# liam
+		$who =~ tr/A-Z/a-z/;
+		$nameCounts{$who}++;
+		$mixedCaseNames{$who} = $mix; # liam -> Liam
+		}
+	}
+my @descending = sort { $nameCounts{$b} <=> $nameCounts{$a} } keys %nameCounts;
+# warn "Names in descending order:\n";
+foreach my $n (@descending)
+	{
+	# warn "	$nameCounts{$n} $n\n";
+	}
+# warn "\n";
+return "UNKNOWN" if !@descending;
+return $mixedCaseNames{$descending[0]};
+}
+
+
+#################################################################
 ################# IgnoreGarbage #################
 #################################################################
+# Ignore off-record lines and other lines that should not be minuted.
 sub IgnoreGarbage
 {
 @_ == 1 || die;
 my ($all) = @_;
-# Ignore off-record lines and other lines that should not be minuted.
 my @lines = split(/\n/, $all);
 my $nLines = scalar(@lines);
 warn "Lines found: $nLines\n";
@@ -1471,42 +1532,59 @@ return($score, $all);
 # This style is ambiguous, because we can't distinguish between the
 # continuation of the previous speaker's statement and a new statement made
 # by the scribe.
+#
+# The <dbooth>'s should have already been changed to <scribe> prior 
+# to calling this function.
 sub ProbablyUsesImplicitContinuations
 {
 die if @_ != 1;
 my ($all) = @_;
+$all = &IgnoreGarbage($all);
 my @lines = split(/\n/, $all);
 my @t = @lines;
 # Blank lines:
 @t = grep {!m/\A\s*\Z/} @t;
+# Only consider scribe statements
+# 	<scribe> whatever
+@t = grep {m/\A\<scribe\>/i} @t;
 # Don't count action lines
 # 	<dbooth> [DONE] ACTION: ...
 @t = grep {!m/\bACTION\b/i} @t;
 # Don't count empty statements
 # 	<dbooth> 
-@t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>\s*\Z/} @t;
+# @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>\s*\Z/} @t;
+@t = grep {!m/\A\<scribe\>\s*\Z/i} @t;
 my $nTotal = scalar(@t);
  # 	<dbooth> Amy: Now is the time (EXPLICIT SPEAKER)
- @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s?\s?)[a-zA-Z0-9\-_]+\s*\:/} @t;
+ # @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s?\s?)[a-zA-Z0-9\-_]+\s*\:/i} @t;
+ @t = grep {!m/\A\<scribe\>(\s?\s?)[a-zA-Z0-9\-_]+\s*\:/i} @t;
 my $nSpeaker = $nTotal - scalar(@t);
  # 	<dbooth>  for all good men and women  (EXPLICIT CONTINUATION)
- @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s\s\s*)/} @t;
+ # @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s\s\s*)/} @t;
+ @t = grep {!m/\A\<scribe\>(\s\s\s*)/i} @t;
  # 	<dbooth> ... for all good men and women  (EXPLICIT CONTINUATION)
- @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s*)\.\./} @t;
+ # @t = grep {!m/\A\<[a-zA-Z0-9\-_]+\>(\s*)\.\./} @t;
+ @t = grep {!m/\A\<scribe\>(\s*)\.\./i} @t;
 my $nExpCont = $nTotal - ($nSpeaker + scalar(@t));
  # Remaining lines are potentially implicit continuation lines.
 my $nPossCont = scalar(@t);
 die if $nPossCont + $nExpCont + $nSpeaker != $nTotal;
+# warn "nTotal: $nTotal nSpeaker: $nSpeaker nExpCont: $nExpCont nPossCont: $nPossCont\n";
 # Guess the format
-return 0 if $nPossCont == 0;
-# Mostly explicit speaker lines?
-if ($nSpeaker/$nTotal >= 0.8)
+my $result = 0;
+if ($nPossCont == 0)
 	{
-	if ($nExpCont/$nPossCont < 0.2) { return 1; }
-	else { return 0; }
+	$result = 0;
 	}
-elsif ($nExpCont/$nPossCont < 0.05) { return 1; }
-return 0;
+# Mostly explicit speaker lines?
+elsif ($nSpeaker/$nTotal >= 0.8)
+	{
+	if ($nExpCont/$nPossCont < 0.2) { $result = 1; }
+	else { $result = 0; }
+	}
+elsif ($nExpCont/$nPossCont < 0.05) { $result = 1; }
+# warn "ProbablyUsesImplicitContinuations returning: $result\n";
+return $result;
 }
 
 ##################################################################
@@ -1537,6 +1615,7 @@ my @lines = split(/\n/, $all);
 my $inContinuation = 0;
 for (my $i=0; $i<@lines; $i++)
 	{
+	# warn "LINE: $lines[$i]\n";
 	# Skip blank lines:
 	next if ($lines[$i] =~ m/\A\s*\Z/);
 	# Skip lines not starting with <scribe>:
@@ -1585,6 +1664,7 @@ for (my $i=0; $i<@lines; $i++)
 		{
 		# <scribe> for all good men and women
 		# Implicit continuation line!  Add leading blank:
+		# warn "Reformatting implicit continuation line: <scribe>  $rest\n";
 		$lines[$i] = "<scribe>  $rest";
 		}
 	}
@@ -1627,9 +1707,7 @@ if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	# Parse date from input.
 	# I should have used a library function for this, but I wrote
 	# this without net access, so I couldn't get one.
-	my $d = $4;
-	$d =~ s/\A\s+//;
-	$d =~ s/\s+\Z//;
+	my $d = &Trim($4);
 	warn "Found Date: $d\n";
 	my @words = split(/\s+/, $d);
 	die "ERROR: Date not understood: $d\n" if @words != 3;
@@ -1795,9 +1873,7 @@ while($t =~ s/\n\<((\w|\-)+)\>/\n/)
 $t = $all;
 while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
 	{
-	my $match = $&;
-	$match =~ s/\A\s+//;
-	$match =~ s/\s+\Z//;
+	my $match = &Trim($&);
 	# warn "DELETED: $match\n";
 	}
 
@@ -1820,11 +1896,9 @@ while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/)
 # Collect names
 while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/)
 	{
-	my $list = $9;
-	$list =~ s/\A\s+//;
-	$list =~ s/\s+\Z//;
+	my $list = &Trim($9);
 	my @names = split(/[^\w\-]+/, $list);
-	@names = map {s/\A\s+//; s/\s+\Z//; $_} @names;
+	@names = map {&Trim($_)} @names;
 	@names = grep {$_} @names;
 	# warn "Matched #       <Zakim> I see: @names\n";
 	foreach my $n (@names)
@@ -2042,9 +2116,8 @@ while($t =~ s/\n\<((\w|\-)+)\>/\n/)
 $t = $all;
 while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
 	{
-	my $match = $&;
-	$match =~ s/\A\s+//;
-	$match =~ s/\s+\Z//;
+	my $match = &Trim($&);
+	$match =~ &Trim($match);
 	# warn "DELETED: $match\n";
 	}
 
@@ -2067,11 +2140,9 @@ while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/)
 # Collect names
 while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/)
 	{
-	my $list = $9;
-	$list =~ s/\A\s+//;
-	$list =~ s/\s+\Z//;
+	my $list = &Trim($9);
 	my @names = split(/[^\w\-]+/, $list);
-	@names = map {s/\A\s+//; s/\s+\Z//; $_} @names;
+	@names = map {&Trim($_)} @names;
 	@names = grep {$_} @names;
 	# warn "Matched #       <Zakim> I see: @names\n";
 	foreach my $n (@names)
@@ -2157,6 +2228,19 @@ $lcScribe =~ tr/A-Z/a-z/;
 $scribe = $synonyms{$lcScribe} if exists($synonyms{$lcScribe});
 my @sortedUniqNames = sort values %uniqNames;
 return($expandedIRC, $scribe, \@allNameRefs, @sortedUniqNames);
+}
+
+##################################################################
+################ Trim ####################
+##################################################################
+# Trim leading and trailing blanks from the given string.
+sub Trim
+{
+@_ == 1 || die;
+my ($s) = @_;
+$s =~ s/\A\s+//;
+$s =~ s/\s+\Z//;
+return $s;
 }
 
 ##################################################################
