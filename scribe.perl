@@ -1,5 +1,7 @@
 #! perl -w
 
+use strict;  	
+
 my ($CVS_VERSION) = q$Revision$ =~ /(\d+[\d\.]*\.\d+)/;
 
 warn 'This is scribe.perl $Revision$ of $Date$ 
@@ -130,7 +132,7 @@ my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair
 	Present Regrets Agenda 
 	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION);
 # Make lower case and generate spelling variations
-@commands = &Uniq(&WordVariations(map {&LC($_)} @ucCommands));
+my @commands = &Uniq(&WordVariations(map {&LC($_)} @ucCommands));
 # Map to preferred spelling:
 my %commands = &WordVariationsMap(@ucCommands);
 # A pattern to match any of them.  (Be sure to use case-insensitive matching.)
@@ -341,7 +343,7 @@ while($restartForEmbeddedOptions)
 
 	# Normalize input format.  This accepts several formats of input
 	# and puts it into a common format.
-	# The @inputFormats is the list of known normalizer functions.
+	# The %inputFormats is the list of known normalizer functions.
 	# Each one is defined below.
 	# Just add another to the list if you want to recognize another format.
 	# Each function takes $all (the input text) as input and returns
@@ -349,17 +351,21 @@ while($restartForEmbeddedOptions)
 	#	$score is a value [0,1] indicating how well it matched (fraction
 	#		of lines conforming to this format).
 	#	$newAll is the normalized input.
-	my @inputFormats = qw(
-			RRSAgent_Text_Format 
-			RRSAgent_HTML_Format 
-			RRSAgent_Visible_HTML_Text_Paste_Format
-			Mirc_Text_Format
-			Irssi_ISO8601_Log_Text_Format
-			Yahoo_IM_Format
-			Plain_Text_Format
-			Normalized_Format
-			);
-	my %inputFormats = map {($_,$_)} @inputFormats;
+	# Each key, value pair in the %inputFormats map is the name of the
+	# function and the function address.
+	my %inputFormats = (
+		# functionName, functionAddress,
+		"RRSAgent_Text_Format", \&RRSAgent_Text_Format, 
+		"RRSAgent_HTML_Format", \&RRSAgent_HTML_Format, 
+		"RRSAgent_Visible_HTML_Text_Paste_Format", \&RRSAgent_Visible_HTML_Text_Paste_Format,
+		"Mirc_Text_Format", \&Mirc_Text_Format,
+		"Irssi_ISO8601_Log_Text_Format", \&Irssi_ISO8601_Log_Text_Format,
+		"Yahoo_IM_Format", \&Yahoo_IM_Format,
+		"Plain_Text_Format", \&Plain_Text_Format,
+		"Normalized_Format", \&Normalized_Format,
+		);
+	my @inputFormats = keys %inputFormats;
+
 	if ($inputFormat && !exists($inputFormats{$inputFormat}))
 		{
 		warn "\nWARNING: Unknown input format specified: $inputFormat\n";
@@ -372,7 +378,8 @@ while($restartForEmbeddedOptions)
 	$bestName = "";  	# Global var because we access it later
 	foreach my $f (@inputFormats)
 		{
-		my ($score, $newAll) = &$f($all);
+		my $fAddress = $inputFormats{$f};
+		my ($score, $newAll) = &$fAddress($all);
 		# warn "$f: $score\n";
 		if ($score > $bestScore)
 			{
@@ -386,7 +393,8 @@ while($restartForEmbeddedOptions)
 		{
 		# warn "INPUT FORMAT: $inputFormat\n";
 		# Format was specified using -inputFormat option
-		my ($score, $newAll) = &$inputFormat($all);
+		my $fAddress = $inputFormats{$inputFormat};
+		my ($score, $newAll) = &$fAddress($all);
 		my $scoreString = sprintf("%4.2f", $score);
 		$all = $newAll;
 		warn "\nWARNING: Input looks more like $bestName format (score $bestScoreString),
@@ -543,7 +551,7 @@ if ($dashTopics)
 if (1)
 	{
 	my @lines = split(/\n/, $all);
-	my @nonredundantlines = ();
+	my @nonredundantLines = ();
 	my $previousTopic = "";
 	foreach my $line (@lines)
 		{
@@ -2651,6 +2659,7 @@ die if @_ != 1;
 my ($all) = @_;
 my @lines = split(/\n/, $all);
 my $inContinuation = 0;
+my $inStatement = 0;
 for (my $i=0; $i<@lines; $i++)
 	{
 	# warn "LINE: $lines[$i]\n";
