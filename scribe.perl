@@ -224,6 +224,7 @@ warn "WARNING: Low confidence ($bestScoreString) on guessing input format: $best
 	if $bestScore < 0.7;
 $all = $bestAll;
 
+
 # Perform s/old/new/ substitutions.
 while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 	{
@@ -404,7 +405,7 @@ while ($t =~ s/\n\<[^\>]+\>\s*DONE\s*(\:|\ |(\-+))\s*ACTION\s*\:\s*(.*)/\n/)
 	$doneActions{$action} = $action;
 	}
 # warn "DONE ACTIONS 1:\n";
-while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*)(\-+)\s*DONE\s*\n/\n\n/)
+while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[\-\ ]+DONE\s*\n/\n\n/)
 	{
 	my $action = "$1";
 	$action =~ s/\A\s+//;
@@ -429,7 +430,7 @@ while ($t =~ s/\n\<[^\>]+\>\s*PENDING\s*(\:|\ |(\-+))\ *ACTION\s*\:\s*(.*)/\n/)
 	$pendingActions{$action} = $action;
 	}
 # warn "PENDING ACTIONS 1:\n";
-while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*)[\-\ ]+PENDING\s*\n/\n\n/)
+while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[\-\ ]+PENDING\s*\n/\n\n/)
 	{
 	my $action = "$1";
 	$action =~ s/\A\s+//;
@@ -778,6 +779,7 @@ foreach my $line (@lines)
 	$n++ if $line =~ s/\A$timePattern\s+(\<$namePattern\>\s)/$5/;
 	# warn "LINE: $line\n";
 	}
+$all = join("\n", @lines);
 # warn "NormalizerRRSAgentText n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
@@ -871,13 +873,6 @@ foreach my $line (@lines)
 $all = join("\n", @lines);
 # warn "NormalizerYahoo n matches: $n\n";
 my $score = $n / @lines;
-# Join continued lines:
-# $all =~ s/\n\ \ //g;
-# Fix split URLs:
-# 	<RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2002Mar/00
-# 	  46.html Simon's two minutes
-# while ($all =~ s/(http\:[^\ ]+)\n\ \ /$1/ig) {}
-# while ($all =~ s/(http\:[^\ ]+)\n\ /$1/ig) {}
 return($score, $all);
 }
 
