@@ -1921,6 +1921,7 @@ my $sampleInput = <<'SampleInput-EOF'
 <dbooth> Scribe: dbooth
 <dbooth> Chair: Jonathan
 <dbooth> Meeting: Weekly Baking Club Meeting
+<hugo> Agenda: http//www.example.com/agendas/2002-12-05-agenda.html
 <dbooth> Date: 05 Dec 2002
 <dbooth> Topic: Review of Action Items
 <Philippe> PENDING ACTION: Barbara to bake 3 pies 
@@ -1973,9 +1974,6 @@ SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
 SV_FORMATTED_AGENDA_LINK
 
-<!-- Old:
-<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
--->
 SV_FORMATTED_IRC_URL
 
 <h2><a name="attendees">Attendees</a></h2>
@@ -1998,23 +1996,7 @@ SV_FORMATTED_IRC_URL
 </ul>
 <hr>
 
-
-<!--  We don't need the agenda items listed twice.
-<h2><a name="agenda">Topics</a></h2>
-<ul>
-  SV_MEETING_AGENDA
-</ul>
--->
-
 SV_AGENDA_BODIES
-<!--
-<h3 id="item1">Item name (owner)</h3>
-<p>... text of discussion ...</p>
-
-<h3 id="item2">Item name (owner)</h3>
-<p>... text of discussion ...</p>
--->
-
 
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- Action Items -->
@@ -2023,13 +2005,6 @@ SV_ACTION_ITEMS
 <hr>
 
 <address>
-  <!--
-  <a href="http://validator.w3.org/check/referer"><img border="0"
-  src="http://validator.w3.org/images/vh40.gif" alt="Valid HTML 4.0!"
-  height="31" width="88" align="right">
-  </a> 
-  -->
-  <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
   Minutes formatted by David Booth's 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
   $Date$ 
@@ -2068,9 +2043,6 @@ SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
 SV_FORMATTED_AGENDA_LINK
 
-<!-- Old:
-<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
--->
 SV_FORMATTED_IRC_URL
 
 <h2><a name="attendees">Attendees</a></h2>
@@ -2093,23 +2065,7 @@ SV_FORMATTED_IRC_URL
 </ul>
 <hr>
 
-
-<!--  We don't need the agenda items listed twice.
-<h2><a name="agenda">Topics</a></h2>
-<ul>
-  SV_MEETING_AGENDA
-</ul>
--->
-
 SV_AGENDA_BODIES
-<!--
-<h3 id="item1">Item name (owner)</h3>
-<p>... text of discussion ...</p>
-
-<h3 id="item2">Item name (owner)</h3>
-<p>... text of discussion ...</p>
--->
-
 
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- New Action Items -->
@@ -2118,13 +2074,6 @@ SV_ACTION_ITEMS
 <hr>
 
 <address>
-  <!--
-  <a href="http://validator.w3.org/check/referer"><img border="0"
-  src="http://validator.w3.org/images/vh40.gif" alt="Valid HTML 4.0!"
-  height="31" width="88" align="right">
-  </a> 
-  -->
-  <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
   Minutes formatted by David Booth's 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
   $Date$ 
@@ -2164,9 +2113,6 @@ SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
 SV_FORMATTED_AGENDA_LINK
 
-<!-- Old:
-<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
--->
 SV_FORMATTED_IRC_URL
 
 <h2><a name="attendees">Attendees</a></h2>
@@ -2190,22 +2136,7 @@ SV_FORMATTED_IRC_URL
 <hr>
 
 
-<!--  We don't need the agenda items listed twice.
-<h2><a name="agenda">Topics</a></h2>
-<ul>
-  SV_MEETING_AGENDA
-</ul>
--->
-
 SV_AGENDA_BODIES
-<!--
-<h3 id="item1">Item name (owner)</h3>
-<p>... text of discussion ...</p>
-
-<h3 id="item2">Item name (owner)</h3>
-<p>... text of discussion ...</p>
--->
-
 
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- New Action Items -->
@@ -2214,13 +2145,6 @@ SV_ACTION_ITEMS
 <hr>
 
 <address>
-  <!--
-  <a href="http://validator.w3.org/check/referer"><img border="0"
-  src="http://validator.w3.org/images/vh40.gif" alt="Valid HTML 4.0!"
-  height="31" width="88" align="right">
-  </a> 
-  -->
-  <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
   Minutes formatted by David Booth's 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
   $Date$ 
@@ -2261,9 +2185,6 @@ SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</h1>
 
 SV_FORMATTED_AGENDA_LINK
 
-<!-- Old:
-<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>
--->
 SV_FORMATTED_IRC_URL
 
 <h2><a name="attendees">Attendees</a></h2>
@@ -2287,21 +2208,7 @@ SV_FORMATTED_IRC_URL
 <hr>
 
 
-<!--  We don't need the agenda items listed twice.
-<h2><a name="agenda">Topics</a></h2>
-<ul>
-  SV_MEETING_AGENDA
-</ul>
--->
-
 SV_AGENDA_BODIES
-<!--
-<h3 id="item1">Item name (owner)</h3>
-<p>... text of discussion ...</p>
-
-<h3 id="item2">Item name (owner)</h3>
-<p>... text of discussion ...</p>
--->
 
 
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
@@ -2311,13 +2218,6 @@ SV_ACTION_ITEMS
 <hr>
 
 <address>
-  <!--
-  <a href="http://validator.w3.org/check/referer"><img border="0"
-  src="http://validator.w3.org/images/vh40.gif" alt="Valid HTML 4.0!"
-  height="31" width="88" align="right">
-  </a> 
-  -->
-  <!-- <a href="/Team/SV_TEAM_PAGE_LOCATION">David Booth</a> <br /> -->
   Minutes formatted by David Booth's 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribe.perl">scribe.perl SCRIBEPERL_VERSION</a> (<a href="http://dev.w3.org/cvsweb/2002/scribe/scribe.perl">CVS log</a>)<br>
   $Date$ 
