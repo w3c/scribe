@@ -8,17 +8,14 @@
   <meta name="author" content="David Booth">
 </head>
 <body>
-<h1>&nbsp;<a href="http://www.w3.org/"><img
- src="http://www.w3.org/Icons/w3c_home" alt="W3C"
- style="border: 0px solid ; height: 48px; width: 72px;" title=""></a>&nbsp;
-Scribe.perl - Generate Meeting Minutes from an IRC Log</h1>
-<span style="font-style: italic;">This documentation is
-unfinished.&nbsp; See the <a
+<h1>Scribe.perl - Generate Meeting Minutes from an IRC Log</h1>
+<span style="font-style: italic;">See the <a
  href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">the
-scribe.perl source code</a> if this isn't enough.&nbsp; Also,
+scribe.perl source code</a> or ask me if this documentation isn't
+enough.&nbsp; Also,
 please feel free to make improvements to this document and the source
 code and check them into CVS.&nbsp; Thanks!&nbsp; -- dbooth</span><br>
-<h2>General Description</h2>
+<h2>Abstract</h2>
 <a href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">Scribe.perl</a>
 is a crude perl script for generating meeting minutes from an IRC, IM
 or other log that has been written to follow some simple minuting
@@ -29,7 +26,19 @@ output:<br>
 <pre><code>perl scribe.perl <span style="font-style: italic;">[options]</span> &lt; <span
  style="font-style: italic;">log.txt</span>  &gt; <span
  style="font-style: italic;">minutes.html</span></code></pre>
-<h2>Pros and Cons of Using Scribe.perl</h2>
+<h2>Table of Contents</h2>
+<div style="margin-left: 40px;"><a
+ href="#Pros_and_Cons_of_Using_Scribe.perl">Pros and Cons of Using
+Scribe.perl</a><br>
+<a href="#Quick_Start_Guide">Quick Start Guide</a><br>
+<a href="#Environment_Variables">Environment Variables</a><br>
+<a href="#options">Options<br>
+</a><a href="#one_time_commands">Commands<br>
+</a><a href="#correcting_mistakes">Correcting Mistakes While Scribing</a><br>
+<a href="#input_formats">Input Formats</a><br>
+</div>
+<h2><a name="Pros_and_Cons_of_Using_Scribe.perl"></a>Pros and Cons of
+Using Scribe.perl</h2>
 <span style="font-weight: bold;">Pros</span>:<br>
 <ul>
   <li>It's free, it's open source, and it usually works.</li>
@@ -52,7 +61,8 @@ you can easily correct this using the <code>-tidy</code> option (if
 you have HTML tidy installed).</li>
   <li>The code is a mess.&nbsp; (Sorry!)</li>
 </ul>
-<h2>Quick Start</h2>
+<h2><a name="Quick_Start_Guide"></a>Quick Start Guide<br>
+</h2>
 Step 1:&nbsp; Invite <a href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a>
 and <a href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a>
 (skip this step if you're not using W3C's IRC):<br>
@@ -112,6 +122,19 @@ the meeting:
     </tr>
     <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code><span
+ style="font-weight: bold;">Scribe:</span> <span
+ style="font-style: italic;">David Booth<br>
+      </span></code></td>
+      <td style="vertical-align: top; font-style: italic;">(Optional) <code>David
+Booth</code>
+is the name of the scribe as it should appear in the generated
+minutes.&nbsp; The ScribeNick will be used instead if Scribe is not
+specified.&nbsp; To handle <span style="font-weight: bold;">multiple
+scribes:</span> Issue this command whenever the scribe name changes.<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; white-space: nowrap;"><code><span
  style="font-weight: bold;">ScribeNick:</span> <span
  style="font-style: italic;">dbooth</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>dbooth</code>
@@ -119,19 +142,9 @@ is the IRC nickname of the scribe.&nbsp; The ScribeNick will be guessed
 if neither Scribe nor ScribeNick are specified.&nbsp; HINT: Do <span
  style="text-decoration: underline;">not</span>
 change
-your IRC nickname to "scribe".<br>
-      </td>
-    </tr>
-    <tr>
-      <td style="vertical-align: top; white-space: nowrap;"><code><span
- style="font-weight: bold;">Scribe:</span> <span
- style="font-style: italic;">David Booth<br>
-      </span></code></td>
-      <td style="vertical-align: top; font-style: italic;">(Optional) <code>David
-Booth</code> is the name of the scribe as it should appear in the
-generated minutes.&nbsp; The ScribeNick will be used instead if Scribe
-is not specified.<br>
-      </td>
+your IRC nickname to "scribe".&nbsp; To handle <span
+ style="font-weight: bold;">multiple scribes:</span> Issue this command
+whenever the scribe nickname changes. </td>
     </tr>
     <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code><span
@@ -229,7 +242,8 @@ write spec</span> <span style="font-weight: bold;">[</span><span
 action and status: <br>
       <code><span style="font-weight: bold;">DONE, PENDING,</span> </code>or
       <code style="font-weight: bold;">DROPPED<br>
-      </code>The action status may also be on the line immediately
+      </code>The action status may also be on a line by itself
+immediately
 following the action item.<br>
       </td>
     </tr>
@@ -379,7 +393,7 @@ Option 1 is best if you forgot to indicate who is scribe ("Scribe:
 </table>
 <br>
 <pre><code></code><code></code></pre>
-<h2>Environment Variables</h2>
+<h2><a name="Environment_Variables"></a>Environment Variables</h2>
 The <code>SCRIBEOPTIONS</code> environment variable holds the
 default options that one wants to use.&nbsp; It is not required. &nbsp;
 Example for a Bourne-style shell:
@@ -545,39 +559,46 @@ is used.</dd>
   <br>
 </dl>
 <br>
-<h2><a name="one_time_commands"></a>One-Time Commands</h2>
-These commands should be done once.&nbsp; If the data for any of these
-changes during the meeting (for example, if the scribe changes), the
-easiest solution is to break the log into two files and generate two
-sets of minutes.<br>
-<br>
+<h2><a name="one_time_commands"></a>Commands</h2>
 <big><code><span style="font-weight: bold;">Meeting: <span
  style="font-style: italic;">Baking Club</span></span></code></big><br
  style="font-weight: bold;">
-Use Baking Club for the title of the meeting minutes.<br>
+Use Baking Club for the title of the meeting minutes.&nbsp; This
+command should only be done once.<br>
 <br>
 <big><code><span style="font-weight: bold;">Chair: <span
  style="font-style: italic;">Jonathan</span></span></code></big><br
  style="font-weight: bold; font-style: italic;">
-Jonathan was the meeting chair.<br>
+Jonathan was the meeting chair.&nbsp; This command should only be done
+once.<br>
 <br>
 <big><code><span style="font-weight: bold;">Scribe: <span
  style="font-style: italic;">Mary</span></span></code></big><br
  style="font-weight: bold; font-style: italic;">
-Mary was the scribe.&nbsp; If you also use the ScribeNick command
-(below), then you can use this to give the full name of the scribe,
-rather than the IRC nickname.<br>
+Mary was the scribe.&nbsp; The Scribe command is to indicate the full
+name of the scribe. If the name given in the Scribe command matches an
+IRC name, then it will also be used as the ScribeNick.&nbsp; If you
+also use the ScribeNick command
+(below), then you can use the Scribe command to give the full name of
+the scribe,
+rather than the IRC nickname.&nbsp; The Scribe command can be used more
+than once, which indicates that <span style="font-weight: bold;">multiple
+scribes</span> were used during the meeting.<br>
 <br>
 <big><code><span style="font-weight: bold;"><a name="ScribeNick"></a>ScribeNick:
 <span style="font-style: italic;">MaryScr</span></span></code></big><br
  style="font-weight: bold; font-style: italic;">
 MaryScr was the IRC nickname used by the scribe.&nbsp; Use this (and
-the "Scribe:" command above) if the scribe's IRC nickname was cryptic.<br>
+the "Scribe:" command above) if the scribe's IRC nickname was
+cryptic.&nbsp; The ScribeNick command can be used more than once, which
+indicates that <span style="font-weight: bold;">multiple scribes</span>
+were used during the meeting.<br>
 <br>
 <big style="font-weight: bold;"><code></code></big><big><code><span
  style="font-weight: bold;">Agenda: <span style="font-style: italic;">http://www.example.com/agenda.html</span></span></code></big><br
  style="font-weight: bold; font-style: italic;">
-Specify the agenda URL (optional).<br>
+Specify the agenda URL (optional).&nbsp; This command should only be
+done once.<br>
 <br>
 <big style="font-weight: bold;"><code></code></big><big
  style="font-weight: bold;"><code>Present: <span
@@ -615,7 +636,7 @@ Replace the most recent occurrence of <span style="font-style: italic;">old
 </span>with <span style="font-style: italic;">new</span>.&nbsp; <span
  style="font-style: italic;">Old</span> is treated as a fixed string
 (it will be escaped using quotemeta(...)) -- not a regular
-expression.&nbsp; These are processed first to last.<br>
+expression.&nbsp; These are processed in order, first to last.<br>
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
@@ -629,16 +650,9 @@ Replace globally from this point backward.<br>
 <br>
 Replace globally, both forward and backward.<br>
 <br>
-<h2>Handling Multiple Scribes</h2>
-At present, the program is not set up to understand that a meeting
-could have multiple scribes.&nbsp; An example workaround follows.&nbsp;
-The general approach is: (a) document the point when the scribe
-changed; (b) change all the scribe IRC handles to "scribe", either
-using commands like <code>s/&lt;dbooth&gt;/scribe/G</code> in IRC, or
-by editing a copy of the log; (c) use the "Scribe:" command to list all
-of the actual scribe names.&nbsp; Example:<br>
 <br>
-<h2><a name="input_formats"></a>Input Formats Accepted</h2>
+<h2><a name="input_formats"></a>Input Formats<br>
+</h2>
 Several log formats are accepted.&nbsp; Scribe.perl guesses which
 format you have used by seeing which format best matches the
 input.&nbsp; If necessary, you can specify the input format explicitly
@@ -669,6 +683,9 @@ displayed text is copied -- not the raw HTML tags.<br>
 <h3>Mirc_Text_Format</h3>
 The format produced by mIRC when you do Buffer--&gt;Save As.<br>
 <pre><code>&lt;</code><code>dbooth</code><code>&gt; M</code><code>ike: Feature X would benefit users</code><code>.<br>&lt;dbooth&gt; </code><code>... and implementation would be easy</code><code></code><code>.<br>&lt;ericn&gt; I agree.<br></code></pre>
+<h3>Mirc_Timestamped_Log_Format</h3>
+Timestamped log format produced by mIRC.<br>
+<pre><code>[19:35] &lt;Zakim&gt; Steven should now be muted<br>[19:36] &lt;ph&gt; http://lists.w3.org/Archives/Member/w3c-html-cg/2004JanMar/0038.html<br>[19:36] * Zakim hears Steven's hand up<br>[19:36] * Zakim sees Steven on the speaker queue</code><code><br></code></pre>
 <h3>Irssi_ISO8601_Log_Text_Format</h3>
 The format produced by Irssi logging with Hugo's suggested timestamp
 prefixes.<br>
