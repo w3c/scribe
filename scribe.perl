@@ -97,10 +97,15 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # Formatting:
 # my $preSpeakerHTML = "<strong>";
 # my $postSpeakerHTML = "</strong> <br />";
-my $preSpeakerHTML = "<b>";
-my $postSpeakerHTML = "</b>";
-my $preParagraphHTML = "<p>";
-my $postParagraphHTML = "</p>";
+my $preSpeakerHTML = "<cite class='phone'>";
+my $postSpeakerHTML = "</cite>";
+my $preIRCSpeakerHTML = "<cite class='irc'>";
+my $postIRCSpeakerHTML = "</cite>";
+my $prePhoneParagraphHTML = "<p class='phone'>";
+my $postPhoneParagraphHTML = "</p>";
+my $preIRCParagraphHTML = "<p class='irc'>";
+my $postIRCParagraphHTML = "</p>";
+
 my $preTopicHTML = "<h3";
 my $postTopicHTML = "</h3>";
 
@@ -1063,24 +1068,30 @@ foreach my $item (sort keys %agenda)
 	{
 	$agenda .= '<li><a href="#' . $item . '">' . $agenda{$item} . "</a></li>\n";
 	}
-
+### @@@ Fix IRC/Phone distinctionxc
 # Break into paragraphs:
-$all =~ s/\n(([^\ \.\<].*)(\n\ *\.\.+.*)*)/\n$preParagraphHTML\n$1\n$postParagraphHTML\n/g;
+$all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\n$1\n$postPhoneParagraphHTML\n/g;
+$all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\n$1\n$postIRCParagraphHTML\n/g;
 
 # Bold or <strong> speaker name:
 # Change "<speaker> ..." to "<b><speaker><b> ..."
 my $preUniq = "PreSpEaKerHTmL";
 my $postUniq = "PostSpEaKerHTmL";
-$all =~ s/\n(\&lt\;($namePattern)\&gt\;)\s*/\n\&lt\;$preUniq$2$postUniq\&gt\; /ig;
+my $preIRCUniq = "PreIrCSpEaKerHTmL";
+my $postIRCUniq = "PostIrCSpEaKerHTmL";
+$all =~ s/\n(\&lt\;($namePattern)\&gt\;)\s*/\n\&lt\;$preIRCUniq$2$postIRCUniq\&gt\; /ig;
 # Change "speaker: ..." to "<b>speaker:<b> ..."
 $all =~ s/\n($speakerPattern)\:\s*/\n$preUniq$1\:$postUniq /ig;
 $all =~ s/$preUniq/$preSpeakerHTML/g;
 $all =~ s/$postUniq/$postSpeakerHTML/g;
+$all =~ s/$preIRCUniq/$preIRCSpeakerHTML/g;
+$all =~ s/$postIRCUniq/$postIRCSpeakerHTML/g;
+
 
 # Add <br /> before continuation lines:
-$all =~ s/\n(\ *\.)/ <br \/>\n$1/g;
+$all =~ s/\n(\ *\.)/ <br>\n$1/g;
 # Collapse multiple <br />s:
-$all =~ s/<br \/>((\s*<br \/>)+)/<br \/>/g;
+$all =~ s/<br>((\s*<br>)+)/<br \/>/g;
 # Standardize continuation lines:
 # $all =~ s/\n\s*\.+/\n\.\.\./g;
 # Make links:
@@ -2717,6 +2728,7 @@ my $template = <<'PublicTemplate-EOF'
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/public.css">
+  <LINK rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -2737,10 +2749,16 @@ SV_FORMATTED_IRC_URL
 <h2><a name="attendees">Attendees</a></h2>
 
 <div class="intro">
-<p>Present: SV_PRESENT_ATTENDEES</p>
-<p>Regrets: SV_REGRETS</p>
-<p>Chair: SV_MEETING_CHAIR </p>
-<p>Scribe: SV_MEETING_SCRIBE</p>
+<dl>
+<dt>Present</dt>
+<dd>SV_PRESENT_ATTENDEES</dd>
+<dt>Regrets</dt>
+<dd>SV_REGRETS</dd>
+<dt>Chair</dt>
+<dd>SV_MEETING_CHAIR </dd>
+<dt>Scribe</dt>
+<dd>SV_MEETING_SCRIBE</dd>
+</dl>
 </div>
 
 <h2>Contents</h2>
@@ -2753,9 +2771,9 @@ SV_FORMATTED_IRC_URL
   <li><a href="#ActionSummary">Summary of Action Items</a></li>
 </ul>
 <hr>
-
+<div class="meeting">
 SV_AGENDA_BODIES
-
+</div>
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- Action Items -->
 SV_ACTION_ITEMS
@@ -2787,6 +2805,7 @@ my $template = <<'MemberTemplate-EOF'
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member.css">
   <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member-minutes.css">
+  <LINK rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -2806,10 +2825,16 @@ SV_FORMATTED_IRC_URL
 <h2><a name="attendees">Attendees</a></h2>
 
 <div class="intro">
-<p>Present: SV_PRESENT_ATTENDEES</p>
-<p>Regrets: SV_REGRETS</p>
-<p>Chair: SV_MEETING_CHAIR </p>
-<p>Scribe: SV_MEETING_SCRIBE</p>
+<dl>
+<dt>Present</dt>
+<dd>SV_PRESENT_ATTENDEES</dd>
+<dt>Regrets</dt>
+<dd>SV_REGRETS</dd>
+<dt>Chair</dt>
+<dd>SV_MEETING_CHAIR </dd>
+<dt>Scribe</dt>
+<dd>SV_MEETING_SCRIBE</dd>
+</dl>
 </div>
 
 <h2>Contents</h2>
@@ -2822,9 +2847,9 @@ SV_FORMATTED_IRC_URL
   <li><a href="#ActionSummary">Summary of Action Items</a></li>
 </ul>
 <hr>
-
+<div class="meeting">
 SV_AGENDA_BODIES
-
+</div>
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- New Action Items -->
 SV_ACTION_ITEMS
@@ -2856,6 +2881,7 @@ my $template = <<'TeamTemplate-EOF'
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
   <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
+  <LINK rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -2876,10 +2902,16 @@ SV_FORMATTED_IRC_URL
 <h2><a name="attendees">Attendees</a></h2>
 
 <div class="intro">
-<p>Present: SV_PRESENT_ATTENDEES</p>
-<p>Regrets: SV_REGRETS</p>
-<p>Chair: SV_MEETING_CHAIR </p>
-<p>Scribe: SV_MEETING_SCRIBE</p>
+<dl>
+<dt>Present</dt>
+<dd>SV_PRESENT_ATTENDEES</dd>
+<dt>Regrets</dt>
+<dd>SV_REGRETS</dd>
+<dt>Chair</dt>
+<dd>SV_MEETING_CHAIR </dd>
+<dt>Scribe</dt>
+<dd>SV_MEETING_SCRIBE</dd>
+</dl>
 </div>
 
 <h2>Contents</h2>
@@ -2893,9 +2925,9 @@ SV_FORMATTED_IRC_URL
 </ul>
 <hr>
 
-
+<div class="meeting">
 SV_AGENDA_BODIES
-
+</div>
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- New Action Items -->
 SV_ACTION_ITEMS
@@ -2927,6 +2959,7 @@ my $template = <<'MITTemplate-EOF'
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
   <LINK rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
   <link rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
+  <LINK rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" lang="en" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -2948,10 +2981,16 @@ SV_FORMATTED_IRC_URL
 <h2><a name="attendees">Attendees</a></h2>
 
 <div class="intro">
-<p>Present: SV_PRESENT_ATTENDEES</p>
-<p>Regrets: SV_REGRETS</p>
-<p>Chair: SV_MEETING_CHAIR </p>
-<p>Scribe: SV_MEETING_SCRIBE</p>
+<dl>
+<dt>Present</dt>
+<dd>SV_PRESENT_ATTENDEES</dd>
+<dt>Regrets</dt>
+<dd>SV_REGRETS</dd>
+<dt>Chair</dt>
+<dd>SV_MEETING_CHAIR </dd>
+<dt>Scribe</dt>
+<dd>SV_MEETING_SCRIBE</dd>
+</dl>
 </div>
 
 <h2>Contents</h2>
@@ -2965,9 +3004,9 @@ SV_FORMATTED_IRC_URL
 </ul>
 <hr>
 
-
+<div class="meeting">
 SV_AGENDA_BODIES
-
+</div>
 
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- Action Items -->
