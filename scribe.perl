@@ -27,7 +27,7 @@ use strict;
 #
 # 00000. Working on pre/postParagraph formatting.  See nesting problem
 # in file:///home/dbooth/w3c/DEV/2002/scribe/test-data/minimal-mit.htm
-# First step is to convert to using $phoneParagraphHTMLTemplate.
+# First step is to convert to using $scribeParagraphHTMLTemplate.
 #
 # 0000. BUG: MakeLinks does not work correctly on URLs that contain & because
 # it is already escaped into &amp;.  Try test-data/22-tag*
@@ -44,7 +44,6 @@ use strict;
 # 19:29:44 <Zakim> +Alan, Simon, Ralph; got it
 # 19:30:23 <Alan> Alan has joined &mit
 # 19:31:10 <Liam> Liam has joined &mit
-#
 # Also define $defaultMeetingTitle from zakim conference name.
 #
 # 00. Fix formatting processing to prevent generating invalid HTML.
@@ -52,10 +51,19 @@ use strict;
 # and toward making the formatting be fully template-based.
 # test-data/validHTML.txt provides a simple input test case.
 #
+# 0. Embed the CSS, so that it doesn't take so long to load the page.
+#
 # 0. BUG: URLs written like <http://...> are formatted as IRC statements.
 # See the text pasted inside [[ ... ]] at
 # http://www.w3.org/2004/11/04-ws-desc-minutes.htm#item06
 # The relevant code below may be around line 3581.
+#
+# 0. Add warning if "Chair: " appears more than once, because it
+# is likely to be a chair statement rather than a command.
+#
+# 0. Recognize ACTIONS that have a date in front like:
+#    20050105 ACTION Steve: Report to w3m 
+# See http://www.w3.org/2005/03/23-w3m
 #
 # 0.1 Summarize RESOLUTIONS at the beginning or end.  (Also move summary
 # of action items to the beginning?)
@@ -155,15 +163,12 @@ $versionMessage =~ s/\$//g; # Prevent CVS from remunging the version in minutes
 &Warn($versionMessage);
 
 ##### Formatting:
-# my $preSpeakerHTML = "<strong>";
-# my $postSpeakerHTML = "</strong> <br />";
 my $preSpeakerHTML = "<cite>";
 my $postSpeakerHTML = "</cite>";
 my $preWriterHTML = "<cite>";
 my $postWriterHTML = "</cite>";
 my $prePhoneParagraphHTML = "<p class='phone'>";
 my $postPhoneParagraphHTML = "</p>";
-my $phoneParagraphHTMLTemplate = "$prePhoneParagraphHTML\n\$paragraph\n$postPhoneParagraphHTML";
 my $preIRCParagraphHTML = "<p class='irc'>";
 my $postIRCParagraphHTML = "</p>";
 my $preResolutionHTML = "<strong class='resolution'>";
@@ -175,7 +180,27 @@ my $postTopicHTML = "</h3>";
 # Other globals
 my $debug = 1;
 my $debugActions = 0;
-my $namePattern = '[\\w\\d\\_\\-\\.\\`\\\'\\+]+';
+# According to http://en.wikibooks.org/wiki/IRC :
+#   "Although implementations vary, restrictions on nicknames usually 
+#   dictate that they be composed only of characters a-z, A-Z, 0-9, underscore, 
+#   and dash."
+# I also note that at least some implementations forbid a dash at the 
+# beginning.  AFAICT xchat (at least) also seems to require at least a letter.
+# I also find http://www.kvirc.de/docu/doc_rfc2812.html saying:
+#   nickname   =  ( letter / special ) *8( letter / digit / special / "-" )
+#   letter     =  %x41-5A / %x61-7A       ; A-Z / a-z
+#   digit      =  %x30-39                 ; 0-9
+#   special    =  %x5B-60 / %x7B-7D
+#                        ; "[", "]", "\", "`", "_", "^", "{", "|", "}"
+# I was able to change my nick to _-_- but not starting with - and not
+# starting with a number.
+# I also find http://www.irchelp.org/irchelp/rfc/chapter2.html#c2_3_1 saying:
+#   <nick> ::= <letter> { <letter> | <number> | <special> }
+#   <letter> ::= 'a' ... 'z' | 'A' ... 'Z'
+#   <number> ::= '0' ... '9'
+#   <special> ::= '-' | '[' | ']' | '\' | '`' | '^' | '{' | '}'
+# my $namePattern = '[\\w\\d\\_\\-\\.\\`\\\'\\+]+';
+my $namePattern = '[a-zA-Z_][a-zA-Z0-9_\\-]*';
 # if ($line =~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
 # warn "namePattern: $namePattern\n";
 
@@ -198,7 +223,9 @@ my $urlPattern = '(http(s?)://([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)(#
 #### Ditto for Previous_Meeting and PreviousMeeting.
 my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair 
 	Present Regrets Agenda 
-	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION);
+	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION
+	NamedAnchorHere
+	);
 # Make lower case and generate spelling variations
 my @commands = &Uniq(&WordVariations(map {&LC($_)} @ucCommands));
 # Map to preferred spelling:
@@ -305,6 +332,18 @@ my $allowSpaceContinuation = 0;	# Leading space indicates continuation line?
 my $preferredContinuation = "... "; # Either "... " or " ".
 my $embeddedScribeOptions = "";	# Any "ScribeOptions: ..." from input
 die if $preferredContinuation eq " " && !$allowSpaceContinuation;
+
+##### Globals used by specific functions (prefix with function name):
+my %globalProcessNamedAnchors_anchorIDs = ();
+my @globalProcessTopic_agenda = ();	# Plain text
+my @globalProcessTopic_agendaIDs = ();	# Named anchors
+# my $globalProcessTopic_agenda = "";	# HTML formatted
+my $oldGlobalAgenda = "";
+
+my $globalLTPattern = "&lt;";	# TOTO: Change back to <
+my $globalGTPattern = "&gt;";	# TOTO: Change back to >
+my $globalAmpPattern = "&amp;";	# TOTO: Change back to &
+
 
 # Loop to get options and input.  The reason this is a loop is that there
 # may be options embedded in the input (using "ScribeOptions: ...").
@@ -469,7 +508,8 @@ while($restartForEmbeddedOptions)
 		"RRSAgent_Visible_HTML_Text_Paste_Format", \&RRSAgent_Visible_HTML_Text_Paste_Format,
 		"Mirc_Text_Format", \&Mirc_Text_Format,
 		"Mirc_Timestamped_Log_Format", \&Mirc_Timestamped_Log_Format,
-		"Irssi_ISO8601_Log_Text_Format", \&Irssi_ISO8601_Log_Text_Format,
+		"Irssi_GMT_Log_Text_Format", \&Irssi_GMT_Log_Text_Format,
+ 		"Irssi_ISO8601_Log_Text_Format", \&Irssi_ISO8601_Log_Text_Format,
 		"Yahoo_IM_Format", \&Yahoo_IM_Format,
 		"Plain_Text_Format", \&Plain_Text_Format,
 		"Normalized_Format", \&Normalized_Format,
@@ -674,7 +714,9 @@ my @allNames = map { ${$_} } @{$allNameRefsRef};
 
 push(@allNames,"scribe");
 my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
-my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
+# my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
+# my $speakerPattern = join("|", @allSpeakerPatterns);
+my $speakerPattern = $namePattern; # Not sure what else to use here
 # warn "speakerPattern: $speakerPattern\n";
 
 # Get the list of people present.
@@ -892,18 +934,25 @@ foreach my $n (keys %embeddedTemplates)
 
 ######################### HTML ##########################
 # From now on, $all is HTML!!!!!
+
+
 ##############  Escape < > as &lt; &gt; ################
-# Escape < and >:
-$all =~ s/\&/\&amp\;/g;
-$all =~ s/\</\&lt\;/g;
-$all =~ s/\>/\&gt\;/g;
-# $all =~ s/\"/\&quot\;/g;
+my $oldProcessingModel = 1;
+if ($oldProcessingModel)	{ 
+	# Escape < and >:
+	$all = &EscapeHTML($all);
+	}
+else	{ # This works (tested 3/24/05):
+	# $all = &MapProcessLines($all, \&TempProcessEscapeHTML);
+	}
+# print $all; exit 0;
 
 # Insert named anchors for ACTION item locations:
 my @allLines;
-if (1)
-	{
+if ($oldProcessingModel) # 
+	{ # old processing model
 	@allLines = split(/\n/, $all);
+	my %actionIDs = ();
 	for (my $i=0; $i<@allLines; $i++)
 		{
 		# Looking for:
@@ -911,74 +960,88 @@ if (1)
 		# die if !defined($i);
 		# die if !defined(@allLines);
 		# die if !defined($allLines[$i]);
+		# warn "SEEN: $allLines[$i]\n" if $allLines[$i] =~ m/NamedAnchorHere/;
 		next if $allLines[$i] !~ m/\A\&lt\;[^ \t\<\>\&]+\&gt\;\s*NamedAnchorHere\:\s*(\S+)\s*\Z/i;
+		# warn "FOUND: $allLines[$i]\n";
 		# Found one.  Convert it to a real named anchor.
 		my $actionID = $1;
 		# die if !defined($actionID);
+		&Warn("WARNING: Duplicate named anchor: $actionID\n") if (exists($actionIDs{$actionID}));
+		$actionIDs{$actionID} = $actionID;
 		$allLines[$i] = '<a name="' . $actionID . '"></a>';
 		}
 	$all = "\n" . join("\n", @allLines) . "\n";
 	}
-
-# Highlight in-line ACTION items:
-@allLines = split(/\n/, $all);
-for (my $i=0; $i<@allLines; $i++)
-	{
-	next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
-	$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/i;
+else	{ # new processing model
+	# Working:
+	# 	&ProcessNamedAnchors
+	#	&ProcessActions (maybe)
+	#
+	##### Otherwise:
+	$all = &MapProcessLines($all, 
+		\&ProcessNamedAnchors, 
+		\&ProcessActions,
+		\&ProcessTopic,
+		\&ProcessScribeStatement,
+		\&ProcessIRCStatement,
+		\&TempProcessEscapeHTML);
 	}
-$all = "\n" . join("\n", @allLines) . "\n";
 
-# Highlight in-line ACTION status:
-foreach my $status (@actionStatuses)
-	{
-	my $ucStatus = $status;
-	$ucStatus =~ tr/a-z/A-Z/; # Make upper case but not preferred spelling
-	$all =~ s/\[\s*$status\s*\]/<strong>[$ucStatus]<\/strong>/ig;
+# die "AGENDA: $oldGlobalAgenda\n";
+
+### *** stopped here ***.  Incrementally converting these sections
+### to new processing model.
+
+if ($oldProcessingModel)
+	{ # Old processing model
+	# Highlight in-line ACTION items:
+	@allLines = split(/\n/, $all);
+	for (my $i=0; $i<@allLines; $i++)
+		{
+		next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
+		$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/i;
+		}
+	$all = "\n" . join("\n", @allLines) . "\n";
+	# Highlight in-line ACTION status:
+	foreach my $status (@actionStatuses)
+		{
+		my $ucStatus = $status;
+		$ucStatus =~ tr/a-z/A-Z/; # Make upper case but not preferred spelling
+		$all =~ s/\[\s*$status\s*\]/<strong>[$ucStatus]<\/strong>/ig;
+		}
+	}
+else	{ # new processing model
+	##### Otherwise:
+	# $all = &MapProcessLines($all, \&ProcessActions);
 	}
 
 # Format topic titles (i.e., collect agenda):
-my %agenda = ();
-my $itemNum = "item01";
-while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTML id\=\"$itemNum\"\>$2$postTopicHTML\n/i)
-	{
-	$agenda{$itemNum} = $2;
-	$itemNum++;
-	}
-if (!scalar(keys %agenda)) 	# No "Topic:"s found?
-	{
-	&Warn("\nWARNING: No \"Topic: ...\" lines found!  \nResulting HTML may have an empty (invalid) <ol>...</ol>.\n\nExplanation: \"Topic: ...\" lines are used to indicate the start of \nnew discussion topics or agenda items, such as:\n<dbooth> Topic: Review of Amy's report\n\n");
-	}
-my $agenda = "";
-foreach my $item (sort keys %agenda)
-	{
-	$agenda .= '<li><a href="#' . $item . '">' . $agenda{$item} . "</a></li>\n";
-	}
-
-#### Experimenting with a different line processing model:
-if (0)
-	{
-	my $done = "";
-	while ($all =~ s/\A(.*)(\n?)//)		# Grab next line
+if (1)
+	{ # Old processing model
+	my %agenda = ();
+	my $itemNum = "item01";
+	while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTML id\=\"$itemNum\"\>$2$postTopicHTML\n/i)
 		{
-		my $line = $1;
-		# Strip off writer (if any):
-		my $writer = "";
-		$writer = $1 if $line =~ s/\A\<($namePattern)\>\s?//;
-		# Ignore empty lines:
-		next if $line =~ m/\A\s*\Z/;
-		my @lineProcessorRefs = ();
-		foreach my $lineProcessorRef (@lineProcessorRefs)
-			{
-			my $deltaDone = "";
-			($deltaDone, $line, $all) = &$lineProcessorRef($writer, $line, $all);
-			defined($all) || die;
-			$done .= $deltaDone;
-			last if $line eq "";
-			}
+		$agenda{$itemNum} = $2;
+		$itemNum++;
 		}
-	# Then put $done into $template, etc.
-	# **** stopped here***
+	if (!scalar(keys %agenda)) 	# No "Topic:"s found?
+		{
+		&Warn("\nWARNING: No \"Topic: ...\" lines found!  \nResulting HTML may have an empty (invalid) <ol>...</ol>.\n\nExplanation: \"Topic: ...\" lines are used to indicate the start of \nnew discussion topics or agenda items, such as:\n<dbooth> Topic: Review of Amy's report\n\n");
+		}
+	foreach my $item (sort keys %agenda)
+		{
+		$oldGlobalAgenda .= '<li><a href="#' . $item . '">' . $agenda{$item} . "</a></li>\n";
+		}
+	}
+else
+	{ # new processing model
+	##### Otherwise:
+	$all = &MapProcessLines($all, \&ProcessTopic);
+	if (!@globalProcessTopic_agenda) 	# No "Topic:"s found?
+		{
+		&Warn("\nWARNING: No \"Topic: ...\" lines found!  \nResulting HTML may have an empty (invalid) <ol>...</ol>.\n\nExplanation: \"Topic: ...\" lines are used to indicate the start of \nnew discussion topics or agenda items, such as:\n<dbooth> Topic: Review of Amy's report\n\n");
+		}
 	}
 
 #### Another experiment
@@ -992,27 +1055,13 @@ if (0)
 		}
 	}
 
-
-# my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair 
-# 	Present Regrets Agenda 
-# 	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION);
-sub CommandMeeting
-{
-@_ == 3 || die;
-my ($writer, $line, $all) = @_;
-($line =~ m/\A\s{0,4}Meeting\s{0,2}:\s*(.*)\s*\Z/i)
-	|| return("", $line, $all);
-my $t = &Trim($1);
-if ($t eq "") { &Warn("WARNING: Empty \"Meeting: title\" command with empty title\n"); }
-# else { $globalMeetingTitle = $t; }
-else { $title = $t; }
-return("", "", $all);
-}
-
 ### @@@ Fix IRC/Phone distinctionxc
 # Break into paragraphs:
-# my $phoneParagraphHTMLTemplate = "$prePhoneParagraphHTML\n\$paragraph\n$postPhoneParagraphHTML";
-$all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\n$1\n$postPhoneParagraphHTML\n/g;
+# my $scribeParagraphHTMLTemplate = "$prePhoneParagraphHTML\n\$speakerHTML\$statementHTML\n$postPhoneParagraphHTML\n\n";
+if ($oldProcessingModel)
+	{
+	$all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\n$1\n$postPhoneParagraphHTML\n/g;
+	}
 if (0)
 	{
 	my $body = "";
@@ -1040,9 +1089,15 @@ if (0)
 		}
 	}
 
-# $all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\nFOO $1 FUM\n$postPhoneParagraphHTML\n/g;
-$all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\n$1\n$postIRCParagraphHTML\n/g;
-# $all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\nBAR $1 BAH\n$postIRCParagraphHTML\n/g;
+if ($oldProcessingModel)
+	{
+	# $all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\nFOO $1 FUM\n$postPhoneParagraphHTML\n/g;
+	$all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\n$1\n$postIRCParagraphHTML\n/g;
+	# $all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\nBAR $1 BAH\n$postIRCParagraphHTML\n/g;
+	}
+
+# Highlight resolutions
+$all =~ s/\n\s*(RESOLUTION|RESOLVED): (.*)/\n${preResolutionHTML}RESOLUTION: $2$postResolutionHTML/g;
 
 # Bold or <strong> speaker name:
 # Change "<speaker> ..." to "<b><speaker><b> ..."
@@ -1052,23 +1107,42 @@ my $preIRCUniq = "PreIrCSpEaKerHTmL";
 my $postIRCUniq = "PostIrCSpEaKerHTmL";
 $all =~ s/\n(\&lt\;($namePattern)\&gt\;)\s*/\n\&lt\;$preIRCUniq$2$postIRCUniq\&gt\; /ig;
 # Change "speaker: ..." to "<b>speaker:<b> ..."
-$all =~ s/\n($speakerPattern)\:\s*/\n$preUniq$1\:$postUniq /ig;
+# $all =~ s/\n($speakerPattern)\:\s*/\n$preUniq$1\:$postUniq /ig;
+if (1)
+	{
+	my $done = "";
+	while ($all =~ m/\A((.|\n)*?)\n($speakerPattern)\:\s*/i)
+		{
+		my $pre = $1;
+		my $post = $';
+		my $speaker = $3;
+		my $match = $&;
+		my $new = "\n$preUniq$speaker\:$postUniq ";
+		if (exists($stopList{&LC($speaker)}) 
+		  && &LC($speaker) ne "scribe")
+			{ $done .= $match; } # No change
+		else	{ $done .= $pre . $new; }
+		$all = $post;
+		}
+	$done .= $all;
+	$all = $done;
+	}
 $all =~ s/$preUniq/$preSpeakerHTML/g;
 $all =~ s/$postUniq/$postSpeakerHTML/g;
 $all =~ s/$preIRCUniq/$preWriterHTML/g;
 $all =~ s/$postIRCUniq/$postWriterHTML/g;
 
-# Highlight resolutions
-$all =~ s/\n\s*(RESOLUTION|RESOLVED): (.*)/\n${preResolutionHTML}RESOLUTION: $2$postResolutionHTML/g;
-
-# Add <br /> before continuation lines:
-$all =~ s/\n(\ *\.)/ <br>\n$1/g;
-# Collapse multiple <br />s:
-$all =~ s/<br>((\s*<br>)+)/<br \/>/ig;
-# Standardize continuation lines:
-# $all =~ s/\n\s*\.+/\n\.\.\./g;
-# Make links:
-$all = &MakeLinks($all);
+if ($oldProcessingModel)
+	{
+	# Add <br /> before continuation lines:
+	$all =~ s/\n(\ *\.)/ <br>\n$1/g;
+	# Collapse multiple <br />s:
+	$all =~ s/<br>((\s*<br>)+)/<br \/>/ig;
+	# Standardize continuation lines:
+	# $all =~ s/\n\s*\.+/\n\.\.\./g;
+	# Make links:
+	$all = &MakeLinks($all);
+	}
 
 # Put into template:
 # $all =~ s/\A\s*<\/p>//;
@@ -1086,7 +1160,7 @@ $result =~ s/SV_PREVIOUS_MEETING_URL/$previousURL/g;
 $result =~ s/SV_MEETING_CHAIR/$chair/g;
 my $scribeNames = join(", ", @scribeNames);
 $result =~ s/SV_MEETING_SCRIBE/$scribeNames/g;
-$result =~ s/SV_MEETING_AGENDA/$agenda/g;
+$result =~ s/SV_MEETING_AGENDA/$oldGlobalAgenda/g;
 $result =~ s/SV_TEAM_PAGE_LOCATION/SV_TEAM_PAGE_LOCATION/g;
 
 $result =~ s/SV_REGRETS/$regrets/g;
@@ -1141,6 +1215,437 @@ print $result;
 
 exit 0;
 ################### END OF MAIN ######################
+
+###########################################################
+################# TempProcessEscapeHTML ####################
+###########################################################
+# TODO: Get rid of this function after converting to new processing model.
+sub TempProcessEscapeHTML
+{
+@_ >= 4 || die;
+my ($writer, $line, $all, $wholeLine) = @_;
+# ($deltaDone, $line, $all) = &$lineProcessorRef($writer, $line, $all);
+my $deltaDone = "";
+$deltaDone .= &EscapeHTML($wholeLine) . "\n";
+return ($deltaDone, "", $all);
+}
+
+###########################################################
+################# ProcessNamedAnchors ####################
+###########################################################
+sub ProcessNamedAnchors
+{
+@_ >= 3 || die;
+my ($writer, $line, $all) = @_;
+# ($deltaDone, $line, $all) = &$lineProcessorRef($writer, $line, $all);
+# GLOBAL my %globalProcessNamedAnchors_anchorIDs = ();
+# Looking for:
+# 	<inserted> NamedAnchorHere: action01
+# if ($allLines[$i] !~ m/\A\&lt\;[^ \t\<\>\&]+\&gt\;\s*NamedAnchorHere\:\s*(\S+)\s*\Z/i)
+# if ($line !~ m/\A($globalLTPattern$namePattern$globalGTPattern)?\s*NamedAnchorHere\:\s*(\S+)\s*\Z/i)
+if ($line !~ m/\A(\<$namePattern\>)?\s*NamedAnchorHere\:\s*(\S+)\s*\Z/i)
+	{
+	return ("", $line, $all);
+	}
+# Found one.  Convert it to a real named anchor.
+my $anchorID = $2;
+# die if !defined($anchorID);
+&Warn("WARNING: Duplicate named anchor: $anchorID\n") if (exists($globalProcessNamedAnchors_anchorIDs{$anchorID}));
+$globalProcessNamedAnchors_anchorIDs{$anchorID} = $anchorID;
+my $deltaDone = "<a name=\"$anchorID\"></a>\n";
+# warn "ProcessNamedAnchors:\n  line: $line\n  deltaDone: $deltaDone\n";
+return ($deltaDone, "", $all);
+}
+
+###############################################################
+#################### ProcessScribeCommand #############################
+###############################################################
+# Format topic titles (i.e., collect agenda):
+sub UNUSED_ProcessScribeCommand
+{
+@_ >= 4 || die;
+my ($writer, $line, $all, $wholeLine) = @_;
+if ($line !~ m/\A\s*Scribe\s*\:(.*)\Z/i)
+	{
+	return ("", $line, $all);
+	}
+my $who = &Trim($1);
+# warn "SCRIBE: $who\n";
+if ($who eq "")
+	{
+	&Warn("WARNING: Empty \"Scribe:\" command ignored.\n");
+	return("", "", $all);
+	}
+# Check for scribe statement rather than the "Scribe:" command.
+# Scribe: something that the scribe said
+if ($who =~ m/\A\w+\s+\w+\s+\w+/) 	# 3 or more words
+	{
+	&Warn("WARNING: \"Scribe:\" command found with multiple words: $wholeLine\nEXPLANATION: The \"Scribe:\" command is used to indicate the name of the scribe.  Statements by the scribe should be minuted using the person's name, such as \"Alice: I favor option 2\".\n");
+	# *** stopped here ***
+	}
+my $deltaDone = &FormatSpeakerParagraph($line);
+return($deltaDone, "", $all);
+}
+
+###############################################################
+#################### ProcessTopic #############################
+###############################################################
+# Format topic titles (i.e., collect agenda):
+sub ProcessTopic
+{
+@_ >= 3 || die;
+my ($writer, $line, $all) = @_;
+# ($deltaDone, $line, $all) = &$lineProcessorRef($writer, $line, $all);
+my $deltaDone = "";
+# GLOBAL my @globalProcessTopic_agenda = ();
+# GLOBAL my @globalProcessTopic_agendaIDs = ();
+# GLOBAL my $globalProcessTopic_agenda = "";
+# while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTML id\=\"$ProcessTopic_itemNum\"\>$2$postTopicHTML\n/i)
+# warn "LINE: $line\n";
+# if ($line !~ m/\A(\<$namePattern\>)?\s*Topic\s*\:(.*)\Z/i)
+if ($line !~ m/\A($globalLTPattern$namePattern$globalGTPattern)?\s*Topic\s*\:(.*)\Z/i)
+	{
+	return ("", $line, $all);
+	}
+my $topic = &Trim($2);
+# warn "TOPIC: $topic\n";
+if ($topic eq "")
+	{
+	&Warn("WARNING: Empty \"Topic:\" ignored.\n");
+	return("", "", $all);
+	}
+my $n = scalar(@globalProcessTopic_agenda);
+my $anchor = sprintf("item%02d", $n+1);
+push(@globalProcessTopic_agenda, $topic);
+push(@globalProcessTopic_agendaIDs, $anchor);
+my $tocHTMLTemplate = "<li><a href=\"#\$anchor\">\$topic</a></li>\n";
+# $oldGlobalAgenda .= '<li><a href="#' . $anchor . '">' . &EscapeHTML($topic) . "</a></li>\n";
+my $tocItem = $tocHTMLTemplate;
+my $escapedTopic = &EscapeHTML($topic); # Only escape special chars
+$tocItem =~ s/\$anchor\b/$anchor/g;
+$tocItem =~ s/\$topic\b/$escapedTopic/g;
+$tocItem ne $tocHTMLTemplate || &Die("ERROR: Bad \$tocHTMLTemplate!\n");
+$oldGlobalAgenda .= $tocItem;
+my $topicHTMLTemplate = "<h3 id=\"\$anchor\">\$topic</h3>\n";
+my $h = $topicHTMLTemplate;
+my $hTopic = &ToHTML($topic); # make links of URLs
+$h =~ s/\$anchor\b/$anchor/g;
+$h =~ s/\$topic\b/$hTopic/g;
+$h ne $topicHTMLTemplate || &Die("ERROR: Bad \$topicHTMLTemplate!\n");
+$deltaDone = $h;
+return($deltaDone, "", $all);
+}
+
+####################################################################
+#################### ProcessActions ############################
+####################################################################
+sub ProcessActions
+{
+@_ >= 3 || die;
+my ($writer, $line, $all) = @_;
+# ($deltaDone, $line, $all) = &$lineProcessorRef($writer, $line, $all);
+my $deltaDone = "";
+if ($line !~ m/\A\s*ACTION\s*\:(.*)\Z/i)
+	{
+	return ("", $line, $all);
+	}
+my $action = &Trim($1);
+my $ah = "<strong>ACTION:</strong> " . &ToHTML($action);
+# warn "ACTION: $action\n";
+# Highlight in-line ACTION status:
+foreach my $status (@actionStatuses)
+	{
+	my $ucStatus = $status;
+	$ucStatus =~ tr/a-z/A-Z/; # Make upper case but not preferred spelling
+	##### Crude and may not always work:
+	$ah =~ s/\[\s*$status\s*\]/<strong>[$ucStatus]<\/strong>/ig;
+	}
+# warn "FORMATTEDACTION: $ah";
+$deltaDone = &FormatParagraph($writer, $ah);
+return($deltaDone, "", $all);
+}
+# ******** stopped here ***********
+
+###################################################################
+####################### NextLine ##################################
+###################################################################
+# Grab next line from $all, skipping empty lines or statements.
+# ($writer, $line, $nextAll, $wholeLine) = &NextLine($all);
+sub NextLine
+{
+@_ == 1 || die;
+my ($all) = @_;
+defined($all) || die;
+while (1)
+	{
+	return("", "", "", "") if $all eq "";
+	my $wholeLine = "";
+	$wholeLine = $1 if $all =~ s/\A(.*)(\n?)//;
+	my $line = $wholeLine;
+	my $writer = "";
+	$writer = $1 if $line =~ s/\A\s?\s?\<($namePattern)\>[\ \t]?//;
+	return ($writer, $line, $all, $wholeLine) if &Trim($line) ne "";
+	}
+}
+
+###################################################################
+####################### MapProcessLines ###########################
+###################################################################
+#### Experimenting with a different line processing model.
+# For each line, try each function until one eats the line.
+sub MapProcessLines
+{
+@_ > 1 || die;
+my ($all, @functions) = @_;
+my $done = "";
+while ($all)		# Grab next line
+	{
+	my ($writer, $line, $nextAll, $wholeLine) = &NextLine($all);
+	last if $line eq "";
+	$all = $nextAll;
+	# warn "LINE: $line\n";
+	foreach my $f (@functions)
+		{
+		my $deltaDone = "";
+		($deltaDone, $line, $all) = &$f($writer, $line, $all, $wholeLine);
+		defined($all) || die;
+		$done .= $deltaDone;
+		last if $line eq "";
+		}
+	# Default if no function ate the line:
+	if ($line ne "")
+		{
+		$done .= "$wholeLine\n";	
+		# TODO: Apply &EscapeHTML and add <br> at the end of the line.
+		# $done .= &EscapeHTML($wholeLine) . " <br>\n";
+		}
+	}
+# print $done; exit 0;
+#### TODO: Do we need the extra \n's any more?
+# return("$done");
+return("\n$done\n");
+}
+
+##############################################################
+####################### ProcessIRCStatement ##############
+##############################################################
+# This must be called last!  It is the default.
+##### Convert:
+# <Roy> Edinburgh +1
+##### Into:
+# <p class='irc'>
+# &lt;<cite>Roy</cite>&gt; Edinburgh +1
+# </p>
+sub ProcessIRCStatement
+{
+@_ >= 3 || die;
+my ($writer, $line, $all) = @_;
+return("", $line, $all) if (!$writer);
+#### TODO: Might want to join continuation lines in the future.
+my $deltaDone = &FormatIRCParagraph($writer, &ToHTML($line));
+return($deltaDone, "", $all);
+}
+
+##############################################################
+####################### ProcessScribeStatement ##############
+##############################################################
+##### Convert:
+# <DanC> VQ: recall we agreed to meet near Nice just after the W3C AC meeting...
+# <DanC> ... and HT has offered to host...
+# <DanC> ... some preferences each way...
+##### Into:
+# <p class='phone'>
+# <cite>VQ:</cite> recall we agreed to meet near Nice just after the W3C AC meeting... <br>
+# ... and HT has offered to host... <br>
+# ... some preferences each way...
+# </p>
+sub ProcessScribeStatement
+{
+@_ >= 3 || die;
+my ($writer, $line, $all) = @_;
+return("", $line, $all) if $writer && &LC($writer) ne "scribe";
+my $speakerHTML = "";
+# VQ: recall we agreed to meet near Nice just after the W3C AC meeting...
+if ($line =~ m/\A\s?\s?($speakerPattern)\s*\:\s*(.*?)\s*\Z/
+  && !exists($stopList{&LC($1)}))
+	{
+	my $speaker = $1;
+	# This will only work if $speakerPattern has no parens!!
+	$line = $2; 
+	my $speakerHTMLTemplate = "<cite>\$speaker\:</cite> ";
+	$speakerHTML = $speakerHTMLTemplate;
+	my $sh = &EscapeHTML($speaker);
+	$speakerHTML =~ s/\$speaker/$sh/g;
+	$speakerHTML ne $speakerHTMLTemplate || &Die("ERROR: Bad \$speakerHTMLTemplate!\n");
+	# warn "SPEAKERHTML: $speakerHTML\n";
+	}
+# TODO: Delete the following "if" statement after converting to new proc model:
+if ($line =~ m/\A\s?\s?($speakerPattern)\s*\:\s*(.*?)\s*\Z/
+  && &LC($1) eq "scribe" 
+  && m/\A\s?\s?Scribe\:\s*\w+\s+\w+\s+\w+/i)
+	{
+	my $speaker = $1;
+	# This will only work if $speakerPattern has no parens!!
+	$line = $2; 
+	my $speakerHTMLTemplate = "<cite>\$speaker\:</cite> ";
+	$speakerHTML = $speakerHTMLTemplate;
+	my $sh = &EscapeHTML($speaker);
+	$speakerHTML =~ s/\$speaker/$sh/g;
+	$speakerHTML ne $speakerHTMLTemplate || &Die("ERROR: Bad \$speakerHTMLTemplate!\n");
+	# warn "SPEAKERHTML: $speakerHTML\n";
+	}
+my $statementHTML = $speakerHTML . &ToHTML($line);
+# Join continuation lines into this paragraph:
+while (1)
+	{
+	my ($nextWriter, $nextLine, $nextAll) = &NextLine($all);
+	# warn "NEXTWRITER: $nextWriter NEXTLINE: $nextLine\n";
+	last if !$nextLine;
+	last if $nextWriter && &LC($nextWriter) ne "scribe";
+	last if $nextLine !~ m/\A\s?\s?\.\./;
+	# ... Continuation
+	$statementHTML .= " <br>\n" . &ToHTML($nextLine);
+	$all = $nextAll;
+	}
+my $deltaDone = &FormatScribeParagraph($statementHTML);
+# TODO: Delete the following special case after converting to new proc model:
+$deltaDone = &FormatIRCParagraph($writer, &ToHTML($line)) 
+	if $writer && $line =~ m/\A\s?\s?Scribe\:/i && $line !~ m/\A\s?\s?scribe\:\s*\w+\s+\w+\s+\s+/i;
+# TODO: Delete the following special case after converting to new proc model:
+$deltaDone = &FormatIRCParagraph($writer, &ToHTML($line)) 
+	if $writer && $line =~ m/\A\s?\s?ScribeNick\:/i && $line !~ m/\A\s?\s?scribe\:\s*\w+\s+\w+\s+\s+/i;
+# TODO: Delete the following special case after converting to new proc model:
+if ($writer && $line =~ m/\A\W*$actionStatusesPattern\b/i)
+	{ $deltaDone = &FormatIRCParagraph($writer, &ToHTML($line)); }
+# warn "DELTADONE: $deltaDone\n";
+return($deltaDone, "", $all);
+}
+
+################################################################
+######################## CommandMeeting ########################
+################################################################
+# ***UNUSED***
+# my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair 
+# 	Present Regrets Agenda 
+# 	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION);
+sub CommandMeeting
+{
+@_ == 3 || die;
+my ($writer, $line, $all) = @_;
+($line =~ m/\A\s{0,4}Meeting\s{0,2}:\s*(.*)\s*\Z/i)
+	|| return("", $line, $all);
+my $t = &Trim($1);
+if ($t eq "") { &Warn("WARNING: Empty \"Meeting: title\" command with empty title\n"); }
+# else { $globalMeetingTitle = $t; }
+else { $title = $t; }
+return("", "", $all);
+}
+
+####################################################################
+###################### FormatSpeaker ################################
+####################################################################
+sub OLD_FormatSpeaker
+{
+@_ == 1 || die;
+my ($speaker) = @_;
+return("") if $speaker eq "";
+my $speakerHTMLTemplate = "<cite>\$speaker</cite>\: ";
+my $speakerHTML = $speakerHTMLTemplate;
+my $sh = &EscapeHTML($speaker); # Just to be safe
+$speakerHTML =~ s/\$speaker\b/$sh/g;
+$speakerHTML ne $speakerHTMLTemplate || die;
+return($speakerHTML);
+}
+
+####################################################################
+###################### FormatWriter ################################
+####################################################################
+sub OLD_FormatWriter
+{
+@_ == 1 || die;
+my ($writer) = @_;
+return("") if $writer eq "";
+my $writerHTMLTemplate = "&lt;<cite>\$writer</cite>&gt; ";
+my $writerHTML = $writerHTMLTemplate;
+my $sh = &EscapeHTML($writer); # Just to be safe
+$writerHTML =~ s/\$writer\b/$sh/g;
+$writerHTML ne $writerHTMLTemplate || die;
+return($writerHTML);
+}
+
+####################################################################
+###################### FormatParagraph ################################
+####################################################################
+# Format either a scribe or non-scribe (IRC) statement.
+sub FormatParagraph
+{
+@_ == 2 || die;
+my ($writer, $statementHTML) = @_;
+if (($writer && &LC($writer) ne "scribe")
+# TODO: Delete this special case after converting to new proc model:
+  || ($writer && $statementHTML =~ m/\bACTION\b/))
+	{ return(&FormatIRCParagraph($writer, $statementHTML)); }
+else	{ return(&FormatScribeParagraph($statementHTML)); }
+}
+
+####################################################################
+###################### FormatIRCParagraph ################################
+####################################################################
+# IRC statement -- normally a non-scribe statement.
+sub FormatIRCParagraph
+{
+@_ == 2 || die;
+my ($writer, $statementHTML) = @_;
+my $ircParagraphHTMLTemplate = "<p class='irc'>\n&lt;<cite>\$writer</cite>&gt; \$statementHTML\n</p>\n\n";
+my $ircParagraphHTML = $ircParagraphHTMLTemplate;
+my $wh = &EscapeHTML($writer); # Be safe
+$ircParagraphHTML =~ s/\$writer\b/$wh/g;
+$ircParagraphHTML =~ s/\$statementHTML\b/$statementHTML/g;
+$ircParagraphHTML ne $ircParagraphHTMLTemplate || &Die("ERROR: Bad \$ircParagraphHTMLTemplate!\n");
+return($ircParagraphHTML);
+}
+
+####################################################################
+###################### FormatScribeParagraph ################################
+####################################################################
+# Scribe statement.
+sub FormatScribeParagraph
+{
+@_ == 1 || die;
+my ($statementHTML) = @_;
+my $scribeParagraphHTMLTemplate = "$prePhoneParagraphHTML\n\$statementHTML\n$postPhoneParagraphHTML\n\n";
+my $scribeParagraphHTML = $scribeParagraphHTMLTemplate;
+$scribeParagraphHTML =~ s/\$statementHTML\b/$statementHTML/g;
+$scribeParagraphHTML ne $scribeParagraphHTMLTemplate || &Die("ERROR: Bad \$scribeParagraphHTMLTemplate!\n");
+return($scribeParagraphHTML);
+}
+
+################################################################
+########################## ToHTML ##############################
+################################################################
+# Convert text to HTML, escaping special chars and making anchors
+# of URLs as needed.
+sub ToHTML
+{
+@_ == 1 || die;
+my ($t) = @_;
+my $done = "";	# Resulting HTML
+# Hmm, should Ralph URL also be processed here?  No, better to process that
+# as a line command.
+# Process URLs:
+while ($t =~ m/\A((.|\n)*?)($urlPattern)/)
+	{
+	my $pre = $1;
+	my $url = $3;
+	my $post = $';
+	my $h = &EscapeHTML($pre);
+	$h .= "<a href=\"$url\">" . &EscapeHTML($url) . "</a>";
+	$done .= $h;
+	$t = $post;
+	}
+$done .= &EscapeHTML($t); # Remainder
+return($done);
+}
 
 ###############################################################
 ##################### ProcessEdits ####################
@@ -1838,6 +2343,18 @@ for (my $i=0; $i<@lines; $i++)
 			my $url = $3;
 			# $urlPattern has 3 parens:
 			my $line = $7; # To end of line
+			my $post = "\n" . $';
+			if (1)	
+				{
+				#### TODO: Delete after conversion to new processing model
+				if ($pre =~ m/\<a href\=\"($urlPattern)\Z/
+				  && $line =~ m/\A\"\>($urlPattern)\<\/\a\>/)
+					{
+					# Ignore URL that is already a link
+					$done .= $pre . $&;
+					$allLine = $' . $post;
+					}
+				}
 			die if !defined($line);
 			if ($debug || 1)
 				{
@@ -1846,7 +2363,6 @@ for (my $i=0; $i<@lines; $i++)
 				$line = "" if !defined($line);
 				warn "pre: $t url:$url line:$line|\n";
 				}
-			my $post = "\n" . $';
 			my $newpre = $pre;
 			# Any other URL
 			my $link = "<a href=\"$url\">$url</a>";
@@ -2729,10 +3245,6 @@ for (my $i=0; $i<@allLines; $i++)
 	# warn "$allLines[$i]\n" if $allLines[$i] =~ m/Liam/; # debug
 	if ($allLines[$i] =~ m/\A\<scribe\>(\s?\s?)($speakerPattern)\s*\:/i)
 		{
-		# The $speakerPattern in the pattern match above is
-		# constructed from all of the known speaker names, so 
-		# it will NOT match "Topic" or other keywords.
-		# But to be safe, let's check it against the %stopList anyway.
 		my $cs = $2;
 		my $lccs = &LC($cs);
 		$currentSpeaker = $cs if !exists($stopList{$lccs});
@@ -3211,7 +3723,69 @@ return($score, $all);
 }
 
 ##################################################################
-########################## Irssi_ISO8601_Log_Text_Format #########################
+################## Irssi_GMT_Log_Text_Format #####################
+##################################################################
+# Example:
+# 2005-03-28T15:09:45Z <ericP> Sandro: 2/3 through 2 week scramble
+# 2005-03-28T15:11:33Z <ericP> ... program goes out on friday
+# 2005-03-28T15:12:17Z <ericP> Ralph: BPDWG reviewing several docs.
+# 2005-03-28T15:12:33Z <ericP> ... RDF topic map approved for 1st pub WD
+#
+# (This function is a modified version of Irssi_ISO8601_Log_Text_Format. )
+#
+sub Irssi_GMT_Log_Text_Format
+{
+die if @_ != 1;
+my ($all) = @_;
+# Join continued lines:
+$all =~ s/\n\ \ //g;
+# Count the number of recognized lines
+my @lines = split(/\n/, $all);
+my $nLines = scalar(@lines);
+my $n = 0; # Number of lines of recognized format.
+# my $namePattern = '([\\w\\-]([\\w\\d\\-\\.]*))';
+# 2005-03-28T15:09:45Z 
+my $datePattern = '(\d\d\d\d\-(\ |\d)\d\-(\ |\d)\d)';	# 3 parens
+my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';	# 4 parens
+my $hourOffsetPattern = 'Z';				# 0 parens
+# Total of 7 parens:
+my $timestampPattern = $datePattern . "T" . $timePattern . $hourOffsetPattern;
+# warn "timestampPattern: $timestampPattern namePattern: $namePattern\n";
+my @linesOut = ();
+while (@lines)
+	{
+	my $line = shift @lines;
+	if (0) {}
+	# Keep normal lines:
+	# 2003-12-18T15:27:36Z <hugo> Hello.
+	elsif ($line =~ s/\A$timestampPattern\s+(\<$namePattern\>)/$8/i)
+		{ $n++; push(@linesOut, $line); }
+	# Also keep comment lines.  They'll be removed later.
+	# 2003-12-18T16:56:06Z  * RRSAgent records action 4
+	elsif ($line =~ s/\A$timestampPattern\s+(\*)/$8/i)
+		{ $n++; push(@linesOut, $line); }
+	# Recognize, but discard:
+	# 2003-12-18T15:26:57Z !mcclure.w3.org hugo invited Zakim into channel #ws-arch.
+	elsif ($line =~ m/\A$timestampPattern\s+\!/i)
+		{ $n++; } 
+	# Recognize, but discard:
+	# 2003-12-18T15:27:30Z -!- dbooth [dbooth@18.29.0.30] has joined #ws-arch
+	elsif ($line =~ m/\A$timestampPattern\s+\-\!\-/i)
+		{ $n++; } 
+	else	{
+		# warn "UNRECOGNIZED LINE: $line\n";
+		push(@linesOut, $line); # Keep unrecognized line
+		}
+	# warn "LINE: $line\n";
+	}
+$all = "\n" . join("\n", @linesOut) . "\n";
+# warn " Irssi_GMT_Log_Text_Format n matches: $n\n";
+my $score = $n / $nLines;
+return($score, $all);
+}
+
+##################################################################
+################## Irssi_ISO8601_Log_Text_Format #####################
 ##################################################################
 # Example: http://lists.w3.org/Archives/Public/www-archive/2004Jan/att-0003/ExampleFormat-NormalizerHugoLogText.txt
 # See also http://wiki.irssi.org/cgi-bin/twiki/view/Irssi/WindowLogging
