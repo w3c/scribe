@@ -64,23 +64,29 @@ and </span><a style="font-weight: bold;"
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top; white-space: nowrap;"><code>/invite&nbsp;rrsagent</code>
+      <td style="vertical-align: top; white-space: nowrap;"><code
+ style="font-weight: bold;">/invite&nbsp;rrsagent</code> <code><span
+ style="font-style: italic;">#ws-arch</span></code></td>
+      <td style="vertical-align: top; font-style: italic;"><code>#ws-arch</code>
+should be your IRC channel<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top; white-space: nowrap;"><code
+ style="font-weight: bold;">/invite</code><span
+ style="font-weight: bold;"> </span><code style="font-weight: bold;">zakim</code>
       <code><span style="font-style: italic;">#ws-arch</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>#ws-arch</code>
 should be your IRC channel<br>
       </td>
     </tr>
     <tr>
-      <td style="vertical-align: top; white-space: nowrap;"><code>/invite</code>
-      <code>zakim</code> <code><span style="font-style: italic;">#ws-arch</span></code></td>
-      <td style="vertical-align: top; font-style: italic;"><code>#ws-arch</code>
-should be your IRC channel<br>
-      </td>
-    </tr>
-    <tr>
-      <td style="vertical-align: top; white-space: nowrap;"><code>zakim,</code>
-      <code>this</code> <code>will</code> <code>be</code> <code><span
- style="font-style: italic;">ws_arch</span></code></td>
+      <td style="vertical-align: top; white-space: nowrap;"><code
+ style="font-weight: bold;">zakim,</code><span
+ style="font-weight: bold;"> </span><code style="font-weight: bold;">this</code><span
+ style="font-weight: bold;"> </span><code style="font-weight: bold;">will</code><span
+ style="font-weight: bold;"> </span><code style="font-weight: bold;">be</code>
+      <code><span style="font-style: italic;">ws_arch</span></code></td>
       <td style="vertical-align: top; font-style: italic;"><code>ws_arch</code>
 should be your meeting <br>
 name as shown in the <a
@@ -271,8 +277,13 @@ how an issue or topic was resolved.</span><br>
 most recent occurrence of "Mary" to "Marie".&nbsp; The old string is
 currently treated as a literal string -- <span
  style="font-weight: bold;">not a
-regex</span>.</span><br>
-      </td>
+regex</span>.&nbsp; Alternate syntax: </span><code
+ style="font-weight: bold;">s<span style="font-family: mon;"><span
+ style="font-style: italic;">|</span></span></code><code><span
+ style="font-style: italic;">Mary</span></code><code
+ style="font-weight: bold;">|</code><code><span
+ style="font-style: italic;">Marie</span></code><code
+ style="font-weight: bold;">|</code> </td>
     </tr>
     <tr>
       <td style="vertical-align: top; white-space: nowrap;"><code
@@ -304,8 +315,14 @@ document).</span></td>
       <td style="vertical-align: top;"><span style="font-style: italic;">Insert
 a "Topic: Vote on Feature Y" line before the line containing the
 literal string "Time to vote" (<span style="font-weight: bold;">not a
-regex</span>).<br>
-      </span></td>
+regex</span>).&nbsp; Alternate syntax:<br>
+      </span><code style="font-weight: bold;">i<span
+ style="font-family: mon;"><span style="font-style: italic;">|</span></span></code><code><span
+ style="font-style: italic;">Time</span></code> <code><span
+ style="font-style: italic;">to vote</span></code><code
+ style="font-weight: bold;"><span style="font-family: mon;"><span
+ style="font-style: italic;">|</span></span></code><code><span
+ style="font-style: italic;">Topic: Vote on Feature Y</span></code></td>
     </tr>
   </tbody>
 </table>
@@ -543,39 +560,30 @@ be guessed.<br>
 <h3><a name="options_output_format"></a>Output Format Options</h3>
 These options control the output format.<br>
 <br>
--tidy<br>
+<span style="font-weight: bold;">-tidy</span><br>
 <div style="margin-left: 40px;">Pipe the output through "tidy
 -c".&nbsp; This only works if you have
 tidy already installed.&nbsp; At present, it also causes tidy's console
 output to be jumbled in with the console messages from scribe.perl,
 which makes it hard to read scribe.perl's warnings.<br>
 </div>
+<br>
+<span style="font-weight: bold;">-scribeOnly</span>
 <dl>
-  <dt> <br>
-  </dt>
-  <dt>-scribeOnly</dt>
   <dd>Only include what the scribe wrote. Discard IRC
 statements made by others.</dd>
-  <dt><br>
-  </dt>
-  <dt><br>
-  </dt>
 </dl>
--draft<br>
+<span style="font-weight: bold;">-draft</span><br>
 <div style="margin-left: 40px;">[DEFAULT] Include a "- DRAFT -" header
 in the formatted output, to remind you that the generated minutes still
 need manual editing.<br>
 </div>
 <br>
--final<br>
+<span style="font-weight: bold;">-final</span><br>
 <div style="margin-left: 40px;">Omit the "- DRAFT -" header
 in the formatted output.<br>
 </div>
 <dl>
-  <dt><br>
-  </dt>
-  <dt><br>
-  </dt>
 -embedDiagnostics
 </dl>
 <div style="margin-left: 40px;">Embed scribe.perl's diagnostic output
@@ -584,7 +592,7 @@ is run as part of an automated process that otherwise would not display
 the diagnostic output to the user.<br>
 </div>
 <br>
--noEmbedDiagnostics<br>
+<span style="font-weight: bold;">-noEmbedDiagnostics</span><br>
 <div style="margin-left: 40px;">[DEFAULT] Write diagnostic output to
 the console (stderr).&nbsp; However, in the case of a fatal error,
 diagnostic output will still be written to stdout (instead of generated
@@ -593,40 +601,42 @@ minutes), to avoid producing an empty and uninformative minutes file.<br>
 <dl>
   <li><br>
   </li>
-  <li><a name="trustRRSAgent_option"></a>-trustRRSAgent</li>
-  <li>Take the action items from what RRSAgent says when it is
+  <li><a name="trustRRSAgent_option"></a><span
+ style="font-weight: bold;">-trustRRSAgent</span></li>
+</dl>
+<div style="margin-left: 40px;">Take the action items from what
+RRSAgent says when it is
 dismissed ("<code>&lt;RRSAgent&gt;
 I see 9 open action items...</code>"), rather than from the original
 text that
 was written in IRC when the action was recorded ("<code>&lt;dbooth&gt;
 ACTION: ...</code>").&nbsp;&nbsp; This option has pros and cons: <span
- style="font-weight: bold;"><br>
-    <br>
-Pros:</span>
+ style="font-weight: bold;"></span><br>
+<span style="font-weight: bold;"> </span><br>
+<span style="font-weight: bold;">Pros:</span>
 (1) It enables scribe.perl to add "[recorded in http://...]" to action
 items.&nbsp; (2) Changes to action items that were made through
 RRSAgent commands ("ACTION 4 = whatever") are reflected in action items
-that are output. <span style="font-weight: bold;"><br>
-    <br>
-Cons:</span>
+that are output. <span style="font-weight: bold;"></span><br>
+<span style="font-weight: bold;"> </span><br>
+<span style="font-weight: bold;">Cons:</span>
 (1) Changes to action items that were made with "s/old/new/" commands
 have
 no effect, because RRSAgent doesn't process them.&nbsp; (2) Action
 items continuation lines (beginning with "...") are not
 recognized. (3) An action status that is on the line after the action
-item will not be recognized.</li>
-  <li><br>
-  </li>
-  <li>-noTrustRRSAgent</li>
-  <li>(DEFAULT) Turn off the -trustRRSAgent option.&nbsp; I.e.,&nbsp;
+item will not be recognized.</div>
+<dl>
+  <li style="font-weight: bold;">-noTrustRRSAgent</li>
+</dl>
+<div style="margin-left: 40px;">(DEFAULT) Turn off the -trustRRSAgent
+option.&nbsp; I.e.,&nbsp;
 get the
 action items from wherever they were initially written. This permits
 action items to be corrected using "s/old/new/" commands instead of
-RRSAgent commands.</li>
-  <li><br>
-  </li>
-  <li><br>
-  </li>
+RRSAgent commands.</div>
+<br>
+<dl>
 </dl>
 <h3><a name="options_template"></a>Template Options</h3>
 Scribe.perl uses templates for generating the formatted
@@ -634,23 +644,27 @@ output.&nbsp; There are a few built in, but you can specify your own if
 you wish.<br>
 <br>
 <dl>
-  <dt><a name="plainOption"></a>-plain<br>
+  <dt><a name="plainOption"></a><span style="font-weight: bold;">-plain</span><br>
   </dt>
-  <dd>Use the built-in plain (non-W3C) template. </dd>
-  <dt>-public</dt>
+  <dd>Use the built-in plain (non-W3C) template.</dd>
+  <dt><br>
+  </dt>
+  <dt style="font-weight: bold;">-public</dt>
   <dd>(DEFAULT) Use the built-in W3C template that is styled for public
-access. </dd>
-  <dt>-member</dt>
+access.</dd>
+  <dt><br>
+  </dt>
+  <dt style="font-weight: bold;">-member</dt>
   <dd>Use the built-in W3C template that is styled for W3C member-only
 access.<br>
     <br>
   </dd>
-  <dt>-team</dt>
+  <dt style="font-weight: bold;">-team</dt>
   <dd>Use the built-in W3C template that is styled for W3C team-only
 access.<br>
     <br>
   </dd>
-  <dt>-mit</dt>
+  <dt style="font-weight: bold;">-mit</dt>
   <dd>Use the built-in W3C template that is styled for W3C MIT site
 meetings.&nbsp;&nbsp; After scribe.perl generates your HTML, <span
  style="font-weight: bold;">you
@@ -660,13 +674,13 @@ reports</span>.&nbsp; Use the <a
 Minutes CGI Script</a> to generate them.</dd>
   <dt><br>
   </dt>
-  <dt><a name="templateOption"></a>-template <span
- style="font-style: italic;">templateFile.html</span></dt>
+  <dt><a name="templateOption"></a><span style="font-weight: bold;">-template</span>
+    <span style="font-style: italic;">templateFile.html</span></dt>
   <dd>Use <span style="font-style: italic;">templateFile.html</span>
 as the template for generating the minutes.<br>
     <br>
   </dd>
-  <dt>-sampleTemplate</dt>
+  <dt style="font-weight: bold;">-sampleTemplate</dt>
   <dd>Show me a sample template file.&nbsp; (This outputs the default
 template.)</dd>
   <dt><br>
@@ -674,31 +688,35 @@ template.)</dd>
 </dl>
 <h3><a name="options_scribe_identification"></a>Scribe Identification
 Options</h3>
+<span style="font-weight: bold;">-scribe</span> <span
+ style="font-style: italic;">Name</span>
 <dl>
-  <dt><br>
-  </dt>
-  <dt>-scribe <span style="font-style: italic;">Name</span></dt>
   <dd>Specify the name of the scribe, as it should appear in the
 generated minutes. If <span style="font-style: italic;">Name</span>
 appears in the input as an IRC nickname, it will also be taken as the
-scribe's nickname, as if specified by the -scribeNick option (below).</dd>
+scribe's nickname, as if specified by the -scribeNick option
+(below).&nbsp; This option may be used multiple times to indicate
+multiple scribes.<br>
+  </dd>
   <dt><br>
   </dt>
-  <dt><br>
-  </dt>
-  <dt>-scribeNick <span style="font-style: italic;">nickName</span></dt>
+  <dt><span style="font-weight: bold;">-scribeNick</span> <span
+ style="font-style: italic;">nickName</span></dt>
   <dd>Indicate the IRC nickname of the scribe, which is used to figure
-out which lines were written by the scribe.&nbsp;</dd>
+out which lines were written by the scribe.&nbsp; This option may be
+used multiple times to indicate multiple scribeNicks.</dd>
   <dt> <br>
-  </dt>
-  <dt><br>
   </dt>
 </dl>
 <h3><a name="options_misc"></a>Miscellaneous Options</h3>
--minutes <span style="font-style: italic;">http://example.org/2005/01-baking-club-minutes</span><br>
-<div style="margin-left: 40px;">Specify the final URL of the generated
-minutes.&nbsp; This allows each ACTION item to include a pointer to its
-original context, such as:<br>
+<span style="font-weight: bold;">-minutes</span> <span
+ style="font-style: italic;">http://example.org/2005/01-baking-club-minutes</span><br>
+<div style="margin-left: 40px;">Specify the URL where you will
+eventually publish the generated
+minutes. &nbsp; This does <span style="font-weight: bold;">not</span>
+cause the minutes to be published for you!&nbsp; Rather it allows each
+ACTION item to include a pointer to its
+original context in the minutes, such as:<br>
 <pre>ACTION: dbooth to bake 3 cakes [recorded in <a
  href="http://example.org/2005/01-baking-club-minutes#action01">http://example.org/2005/01-baking-club-minutes#action01</a>]<br></pre>
 This option is not usually needed if RRSAgent is used, because the
@@ -706,16 +724,15 @@ minutes URL will be inferred from lines such as:<br>
 <pre>&lt;dbooth&gt; rrsagent, draft minutes <br>&lt;RRSAgent&gt; I have made the request to generate http://www.w3.org/2005/01/07-swcg-minutes dbooth</pre>
 </div>
 <dl>
-  <dt>-sampleInput</dt>
+  <dt style="font-weight: bold;">-sampleInput</dt>
   <dd>Show me some sample input, so I can learn how to use this
 program.&nbsp; Input is ignored if this option is used.<br>
     <br>
   </dd>
-  <dt>-sampleOutput</dt>
+  <dt style="font-weight: bold;">-sampleOutput</dt>
   <dd>Show me some sample output.&nbsp; Input is ignored if this option
 is used.</dd>
 </dl>
-<br>
 <h2><a name="one_time_commands"></a>Commands</h2>
 Commands are interspersed with other minuted text in your IRC log,
 except that each command must be on a line by itself. Commands
@@ -735,8 +752,18 @@ your IRC log.)
  style="font-style: italic;">new</span><span style="font-weight: bold;">/</span><br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
- style="font-style: italic;">new</span><br>
-Replace the most recent occurrence of <span style="font-style: italic;">old
+ style="font-style: italic;">new<br>
+</span><span style="font-weight: bold;"></span><span
+ style="font-weight: bold;"></span><span style="font-weight: bold;">s|</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">|</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">|</span><br>
+<span style="font-weight: bold;"></span><span style="font-weight: bold;"></span><span
+ style="font-weight: bold;">s|</span><span style="font-style: italic;">old</span><span
+ style="font-weight: bold;">|</span><span style="font-style: italic;">new</span><span
+ style="font-weight: bold;"></span><br>
+<span style="font-style: italic;"></span>
+<div style="margin-left: 40px;">Replace the most recent occurrence of <span
+ style="font-style: italic;">old
 </span>with <span style="font-style: italic;">new</span>.&nbsp; <span
  style="font-style: italic;">Old</span> is currently treated as a
 literal string
@@ -750,23 +777,49 @@ should not use the -trustRRSAgent option.&nbsp; Conversely, if you use
 use the -trustRRSAgent option.&nbsp; For further explanation, see the <a
  href="file:///home/dbooth/w3c/DEV/2002/scribe/scribedoc.htm#trustRRSAgent_option">-trustRRSAgent
 option</a>.<br>
+</div>
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
  style="font-style: italic;">new</span><span style="font-weight: bold;">/g</span>&nbsp;
 <br>
+<span style="font-weight: bold;">s|</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">|</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">|g</span><br>
+<div style="margin-left: 40px;"><span style="font-weight: bold;"></span><span
+ style="font-weight: bold;"></span>
 Replace globally from this point backward.<br>
+</div>
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
  style="font-style: italic;">new</span><span style="font-weight: bold;">/G</span>&nbsp;
 <br>
+<span style="font-weight: bold;">s|</span><span
+ style="font-style: italic;">old</span><span style="font-weight: bold;">|</span><span
+ style="font-style: italic;">new</span><span style="font-weight: bold;">|G</span><br>
+<div style="margin-left: 40px;"><span style="font-weight: bold;"></span><span
+ style="font-weight: bold;"></span>
 Replace globally, both forward and backward.<br>
+</div>
 <br>
 <span style="font-weight: bold;">i/</span><span
  style="font-style: italic;">locationString</span><span
- style="font-weight: bold;">/</span><span style="font-style: italic;">newLine</span><br>
-Insert line <span style="font-style: italic;">newLine </span>before
+ style="font-weight: bold;">/</span><span style="font-style: italic;">lineToInsert<br>
+</span><span style="font-weight: bold;">i/</span><span
+ style="font-style: italic;">locationString</span><span
+ style="font-weight: bold;">/</span><span style="font-style: italic;">lineToInsert</span><span
+ style="font-weight: bold;">/</span><br>
+<span style="font-weight: bold;">i|</span><span
+ style="font-style: italic;">locationString</span><span
+ style="font-weight: bold;">|</span><span style="font-style: italic;">lineToInsert</span><span
+ style="font-weight: bold;"></span><br>
+<span style="font-weight: bold;"></span><span style="font-weight: bold;">i|</span><span
+ style="font-style: italic;">locationString</span><span
+ style="font-weight: bold;">|</span><span style="font-style: italic;">lineToInsert</span><span
+ style="font-weight: bold;">|</span><br>
+<div style="margin-left: 40px;"><span style="font-weight: bold;"></span>Insert
+<span style="font-style: italic;">lineToInsert </span>before
 the line containing <span style="font-style: italic;">locationString</span>,
 which is currently treated as a
 literal string
@@ -774,6 +827,7 @@ literal string
  style="font-weight: bold;">not a regular
 expression</span>.&nbsp; This is most helpful if you forgot to insert a
 "Topic: " command.<br>
+</div>
 <br>
 <div style="margin-left: 40px;">For example, the following use of the <span
  style="font-weight: bold;">i//</span> command:<br>
@@ -874,28 +928,28 @@ Indicate a decision that the group has made.<br>
  style="font-style: italic;">http://www.w3.org/2002/11/07-ws-arch-irc</span></code></big><br>
 Explicitly indicate the IRC log location.&nbsp; Not usually needed,
 because the script normally infers it from statements like:<br>
-<div style="margin-left: 40px;">&lt;dbooth&gt; rrsagent, where am
+<div style="margin-left: 40px;"><code>&lt;dbooth&gt; rrsagent, where am
 i?<br>
 &lt;RRSAgent&gt; See
-http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36<br>
+http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36</code><br>
 </div>
 <br>
 <span style="font-weight: bold;"><big style="font-weight: bold;"><code></code></big></span><big><code
  style="font-weight: bold;"><a name="command_scribeoptions"></a>ScribeOptions:
-<span style="font-style: italic;">-tidy -dashTopics</span></code></big><br>
+<span style="font-style: italic;">-tidy -dashTopics -embedDiagnostics</span></code></big><br>
 Specify options inline, as if they had been written on the command line
 like: <br>
-<div style="margin-left: 40px;">perl scribe.perl -tidy -dashTopics<br>
+<div style="margin-left: 40px;"><code>perl scribe.perl -tidy
+-dashTopics -embedDiagnostics</code>
 </div>
 <br>
 <span style="font-weight: bold;"><big style="font-weight: bold;"><code>NamedAnchorHere:
 <span style="font-style: italic;">foo</span></code></big><br>
 </span>Cause a named anchor foo to be generated at this point in the
 minutes, such as:<br>
-<div style="margin-left: 40px;">&lt;a name="foo"&gt;<br>
+<div style="margin-left: 40px;"><code>&lt;a name="foo"&gt;</code><br>
 </div>
-<br>
-<h2><a name="editing_the_log"></a>Editing the Log</h2>
+<h2><a name="editing_the_log"></a>Manually Editing the Log</h2>
 In addition to the "realtime" <a href="#correcting_mistakes">editing
 commands</a> above, you may manually edit your
 IRC log with a text editor (by mimicking the log format) before running
@@ -912,7 +966,7 @@ editor.
 <blockquote>
   <pre>20:11:21 &lt;tw&gt; Scribe: TedWilliams<br>&lt;tw&gt; ScribeNick: tw<br>20:11:34 &lt;tw&gt; Topic: Printers<br>20:11:49 &lt;tw&gt; alan: Printers are working now<br>&lt;tw&gt; Topic: Fire Alarms<br>20:12:27 &lt;tw&gt; ralph: Fire marshall assured us that the system is working.<br></pre>
 </blockquote>
-(Note that the IRC name <code>&lt;scribe&gt;</code> <i>is</i>
+(Note that the IRC name <code>&lt;tw&gt;</code> <i>is</i>
 required, though for most commands it does not matter what IRC name is
 specified.)
 <br>
@@ -920,7 +974,9 @@ specified.)
 </h2>
 Several log formats are accepted, and are described below:<br>
 <ul>
-  <li><a href="#RRSAgent_Text_Format">RRSAgent_Text_Format</a></li>
+  <li><a href="#RRSAgent_Text_Format">RRSAgent_Text_Format</a>&nbsp;
+(RECOMMENDED)<br>
+  </li>
   <li><a href="#RRSAgent_HTML_Format">RRSAgent_HTML_Format</a></li>
   <li><a href="#RRSAgent_Visible_HTML_Text_Paste_Format">RRSAgent_Visible_HTML</a><a
  href="#RRSAgent_Visible_HTML_Text_Paste_Format">_Text_Paste_Format</a></li>
@@ -941,8 +997,8 @@ code.&nbsp; If you wish to use a log format that is not listed, please
 email an example to dbooth@w3.org so that I can consider adding support
 for it.<br>
 <br>
-<h3><a name="RRSAgent_Text_Format"></a>RRSAgent_Text_Format -- <span
- style="color: rgb(51, 204, 0);">RECOMMENDED</span><br>
+<h3><a name="RRSAgent_Text_Format"></a>RRSAgent_Text_Format <span
+ style="color: rgb(51, 204, 0);">(RECOMMENDED)</span><br>
 </h3>
 The plain text format (*.txt) produced by RRSAgent.&nbsp; Hint: add
 ".txt"
