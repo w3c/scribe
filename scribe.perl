@@ -1463,7 +1463,7 @@ my $diagnosticsHTML = "<hr />
 <h2>Scribe.perl diagnostic output</h2>
 [Delete this section before finalizing the minutes.] <br>
 <pre>\n" . &EscapeHTML($diagnostics) . "\n</pre>
-[End of scribe.perl diagnostic output]\n";
+[End of <a href=\"http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm\">scribe.perl</a> diagnostic output]\n";
 $diagnosticsHTML = '' if !$embedDiagnostics;
 ($result =~ s/SV_DIAGNOSTICS/$diagnosticsHTML/g) || warn "\nWARNING: SV_DIAGNOSTICS not found in template.\nYou can ignore this warning if your minutes template does not\nneed to contain scribe.perl's diagnostic output.\n\n";
 
