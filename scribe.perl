@@ -436,115 +436,43 @@ $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
-# Totally kludgy, but look for DONE action items in order to subtract them
-# from new/pending action items.
-# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4] -- DONE
-# <dbooth> DONE: ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
-my $t = $all;
-my %doneActions = ();
-while ($t =~ s/\n\<[^\>]+\>\s*DONE\s*(\:|\ |(\-+))\s*ACTION\s*\:\s*(.*)/\n/)
-	{
-	my $action = "$3";
-	$action =~ s/\A\s+//;
-	$action =~ s/\s+\Z//;
-	$action =~ s/\s*\[\d+\]\Z//;	# Remove action numbers: [4]
-	next if exists($doneActions{$action});
-	$doneActions{$action} = $action;
-	}
-# warn "DONE ACTIONS 1:\n";
-while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[^a-zA-Z0-9]+DONE([^a-zA-Z0-9]*)\s*\n/\n\n/)
-	{
-	my $action = "$1";
-	$action =~ s/\A\s+//;
-	$action =~ s/\s+\Z//;
-	$action =~ s/\s*\[\d+\]\Z//;	# Remove action numbers: [4]
-	next if exists($doneActions{$action});
-	$doneActions{$action} = $action;
-	}
-
-# Totally kludgy, but look for PENDING action items in order to subtract them
-# from new action items.
-# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4] -- PENDING
-# <dbooth> PENDING: ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
-my %pendingActions = ();
-while ($t =~ s/\n\<[^\>]+\>\s*PENDING\s*(\:|\ |(\-+))\ *ACTION\s*\:\s*(.*)/\n/)
-	{
-	my $action = "$3";
-	$action =~ s/\A\s+//;
-	$action =~ s/\s+\Z//;
-	$action =~ s/\s*\[\d+\]\Z//;	# Remove action numbers: [4]
-	next if exists($pendingActions{$action});
-	$pendingActions{$action} = $action;
-	}
-# warn "PENDING ACTIONS 1:\n";
-while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[^a-zA-Z0-9]+PENDING([^a-zA-Z0-9]*)\s*\n/\n\n/)
-	{
-	my $action = "$1";
-	$action =~ s/\A\s+//;
-	$action =~ s/\s+\Z//;
-	$action =~ s/\s*\[\d+\]\Z//;	# Remove action numbers: [4]
-	next if exists($pendingActions{$action});
-	$pendingActions{$action} = $action;
-	}
-
-# Grab ACTION items:
+# Grab all ACTION items (whether new, done, pending, or dropped):
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg.
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
-my %actions = ();
-while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*)/\n/)
+# <dbooth> DONE ACTION: MSM to report back on XMLP IPR policy after W3M mtg.
+# <dbooth> PENDING ACTION: MSM to report back on XMLP IPR policy after W3M mtg.
+# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. -- DONE
+# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. -- PENDING
+# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. * DONE *
+# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. * PENDINGa *
+my %actions = ();	# Key: action Value: (NEW|DONE|PENDING|DROPPED)
+# warn "ALL ACTIONs:\n";
+$t = "\n" . $all;
+# $t .= "<dbooth> [PENDING] ACTION: My fake action text1\n";	# Test
+# $t .= "<dbooth> *PENDING* ACTION: My fake action text2\n";	# Test
+# $t .= "<dbooth> PENDING ACTION: My fake action text3\n";	# Test
+# $t .= "<dbooth> ACTION: My fake action text4 (PENDING)\n";	# Test
+# $t .= "<dbooth> ACTION: My fake action text5 PENDING\n";	# Test
+# $t .= "<dbooth> ACTION: My fake action text6 *PENDING*\n";	# Test
+while ($t =~ s/(.|\n)*?\n\<[^\>]+\>\s*[\[\(\-\*\s]*(((NEW)}(DONE)|(PENDING)|(DROPPED))[\]\)\-\*\s]*\s+)?ACTION\s*\:\s*(.*?)\s*\n/\n/)
 	{
-	my $action = "$1";
+	my $action = $8;
+	my $status = $3 ? $3 : "NEW";
+	# warn "action: $action status: $status\n";
 	$action =~ s/\A\s+//;
 	$action =~ s/\s+\Z//;
 	$action =~ s/\s*\[\d+\]\Z//;	# Remove action numbers: [4]
+	$status = $1 if $action =~ s/[\[\(\-\*\s]+((NEW)|(DONE)|(PENDING)|(DROPPED))[\]\)\-\*\s]*\Z//i;
 	next if exists($actions{$action});
-	$actions{$action} = $action;
-	}
-
-# Subtract DONE and PENDING actions from ACTIONS:
-foreach my $action (keys %doneActions)
-	{
-	delete($actions{$action});	# delete from actions list (if there)
-	}
-foreach my $action (keys %pendingActions)
-	{
-	delete($actions{$action});	# delete from actions list (if there)
-	}
-
-# Format the resulting action items:
-# warn "ACTIONS:\n";
-my $formattedActions = "";
-foreach my $a (sort keys %actions)
-	{
-	# warn "	$a\n";
-	$formattedActions .= "<strong>ACTION:</strong> " . $a . " <br />\n";
-	}
-
-# Format the resulting done action items:
-# warn "DONE ACTIONS 2:\n";
-my $formattedDoneActions = "";
-foreach my $a (sort keys %doneActions)
-	{
-	# warn "	$a\n";
-	# Skip this:
-	# $formattedDoneActions .= "DONE: ACTION: " . $a . " <br />\n";
-	}
-
-# Format the resulting pending action items:
-# warn "PENDING ACTIONS 2:\n";
-my $formattedPendingActions = "";
-foreach my $a (sort keys %pendingActions)
-	{
-	# warn "	$a\n";
-	$formattedPendingActions .= "<strong>ACTION:</strong> " . $a . " -- PENDING <br />\n";
+	$actions{$action} = $status;
+	# warn "ACTION: '$action' STATUS: '$status'\n";
 	}
 
 # Get a list of people who have action items:
 my %actionPeople = ();
-foreach my $a ((keys %actions), (keys %doneActions), (keys %pendingActions))
+foreach my $a ((keys %actions))
 	{
 	# warn "action:$a:\n";
-	# if ($a =~ m/\s+(to|will)\s+/i)
 	if ($a =~ m/\s+(to)\s+/i)
 		{
 		my $pre = $`;
@@ -567,6 +495,49 @@ foreach my $a ((keys %actions), (keys %doneActions), (keys %pendingActions))
 		}
 	}
 warn "People with action items: ",join(" ", keys %actionPeople), "\n";
+
+# Format the resulting action items:
+# warn "ACTIONS:\n";
+# my $actionTemplate = "<strong>ACTION:</strong> \$action <strong>[\$status]</strong> <br />\n";
+my $actionTemplate = "<strong>[\$status]</strong> <strong>ACTION:</strong> \$action <br />\n";
+my $formattedActions = "";
+foreach my $status (qw(PENDING NEW))
+	{
+	foreach my $action (keys %actions)
+		{
+		next if $actions{$action} ne $status;
+		my $s = $actionTemplate;
+		$s =~ s/\$action/$action/;
+		$s =~ s/\$status/$status/;
+		$formattedActions .= $s;
+		delete($actions{$action});
+		}
+	$formattedActions .= "<br />\n\n";
+	}
+foreach my $status (qw(DONE DROPPED))
+	{
+	foreach my $action (keys %actions)
+		{
+		next if $actions{$action} ne $status;
+		# Don't need to do anything for the done or dropped actions.
+		delete($actions{$action});
+		}
+	}
+# There shouldn't be any more kinds of actions, but if there are, format them
+# $actions{'FAKE ACTION TEXT'} = 'OTHER_STATUS';	# Test
+foreach my $status (sort values %actions)
+	{
+	foreach my $action (keys %actions)
+		{
+		next if $actions{$action} ne $status;
+		my $s = $actionTemplate;
+		$s =~ s/\$action/$action/;
+		$s =~ s/\$status/$status/;
+		$formattedActions .= $s;
+		delete($actions{$action});
+		}
+	$formattedActions .= "<br />\n\n";
+	}
 
 # Ignore off-record lines and other lines that should not be minuted.
 my @lines = split(/\n/, $all);
@@ -760,9 +731,12 @@ $result =~ s/SV_TEAM_PAGE_LOCATION/SV_TEAM_PAGE_LOCATION/g;
 
 $result =~ s/SV_REGRETS/$regrets/g;
 $result =~ s/SV_PRESENT_ATTENDEES/$presentAttendees/g;
-$result =~ s/SV_DONE_ACTION_ITEMS/$formattedDoneActions/;
-$result =~ s/SV_PENDING_ACTION_ITEMS/$formattedPendingActions/;
-$result =~ s/SV_NEW_ACTION_ITEMS/$formattedActions/;
+if ($result !~ s/SV_ACTION_ITEMS/$formattedActions/)
+	{
+	if ($result =~ s/SV_NEW_ACTION_ITEMS/$formattedActions/)
+		{ warn "WARNING: Template format has changed.  SV_NEW_ACTION_ITEMS should now be SV_ACTION_ITEMS\n"; }
+	else { warn "WARNING: SV_ACTION_ITEMS marker not found in template!\n"; } 
+	}
 $result =~ s/SV_AGENDA_BODIES/$all/;
 $result =~ s/SV_MEETING_TITLE/$title/g;
 
@@ -1408,12 +1382,8 @@ SV_AGENDA_BODIES
 
 
 <h2><a name="newActions">Summary of Action Items</a></h2>
-<!-- Done Action Items -->
-SV_DONE_ACTION_ITEMS
-<!-- Pending Action Items -->
-SV_PENDING_ACTION_ITEMS
-<!-- New Action Items -->
-SV_NEW_ACTION_ITEMS
+<!-- Action Items -->
+SV_ACTION_ITEMS
 
 <hr>
 
@@ -1510,7 +1480,7 @@ SV_DONE_ACTION_ITEMS
 <!-- Pending Action Items -->
 SV_PENDING_ACTION_ITEMS
 <!-- New Action Items -->
-SV_NEW_ACTION_ITEMS
+SV_ACTION_ITEMS
 
 <hr>
 
@@ -1608,7 +1578,7 @@ SV_DONE_ACTION_ITEMS
 <!-- Pending Action Items -->
 SV_PENDING_ACTION_ITEMS
 <!-- New Action Items -->
-SV_NEW_ACTION_ITEMS
+SV_ACTION_ITEMS
 
 <hr>
 
@@ -1707,7 +1677,7 @@ SV_DONE_ACTION_ITEMS
 <!-- Pending Action Items -->
 SV_PENDING_ACTION_ITEMS
 <!-- New Action Items -->
-SV_NEW_ACTION_ITEMS
+SV_ACTION_ITEMS
 
 <hr>
 
