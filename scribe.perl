@@ -534,6 +534,7 @@ my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # Get the list of people present.
 # First look for zakim output, as the default:
 my @present = &GetPresentFromZakim($all); 
+warn "Got default list of people present from zakim.\n" if @present;
 # Now look for explicit "Present: ... " commands:
 die if !defined($all);
 ($all, @present) = &GetPresentOrRegrets("Present", 3, $all, @present); 
@@ -831,7 +832,8 @@ my @formattedActionLines = ();
 foreach my $status (@actionStatuses)
 	{
 	my $n = 0;
-	foreach my $action (sort keys %actions)
+	# foreach my $action (sort keys %actions)
+	foreach my $action (&CaseInsensitiveSort(keys %actions))
 		{
 		next if $actions{$action} ne $status;
 		my $s = $actionTemplate;
@@ -848,7 +850,8 @@ foreach my $status (@actionStatuses)
 foreach my $status (sort values %actions)
 	{
 	my $n = 0;
-	foreach my $action (sort keys %actions)
+	# foreach my $action (sort keys %actions)
+	foreach my $action (&CaseInsensitiveSort(keys %actions))
 		{
 		next if $actions{$action} ne $status;
 		my $s = $actionTemplate;
@@ -1153,6 +1156,14 @@ print $result;
 exit 0;
 ################### END OF MAIN ######################
 
+
+###################################################################
+####################### CaseInsensitiveSort #######################
+###################################################################
+sub CaseInsensitiveSort
+{
+return( sort {&LC($a) cmp &LC($b)} @_ );
+}
 
 ###################################################################
 ####################### GetPresentFromZakim ##########################
@@ -2456,7 +2467,7 @@ return($expandedIRC, $scribe, \@allNameRefs, @sortedUniqNames);
 sub LC
 {
 @_ == 1 || die;
-my ($s) = @_;
+my ($s) = @_;	# Make a copy
 $s =~ tr/A-Z/a-z/;
 return $s;
 }
