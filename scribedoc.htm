@@ -669,6 +669,16 @@ out which lines were written by the scribe.&nbsp;</dd>
   </dt>
 </dl>
 <h3>Miscellaneous Options</h3>
+-minutes <span style="font-style: italic;">http://example.org/2005/01-baking-club-minutes</span><br>
+<div style="margin-left: 40px;">Specify the final URL of the generated
+minutes.&nbsp; This allows each ACTION item to include a pointer to its
+original context, such as:<br>
+<pre>ACTION: dbooth to bake 3 cakes [recorded in <a
+ href="http://example.org/2005/01-baking-club-minutes#action01">http://example.org/2005/01-baking-club-minutes#action01</a>]<br></pre>
+This option is not usually needed if RRSAgent is used, because the
+minutes URL will be inferred from lines such as:<br>
+<pre>&lt;dbooth&gt; rrsagent, draft minutes <br>&lt;RRSAgent&gt; I have made the request to generate http://www.w3.org/2005/01/07-swcg-minutes dbooth</pre>
+</div>
 <dl>
   <dt>-sampleInput</dt>
   <dd>Show me some sample input, so I can learn how to use this
@@ -749,7 +759,8 @@ auto set from the IRC log name or the current date.<br>
  style="font-style: italic;">clean the kitchen [PENDING]</span></code></big></span></span><br>
 Give an action item.&nbsp; Action recipients should be listed before
 the word "to".&nbsp; Action status may be given at the end or on the
-next line: [DONE], [PENDING], or [DROPPED].<br>
+next line: [DONE], [PENDING], or [DROPPED].&nbsp; Several synonyms of
+these status keywords are also recognized.<br>
 <br>
 <big style="font-weight: bold;"><code>RESOLUTION: <span
  style="font-style: italic;">Issue 42 closed as duplicate of issue 21</span></code></big><br>
@@ -759,16 +770,27 @@ Indicate a decision that the group has made.<br>
  style="font-style: italic;">http://www.w3.org/2002/11/07-ws-arch-irc</span></code></big><br>
 Explicitly indicate the IRC log location.&nbsp; Not usually needed,
 because the script normally infers it from statements like:<br>
-#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;dbooth&gt; rrsagent, where am
+<div style="margin-left: 40px;">&lt;dbooth&gt; rrsagent, where am
 i?<br>
-#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;RRSAgent&gt; See
+&lt;RRSAgent&gt; See
 http://www.w3.org/2002/11/07-ws-arch-irc#T13-59-36<br>
+</div>
 <br>
-<big><code style="font-weight: bold;">ScribeOptions: <span
+<span style="font-weight: bold;"><big style="font-weight: bold;"><code></code></big></span><big><code
+ style="font-weight: bold;">ScribeOptions: <span
  style="font-style: italic;">-tidy -dashTopics</span></code></big><br>
 Specify options inline, as if they had been written on the command line
 like: <br>
-perl scribe.perl -tidy -dashTopics<br>
+<div style="margin-left: 40px;">perl scribe.perl -tidy -dashTopics<br>
+</div>
+<br>
+<span style="font-weight: bold;"><big style="font-weight: bold;"><code>NamedAnchorHere:
+<span style="font-style: italic;">foo</span></code></big><br>
+</span>Cause a named anchor foo to be generated at this point in the
+minutes, such as:<br>
+<div style="margin-left: 40px;">&lt;a name="foo"&gt;<br>
+</div>
+<br>
 <h2><a name="correcting_mistakes"></a>Correcting Mistakes</h2>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
@@ -806,14 +828,33 @@ Replace globally, both forward and backward.<br>
 <span style="font-weight: bold;">i/</span><span
  style="font-style: italic;">locationString</span><span
  style="font-weight: bold;">/</span><span style="font-style: italic;">newLine</span><br>
-Insert a new line <span style="font-style: italic;">newLine </span>before
+Insert line <span style="font-style: italic;">newLine </span>before
 the line containing <span style="font-style: italic;">locationString</span>,
 which is currently treated as a
 literal string
-(it will be escaped using quotemeta(...)) -- <span
+(it will be escaped using quotemeta(...)), <span
  style="font-weight: bold;">not a regular
 expression</span>.&nbsp; This is most helpful if you forgot to insert a
 "Topic: " command.<br>
+<br>
+<div style="margin-left: 40px;">For example, the following use of the <span
+ style="font-weight: bold;">i//</span> command:<br>
+</div>
+<div style="margin-left: 80px;"><tt>&lt;Arthur&gt; Finished with issue
+LC71; on to LC82.</tt><br>
+<tt>&lt;Arthur&gt; Frank: This is about syntax</tt><br>
+<tt>&lt;Arthur&gt; ... Do we care about syntax?</tt><br>
+<tt>&lt;dbooth&gt; i/Frank: This is about/Topic: Issue LC82 </tt><br>
+</div>
+<div style="margin-left: 40px;"><tt></tt><br>
+is converted to:<br>
+</div>
+<div style="margin-left: 80px;"><tt>&lt;Arthur&gt; Finished with issue
+LC71; on to LC82.</tt><br>
+<tt>&lt;inserted&gt; Topic: Issue LC82</tt><br>
+<tt>&lt;Arthur&gt; Frank: This is about syntax</tt><br>
+<tt>&lt;Arthur&gt; ... Do we care about syntax?</tt><br>
+</div>
 <br>
 <h2><a name="input_formats"></a>Input Formats<br>
 </h2>

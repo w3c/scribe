@@ -32,14 +32,6 @@ use strict;
 #
 # 0.1 Summarize RESOLUTIONS at the end.
 #
-# 0.2 Have each ACTION item generate a pointer to URL where it was generated.
-#
-# 0.3 Make a default Topic, same as Meeting title, if there aren't any.
-#
-# 1. integration between scribe.perl and mit-2 minutes extractor
-#
-# 1.0. Add a -log option to indicate the IRC log location.
-#
 # 1.1. Set up regression testing, so that we can better test future versions.
 #
 # 1.2. Add a "Subtopic: ..." command?
@@ -77,6 +69,10 @@ use strict;
 # and http://www.w3.org/2003/12/09-mit-irc.txt )
 # (Also remember to watch out for zakim's continuation lines.)
 #
+# 4.1 Make a default Topic, same as Meeting title, if there aren't any.
+# I think the only reason to do this is to prevent invalid HTML, as
+# a result of having an empty <ul></ul> list in the table of contents.
+#
 # 5. Add a -keepUrls option to retain IRC lines that were not written
 # by the scribe even when the -scribeOnly option is used.
 #
@@ -92,6 +88,12 @@ use strict;
 #
 # 9. Delete extra stopList from GetNames.  (There is already a global one.)
 #
+# 10. Integration between scribe.perl and mit-2 minutes extractor:
+# I thought further about this and at present I don't know of an easy 
+# enough way to make it worthwhile.  One issue: the 2-minutes extractor
+# requires Team-only access, so I don't know how scribe.perl would supply
+# the user name and password.
+# 
 
 ######################################################################
 # DESIGN PHILOSOPHY
@@ -176,7 +178,7 @@ my $commandsPattern = &MakePattern(keys %commands);
 my @ucActionStatusListReferences = 
 	(
         [qw( NEW )],
-        [qw( PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING )],
+        [qw( PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING ON_GOING CONTINUED CONT)],
         [qw( POSTPONED )],
         [qw( UNKNOWN )],
         [qw( DONE COMPLETED FINISHED CLOSED )],
@@ -232,6 +234,7 @@ my $template = &DefaultTemplate();	# Template for minutes
 my $bestName = "";  		# Name of input format normalizer guessed
 
 # Get options/args
+my $minutesURL = "";		# Future URL of the generated minutes
 my $warnIfNoRegrets = 0;	# Warn if no "Regrets:" command found?
 my $warnIfNoAgenda = 0;		# Warn if no "Agenda:" command found?
 my $ralphLinks = 1;		# Convert: -> http://foo text
@@ -284,6 +287,15 @@ while($restartForEmbeddedOptions)
 		if (0) {}
 		elsif ($a eq "") 
 			{ }
+                elsif ($a eq "-minutes")
+                        {
+			$minutesURL = shift @ARGV; 
+			&Die("ERROR: -minutes option requires an argument\n")
+				if !defined($minutesURL);
+			&Die("ERROR: -minutes option requires an absolute http: URL\n")
+				if $minutesURL !~ m/\A(http|https)\:/;
+			$minutesURL =~ s/\#.*\Z//; 	# Strip off frag id
+			}
                 elsif ($a eq "-embedDiagnostics")
                         { $embedDiagnostics = 1; }
                 elsif ($a eq "-noEmbedDiagnostics")
@@ -386,10 +398,8 @@ while($restartForEmbeddedOptions)
 
 	# Get input:
 	$all =  join("",<>) if !$all;
-	if (!$all)
-		{
-		&Warn("\nWARNING: Empty input.\n\n");
-		}
+	&Die("\nERROR: Empty input.\n\n") if !$all;
+
 	# Delete control-M's if any.  Cygwin seems to add them. :(
 	$all =~ s/\r//g;
 
@@ -599,8 +609,10 @@ if (1)
 	$all = $newAll;
 	@scribeNames = @$scribeNamesRef;
 	@scribeNicks = @$scribeNicksRef;
-	&Warn("Scribes: ", join(", ", @scribeNames), "\n");
-	&Warn("ScribeNicks: ", join(", ", @scribeNicks), "\n");
+	&Warn("Scribes: ", join(", ", @scribeNames), "\n") 
+		if scalar(@scribeNames) > 1;
+	&Warn("ScribeNicks: ", join(", ", @scribeNicks), "\n")
+		if scalar(@scribeNicks) > 1;
 	}
 
 if ($useZakimTopics)
@@ -727,7 +739,7 @@ my @regrets = ();	# People who sent regrets
 ($all, @regrets) = &GetPresentOrRegrets("Regrets", 0, $all, ()); 
 
 # Grab meeting name:
-my $title = "SV_MEETING_TITLE";
+my $title = "";
 if ($all =~ s/\n\<$namePattern\>\s*(Meeting)\s*\:\s*(.*)\n/\n/i)
 	{ $title = $4; }
 else 	{ 
@@ -768,7 +780,7 @@ You should specify the meeting chair like this:
 
 # Grab IRC LOG URL.  Do this before looking for the date, because
 # we can figure out the date from the IRC log name.
-my $logURL = "SV_MEETING_IRC_URL";
+my $logURL = "";
 # <RRSAgent>   recorded in http://www.w3.org/2002/04/05-arch-irc#T15-46-50
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(http\:([^\s\#]+))/i;
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
@@ -781,6 +793,14 @@ $logURL = $6 if $all =~ s/\n\<$namePattern\>\s*(IRC|Log|(IRC([\s_]*)Log))\s*\:\s
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
+# Guess the $minutesURL?
+if (!$minutesURL)
+	{
+	$minutesURL = &GuessMinutesURL($all);
+	&Warn("Guessing minutes URL: $minutesURL\n") if $minutesURL;
+	}
+
+######### Action processing
 ######### ACTION processing
 ######### ACTION Item Processing
 # First put all action items into a common format, to make them easier to process.
@@ -788,6 +808,9 @@ my @lines = split(/\n/, $all);
 my %debugTypesSeen = ();
 for (my $i=0; $i<(@lines-1); $i++)
 	{
+	# $debugActions = ($lines[$i] =~ m/Guus2/) ? 1 : 0;
+	warn "\nLINE: " . $lines[$i] . "\n" if $debugActions;
+	# warn "\nAFTER GUUS2: " . $lines[$i+1] . "\n" if $debugActions;
 	if (1)
 		{
 		# Handle alternate syntax permitted by RRSAgent:
@@ -891,15 +914,22 @@ for (my $i=0; $i<(@lines-1); $i++)
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
 		if ($type eq "COMMAND" && $value eq "action" && $i+1<@lines)
 			{
-			# warn "FOUND ACTION: $rest\n";
+			warn "FOUND ACTION: $rest\n" if $debugActions;
 			# Look ahead at the next line (by anyone).
 			die if !defined($lines[$i+1]);
 			my ($writer2, $type2, $value2, $rest2, undef) = &ParseLine($lines[$i+1]);
+			warn "type2: $type2 rest2: $rest2\n" if $debugActions;
 			if ($type2 eq "STATUS" && $rest2 eq "")
 				{
 				$lines[$i] = "<$writer\> ACTION: $rest \[$value2\]";
-				$lines[$i+1] = "";
 				warn "JOINED NEXT SPEAKER LINE: " . $lines[$i+1] . "\n" if $debugActions;
+				warn "RESULT: " . $lines[$i] . "\n" if $debugActions;
+				$lines[$i+1] = "";
+				# Delete the status line:
+				@lines = @lines[0..$i,($i+2)..$#lines];
+				# Reprocess this line:
+				$i--;
+				next;
 				}
 			else
 				{
@@ -950,6 +980,45 @@ for (my $i=0; $i<(@lines-1); $i++)
 		}
 	}
 $all = "\n" . join("\n", grep {$_} @lines) . "\n";
+
+# Add a link from each action item to the place in the minutes (or log)
+# where it was recorded, so that it is each to find the context of
+# each action.
+# We do this by adding a named anchor before each ACTION, and appending
+# always points back to its original context.  
+# We do this by adding a line before each ACTION line:
+# 	<inserted> NamedAnchorHere: action1
+# and appending " [recorded in http://...#action1]" to the end of
+# the action.  (Or just " [recorded in http://...]" if we only
+# know the $logURL and not the $minutesURL.)
+if (1)
+	{
+	my @lines = split(/\n/, $all);
+	my $actionID = "action01";
+	for (my $i=0; $i<@lines; $i++)
+		{
+		next if $lines[$i] =~ m/^\<RRSAgent\>/i;
+		next if $lines[$i] !~ m/\A\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)\s*\Z/i;
+		my $a = $lines[$i];
+		# warn "FOUND ACTION: $a\n";
+		my $pre = "<inserted> NamedAnchorHere: $actionID\n";
+		# Default to no URL at all:
+		my $post = "";
+		# Or use the $logURL (with no frag ID) if there is one:
+		$post = " [recorded in $logURL]" if $logURL;
+		# But preferably Use $minutesURL with frag ID if we have one:
+		$post = " [recorded in $minutesURL" . "#" . $actionID . "]"
+			if $minutesURL;
+		# Only add " [recorded in ...]" if the action does NOT 
+		# already have it:
+		$post = "" if $lines[$i] =~ m/\brecorded\s+in\s+http(s?)\:/;
+		$lines[$i] = $pre . $lines[$i] . $post;
+		$actionID++; 	# Perl string increment: action02, ....
+		$a = $lines[$i];
+		# warn "ADDED NamedAnchorHere: $a\n";
+		}
+	$all = "\n" . join("\n", @lines) . "\n";
+	}
 
 # Now it's time to collect the action items.
 # Grab the action items both ways (from RRSAgent, and not from RRSAgent),
@@ -1344,8 +1413,29 @@ $all =~ s/\</\&lt\;/g;
 $all =~ s/\>/\&gt\;/g;
 # $all =~ s/\"/\&quot\;/g;
 
+# Insert named anchors for ACTION item locations:
+my @allLines;
+if (1)
+	{
+	@allLines = split(/\n/, $all);
+	for (my $i=0; $i<@allLines; $i++)
+		{
+		# Looking for:
+		# 	<inserted> NamedAnchorHere: action01
+		# die if !defined($i);
+		# die if !defined(@allLines);
+		# die if !defined($allLines[$i]);
+		next if $allLines[$i] !~ m/\A\&lt\;[^ \t\<\>\&]+\&gt\;\s*NamedAnchorHere\:\s*(\S+)\s*\Z/i;
+		# Found one.  Convert it to a real named anchor.
+		my $actionID = $1;
+		# die if !defined($actionID);
+		$allLines[$i] = '<a name="' . $actionID . '"></a>';
+		}
+	$all = "\n" . join("\n", @allLines) . "\n";
+	}
+
 # Highlight in-line ACTION items:
-my @allLines = split(/\n/, $all);
+@allLines = split(/\n/, $all);
 for (my $i=0; $i<@allLines; $i++)
 	{
 	next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
@@ -1437,15 +1527,15 @@ if ($result !~ s/SV_ACTION_ITEMS/$formattedActions/)
 	else { &Warn("\nWARNING: SV_ACTION_ITEMS marker not found in template!\n\n"); } 
 	}
 $result =~ s/SV_AGENDA_BODIES/$all/;
-$result =~ s/SV_MEETING_TITLE/$title/g;
+$result =~ s/SV_MEETING_TITLE/$title/g if $title;
 
 # Version
 $result =~ s/SCRIBEPERL_VERSION/$CVS_VERSION/;
 
 my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
-if ($logURL eq "SV_MEETING_IRC_URL")
+if (!$logURL)
 	{
-	&Warn("\nWARNING: Missing IRC LOG!\n\n");
+	&Warn("\nWARNING: IRC log location not specified!  (You can ignore this \nwarning if you do not want the generated minutes to contain \na link to the original IRC log.)\n\n");
 	$formattedLogURL = "";
 	}
 $formattedLogURL = "" if $logURL =~ m/\ANone\Z/i;
@@ -1480,6 +1570,24 @@ print $result;
 
 exit 0;
 ################### END OF MAIN ######################
+
+############################################################################
+######################## GuessMinutesURL ##################################
+############################################################################
+sub GuessMinutesURL
+{
+@_ == 1 || die;
+my ($all) = @_;
+$all = "\n$all\n"; # Permit Easier pattern matching below
+# <RRSAgent> I have made the request to generate http://www.w3.org/2005/02/10-ws-desc-minutes dbooth
+if ($all =~ m/\n\<RRSAgent\>\s*I\s+have\s+made\s+the\s+request\s+to\s+generate\s+(http\:\S+)\s+/i)
+	{
+	my $url = $1;
+	# warn "Found minutesURL: $url\n";
+	return($url);
+	}
+return("");
+}
 
 #########################################################
 ################### MakeLinks #####################
@@ -2067,7 +2175,7 @@ if ($line !~ s/\A(\s?)\<([\w\_\-\.]+)\>(\s?)//)
 $writer = $2;
 $allButWriter = &Trim($line);
 # Action status?
-if ($line =~ m/\A\W*($actionStatusesPattern)\W*/i)
+if ($line =~ m/\A\W*\b($actionStatusesPattern)\b\W*/i)
 	{
 	$type = "STATUS";
 	$value = $1;
