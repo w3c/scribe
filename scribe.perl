@@ -24,15 +24,20 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 # Please make improvements to this program!  Check them into CVS (or
 # email them to me) and notify me by email.  Thanks!  -- DBooth
 # P.S. Please try to avoid dependencies on anything that the
-# user might not have installed.  I'd like the code to run an
-# pretty much any minimal perl installation.
+# user might not have installed.  I'd like the code to run on
+# pretty much any minimal perl installation.  
 #
 
 
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 0. Add ScribeNick command, to indicate the scribe nickname.  See
+# 000. Keep zakim question reminders.
+#
+# 00. Change s/old/new/ to be perform in forward order instead of reverse
+# order, because that's what people expect the behavior to be.
+#
+# 0. Document ScribeNick command, to indicate the scribe nickname.  See
 # http://lists.w3.org/Archives/Team/w3t-arch/2004MarApr/att-0117/minutes.html
 # where Scribe was Yves but nick was ScrYves.
 #
@@ -402,9 +407,9 @@ while($restartForEmbeddedOptions)
 		}
 
 	# Perform s/old/new/ substitutions.
-	# These are done last to first, so that later substitutions can actually
-	# modify earlier substitutions.
-	while($all =~ m/\A((.|\n)*)(\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n)/i)
+	# 5/11/04: dbooth changed this to be first to last, because that's
+	# what user's expect.
+	while($all =~ m/\A((.|\n)*?)(\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n)/i)
 		{
 		my $old = $4;
 		my $new = $5;
@@ -1526,7 +1531,7 @@ else	{
 	warn "You can specify the Scribe's IRC name like this:\n";
 	warn "  <$scribeNick> ScribeNick: $scribeNick\n";
 	warn "You can also specify the Scribe's full name like this:\n";
-	warn "  <$scribeNick> ScribeNick: $scribeNick\n\n";
+	warn "  <$scribeNick> Scribe: David_Booth\n\n";
 	$all = $tempGuessedScribeAll;
 	}
 
@@ -2069,6 +2074,7 @@ return 1 if $line =~ m/\A\s*\<(scribe)\>\s*$namePattern\s+has\s+(joined|left|dep
 # Topic change lines:
 # <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
 return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
+return 1 if $line =~ m/\A\s*\<scribe\>\s*($namePattern)\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
 # Zakim lines
 return 1 if $line =~ m/\A\<Zakim\>/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
@@ -2086,6 +2092,36 @@ return 1 if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
 # warn "KEPT: $line\n";
 return 0;
 }
+
+#################################################################
+#################### IsIgnorableZakimLine ###############################
+#################################################################
+# Given a single line, returns 1 if it is a Zakim command
+# or response that should be ignored.
+# *** stopped here ***
+sub IgnorableZakimLine
+{
+@_ == 1 || die;
+my ($line) = @_;
+die if $line =~ m/\n/; # Should be given only one line (with no \n).
+# Zakim lines to specifically keep
+# <Zakim> chaalsNCE, you wanted to say AC members should have priority 
+return 0 if $line =~ m/\A\<Zakim\>\s*\S+\, you wanted to /i;
+# Zakim lines to ignore
+return 1 if $line =~ m/\A\<Zakim\>/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*queue\s*[\+\-\=\?]/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
+# If we get here, it isn't a Zakim line.
+# warn "KEPT: $line\n";
+return 0;
+}
+
 #################################################################
 #################### IsIgnorable ################################
 #################################################################
