@@ -258,14 +258,29 @@ repeat.<br>
 &nbsp;&nbsp;&nbsp; 6. Manually edit the resulting HTML for any
 remaining details.
 <h2><a name="options"></a>Options</h2>
-    <p>The <code>SCRIBEOPTIONS</code> environment variable holds the default options that one wants to use. Example for a Bourne-style shell:</p>
-    <pre>export SCRIBEOPTIONS="-trustRRSAgent"</pre>
+<p>The <code>SCRIBEOPTIONS</code> environment variable holds the
+default options that one wants to use. Example for a Bourne-style shell:</p>
+<pre>export SCRIBEOPTIONS="-trustRRSAgent"</pre>
 <span style="font-style: italic;">I'm not sure what HTML format to use,
 for listing the options below.&nbsp; Any suggestions?&nbsp; I'm using
 the&nbsp; mozilla HTML editor.&nbsp; Thus far I've been trying out a
 definition list, but I haven't been able to figure out how to create
 definition lists in the Mozilla editor without resorting to manually
-inserting the &lt;dt&gt; tags.&nbsp; Any ideas?&nbsp; -- dbooth@w3.org</span><br>
+inserting the &lt;dt&gt; tags, which is a pain.&nbsp; Any ideas?&nbsp;
+-- dbooth@w3.org</span><br>
+<br>
+-dashTopics<br>
+Indicate that dash lines are used to indicate that the next line is the
+start of a new topic, such as:<br>
+<pre>&lt;Philippe&gt; ---<br>&lt;Philippe&gt; Review of Action Items<br></pre>
+instead of<br>
+<pre>&lt;Philippe&gt; Topic: Review of Action Items<br></pre>
+<br>
+-tidy<br>
+Pipe the output through "tidy -c".&nbsp; This only works if you have
+tidy already installed.&nbsp; At present, it also causes tidy's console
+output to be jumbled in with the console messages from scribe.perl,
+which makes it hard to read scribe.perl's warnings.<br>
 <br>
 <dl>
   <dt>-implicitContinuations</dt>
@@ -431,8 +446,16 @@ Separator:<br>
 Replace the most recent occurrence of <span style="font-style: italic;">old
 </span>with <span style="font-style: italic;">new</span>.&nbsp; <span
  style="font-style: italic;">Old</span> is treated as a fixed string
-(it will be escaped using quotemeta(...)) -- not a regular expression.<br
- style="font-style: italic;">
+(it will be escaped using quotemeta(...)) -- not a regular
+expression.&nbsp; These are processed last first, so you can even
+correct a previous substitution.&nbsp; To disable a previous
+substitution such as<br>
+<pre>	&lt;dbooth&gt; s/the/THE/</pre>
+you can do something like:<br>
+<pre>	&lt;dbooth&gt; s/&lt;dbooth&gt; s/&lt;dbooth&gt; * s/</pre>
+which will cause the previous substitution to be treated as a
+non-logged comment, and ignored.&nbsp; In this example, it becomes:<br>
+<pre>	&lt;dbooth&gt; * s/the/THE/</pre>
 <br>
 <span style="font-weight: bold;">s/</span><span
  style="font-style: italic;">old</span><span style="font-weight: bold;">/</span><span
