@@ -1,5 +1,11 @@
 #! perl -w
 
+warn 'This is $Revision$ of $Date$ 
+Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
+
+';
+
+
 # Generate minutes in HTML from a text IRC/chat Log.
 #
 # Author: David Booth <dbooth@w3.org> 
@@ -69,19 +75,24 @@
 #	<dbooth> Chair: Jonathan
 # Identify the meeting itself:
 #	<dbooth> Meeting: Weekly Baking Club Meeting
-# Fix the meeting date (default is today if there is no "Date:" line):
+# Fix the meeting date (default is auto set from IRC log name or today if 
+# there is no "Date:" line):
 #	<dbooth> Date: 05 Dec 2002
 # Identify the current topic.  You should insert one of
 # these lines before the start of EACH topic:
 #	<dbooth> Topic: Review of Action Items
 # Record an action item:
 #	<dbooth> ACTION: dbooth to send a message to himself about action items
-# Record an incomplete action item:
+# Record an incomplete action item (either syntax):
 #	<Philippe> PENDING ACTION: Barbara to bake 3 pies 
+#	<Philippe> ACTION: Barbara to bake 3 pies  -- PENDING
+# Record a completed action item (either syntax):
+#	<Philippe> DONE ACTION: Barbara to bake 3 pies 
+#	<Philippe> ACTION: Barbara to bake 3 pies  -- DONE
 # Scribe someone's statements:
 #	<dbooth> Joseph: I think that we should all eat cake
 #	<dbooth> ... with ice creme.
-# Correct a mistake:
+# Correct a mistake (changes most recent instance):
 #	<dbooth> s/creme/cream/
 # Correct a mistake globally from this point back in the input:
 #	<dbooth> s/Baking/Cooking/g
@@ -93,7 +104,8 @@
 # Separator (at least 4 dashes):
 #	<dbooth> ----
 #
-# INPUT FORMATS ACCEPTED:
+# INPUT FORMATS ACCEPTED
+# These formats are auto detected.  The best match wins.
 #   MIRC buffer style:
 #	<ericn> Where is our next F2F?
 #	<dbooth> Rennes France.
@@ -136,7 +148,8 @@ my $all = "";			# Input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
 my $scribeOnly = 0;		# Only select scribe lines
-@ARGV = map {glob} @ARGV;
+
+@ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
 my @args = ();
 my $template = &DefaultTemplate();
 while (@ARGV)
@@ -199,7 +212,12 @@ my $bestScore = 0;
 my $bestAll = "";
 my $bestName = "";
 # These are the normalizer functions we'll be calling.
+# Each one is defined below.
 # Just add another to the list if you want to recognize another format.
+# Each function takes $all (the input text) as input and returns
+# a pair: ($score, $newAll). 
+#	$score is a value [0,1] indicating how well it matched.
+#	$newAll is the normalized input.
 foreach my $f (qw(
 		NormalizerMircTxt
 		NormalizerRRSAgentText 
@@ -544,15 +562,15 @@ foreach my $line (@lines)
 	# Ignore zakim lines
 	next if $line =~ m/\A\<Zakim\>/i;
 	next if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
-	next if $line =~ m/\A\<$namePattern\>\s*agenda\b/i;
-	next if $line =~ m/\A\<$namePattern\>\s*q\b/i;
-	next if $line =~ m/\A\<$namePattern\>\s*ack\b/i;
+	next if $line =~ m/\A\<$namePattern\>\s*agenda\s*[\+\-\=\?]/i;
+	next if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
+	# next if $line =~ m/\A\<$namePattern\>\s*ack\b/i;
 	# Ignore RRSAgent lines
 	next if $line =~ m/\A\<RRSAgent\>/i;
 	next if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
 	# Remove off the record comments:
 	next if $line =~ m/\A\<$namePattern\>\s*\[\s*off\s*\]/i;
-	# Select only <scribe> lines
+	# Select only <scribe> lines?
 	next if $scribeOnly && $line !~ m/\A\<Scribe\>/i;
 	# warn "KEPT: $line\n";
 	push(@scribeLines, $line);
@@ -1314,7 +1332,7 @@ SV_FORMATTED_IRC_URL
 
 <h2>Contents</h2>
 <ul>
-  <li><a href="#agenda">Agenda Items</a>
+  <li><a href="#agenda">Topics</a>
 	<ol>
 	SV_MEETING_AGENDA
 	</ol>
@@ -1325,7 +1343,7 @@ SV_FORMATTED_IRC_URL
 
 
 <!--  We don't need the agenda items listed twice.
-<h2><a name="agenda">Agenda Items</a></h2>
+<h2><a name="agenda">Topics</a></h2>
 <ul>
   SV_MEETING_AGENDA
 </ul>
@@ -1412,7 +1430,7 @@ SV_FORMATTED_IRC_URL
 
 <h2>Contents</h2>
 <ul>
-  <li><a href="#agenda">Agenda Items</a>
+  <li><a href="#agenda">Topics</a>
 	<ol>
 	SV_MEETING_AGENDA
 	</ol>
@@ -1423,7 +1441,7 @@ SV_FORMATTED_IRC_URL
 
 
 <!--  We don't need the agenda items listed twice.
-<h2><a name="agenda">Agenda Items</a></h2>
+<h2><a name="agenda">Topics</a></h2>
 <ul>
   SV_MEETING_AGENDA
 </ul>
@@ -1511,7 +1529,7 @@ SV_FORMATTED_IRC_URL
 
 <h2>Contents</h2>
 <ul>
-  <li><a href="#agenda">Agenda Items</a>
+  <li><a href="#agenda">Topics</a>
 	<ol>
 	SV_MEETING_AGENDA
 	</ol>
@@ -1522,7 +1540,7 @@ SV_FORMATTED_IRC_URL
 
 
 <!--  We don't need the agenda items listed twice.
-<h2><a name="agenda">Agenda Items</a></h2>
+<h2><a name="agenda">Topics</a></h2>
 <ul>
   SV_MEETING_AGENDA
 </ul>
@@ -1611,7 +1629,7 @@ SV_FORMATTED_IRC_URL
 
 <h2>Contents</h2>
 <ul>
-  <li><a href="#agenda">Agenda Items</a>
+  <li><a href="#agenda">Topics</a>
 	<ol>
 	SV_MEETING_AGENDA
 	</ol>
@@ -1622,7 +1640,7 @@ SV_FORMATTED_IRC_URL
 
 
 <!--  We don't need the agenda items listed twice.
-<h2><a name="agenda">Agenda Items</a></h2>
+<h2><a name="agenda">Topics</a></h2>
 <ul>
   SV_MEETING_AGENDA
 </ul>
