@@ -134,11 +134,13 @@ my $scribeName = "UNKNOWN"; # Default
 # Formatting:
 # my $preSpeakerHTML = "<strong>";
 # my $postSpeakerHTML = "</strong> <br />";
+my $tdoctype = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">';
 my $preSpeakerHTML = "<b>";
 my $postSpeakerHTML = "</b>";
 my $preParagraphHTML = "<p>";
 my $postParagraphHTML = "</p>";
-my $preTopicHTML = "<h3>";
+my $preTopicHTML = "<h3";
 my $postTopicHTML = "</h3>";
 
 # Get options/args
@@ -698,7 +700,7 @@ $all =~ s/\>/\&gt\;/g;
 # Format topic titles (i.e., collect agenda):
 my %agenda = ();
 my $itemNum = "item01";
-while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTML\<a\ name\=\"$itemNum\"\>$4\<\/a\>$postTopicHTML\n/i)
+while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTML id\=\"$itemNum\"\>$4$postTopicHTML\n/i)
 	{
 	$agenda{$itemNum} = $4;
 	$itemNum++;
@@ -763,6 +765,7 @@ $result =~ s/SV_PENDING_ACTION_ITEMS/$formattedPendingActions/;
 $result =~ s/SV_NEW_ACTION_ITEMS/$formattedActions/;
 $result =~ s/SV_AGENDA_BODIES/$all/;
 $result =~ s/SV_MEETING_TITLE/$title/g;
+$result = $tdoctype . "\n" . $result;
 
 my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
 if ($logURL eq "SV_MEETING_IRC_URL")
@@ -1329,8 +1332,6 @@ return $sampleInput;
 sub PublicTemplate
 {
 my $template = <<'PublicTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
-                      "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -1384,10 +1385,10 @@ SV_FORMATTED_IRC_URL
 
 SV_AGENDA_BODIES
 <!--
-<h3><a name="item1">Item name (owner)</a></h3>
+<h3 id="item1">Item name (owner)</h3>
 <p>... text of discussion ...</p>
 
-<h3><a name="item2">Item name (owner)</a></h3>
+<h3 id="item2">Item name (owner)</h3>
 <p>... text of discussion ...</p>
 -->
 
@@ -1427,8 +1428,6 @@ return $template;
 sub MemberTemplate
 {
 my $template = <<'MemberTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
-                      "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -1482,10 +1481,10 @@ SV_FORMATTED_IRC_URL
 
 SV_AGENDA_BODIES
 <!--
-<h3><a name="item1">Item name (owner)</a></h3>
+<h3 id="item1">Item name (owner)</h3>
 <p>... text of discussion ...</p>
 
-<h3><a name="item2">Item name (owner)</a></h3>
+<h3 id="item2">Item name (owner)</h3>
 <p>... text of discussion ...</p>
 -->
 
@@ -1525,8 +1524,6 @@ return $template;
 sub TeamTemplate
 {
 my $template = <<'TeamTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
-                      "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -1581,10 +1578,10 @@ SV_FORMATTED_IRC_URL
 
 SV_AGENDA_BODIES
 <!--
-<h3><a name="item1">Item name (owner)</a></h3>
+<h3 id="item1">Item name (owner)</h3>
 <p>... text of discussion ...</p>
 
-<h3><a name="item2">Item name (owner)</a></h3>
+<h3 id="item2">Item name (owner)</h3>
 <p>... text of discussion ...</p>
 -->
 
@@ -1624,8 +1621,6 @@ return $template;
 sub MITTemplate
 {
 my $template = <<'MITTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
-                      "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -1681,10 +1676,10 @@ SV_FORMATTED_IRC_URL
 
 SV_AGENDA_BODIES
 <!--
-<h3><a name="item1">Item name (owner)</a></h3>
+<h3 id="item1">Item name (owner)</h3>
 <p>... text of discussion ...</p>
 
-<h3><a name="item2">Item name (owner)</a></h3>
+<h3 id="item2">Item name (owner)</h3>
 <p>... text of discussion ...</p>
 -->
 
