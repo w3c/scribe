@@ -55,6 +55,10 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #				W3C MIT style.
 #				(Search for "sub PublicTemplate" below.)
 #
+#	-trustRRSAgent		Don't try to be smart about action items.
+#				Just trust what RRSAgent says
+#
+#
 # The best way to use this program is:
 #	1. Make a backup of your IRC log.
 #	2. Modify the IRC log to conform to the scribe conventions that this
@@ -147,6 +151,7 @@ my $all = "";			# Input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
 my $scribeOnly = 0;		# Only select scribe lines
+my $trustRRSAgent = 0;		# Trust RRSAgent?
 
 @ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
 my @args = ();
@@ -165,6 +170,8 @@ while (@ARGV)
 		{ $scribeOnly = 1; }
 	elsif ($a eq "-canon") 
 		{ $canonicalizeNames = 1; }
+	elsif ($a eq "-trustRRSAgent") 
+	        { $trustRRSAgent = 1; }
 	elsif ($a eq "-teamSynonyms") 
 		{ $useTeamSynonyms = 1; }
 	elsif ($a eq "-mit") 
@@ -454,6 +461,25 @@ $t = "\n" . $all;
 # $t .= "<dbooth> ACTION: My fake action text4 (PENDING)\n";	# Test
 # $t .= "<dbooth> ACTION: My fake action text5 PENDING\n";	# Test
 # $t .= "<dbooth> ACTION: My fake action text6 *PENDING*\n";	# Test
+if ($trustRRSAgent) {
+    my @lines = split(/\n/, $all);
+    for (my $i = 0; $i <= $#lines; $i++) {
+	$_ = $lines[$i];
+	next unless (m/^<RRSAgent>/);
+	if (m/^<RRSAgent> I see \d+ open action items:$/) {
+	    # RRSAgent is giving us a new list of action items
+	    # Forget the list that we had until now
+	    %actions = ();
+	    next;
+	}
+	next unless (m/<RRSAgent> ACTION: (.*)$/);
+	my $action = "$1";
+	$action =~ s/\s+\Z//;
+	$action =~ s/\s*\[\d+\]\Z//;
+	next if exists($actions{$action});
+	$actions{$action} = "UNKNOWN";
+    }
+} else {
 while ($t =~ s/(.|\n)*?\n\<[^\>]+\>\s*[\[\(\-\*\s]*(((NEW)}(DONE)|(PENDING)|(DROPPED))[\]\)\-\*\s]*\s+)?ACTION\s*\:\s*(.*?)\s*\n/\n/)
 	{
 	my $action = $8;
@@ -467,6 +493,7 @@ while ($t =~ s/(.|\n)*?\n\<[^\>]+\>\s*[\[\(\-\*\s]*(((NEW)}(DONE)|(PENDING)|(DRO
 	$actions{$action} = $status;
 	# warn "ACTION: '$action' STATUS: '$status'\n";
 	}
+}
 
 # Get a list of people who have action items:
 my %actionPeople = ();
@@ -501,14 +528,18 @@ warn "People with action items: ",join(" ", keys %actionPeople), "\n";
 # my $actionTemplate = "<strong>ACTION:</strong> \$action <strong>[\$status]</strong> <br />\n";
 my $actionTemplate = "<strong>[\$status]</strong> <strong>ACTION:</strong> \$action <br />\n";
 my $formattedActions = "";
-foreach my $status (qw(PENDING NEW DROPPED DONE))
+foreach my $status (qw(UNKNOWN PENDING NEW DROPPED DONE))
 	{
 	foreach my $action (keys %actions)
 		{
 		next if $actions{$action} ne $status;
 		my $s = $actionTemplate;
 		$s =~ s/\$action/$action/;
-		$s =~ s/\$status/$status/;
+		if ($status ne 'UNKNOWN') {
+		    $s =~ s/\$status/$status/;
+		} else {
+		    $s =~ s/^.+? //;
+		}
 		$formattedActions .= $s;
 		delete($actions{$action});
 		}
