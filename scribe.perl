@@ -34,17 +34,10 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 0. Document ScribeNick command, to indicate the scribe nickname.  See
-# http://lists.w3.org/Archives/Team/w3t-arch/2004MarApr/att-0117/minutes.html
-# where Scribe was Yves but nick was ScrYves.
-#
-# 1 Make <scribe> statement lines look better.
-#
-# 1.1. Fix the default (public) format.  It currently indents the first
-# line of each speaker statement, which makes subsequent lines look ragged:
-#	    Hugo: He told me it's based on WSDL 1.1.
-#	Who wants to champion this response? 
-#	Need someone to read the spec.
+# 0. Figure out how to handle ACTION items that are pasted in and thus
+# span multiple lines, given that the $allowSpaceContinuation is now
+# turned off (because using space for continuation was too error prone).
+# Perhaps the way to handle this is to 
 #
 # 2. Allow the scribe to change.  Process multiple "Scribe: dbooth" commands.
 # Maybe add "Scribes: dbooth hugo" command.
@@ -217,7 +210,7 @@ my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 my $minScribeLines = 40;	# Min lines to be guessed as scribe.
 my $dashTopics = 0;		# Treat "---" as starting a new topic
 my $runTidy = 0;		# Pipe the output through "tidy -c"
-my $allowSpaceContinuation = 1;	# Leading space indicates continuation line?
+my $allowSpaceContinuation = 0;	# Leading space indicates continuation line?
 my $preferredContinuation = "... "; # Either "... " or " ".
 my $embeddedScribeOptions = "";	# Any "ScribeOptions: ..." from input
 die if $preferredContinuation eq " " && !$allowSpaceContinuation;
