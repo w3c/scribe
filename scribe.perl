@@ -32,11 +32,6 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 ######################################################################
 # FEATURE WISH LIST:
 #
-# 000. Keep zakim question reminders.
-#
-# 00. Change s/old/new/ to be perform in forward order instead of reverse
-# order, because that's what people expect the behavior to be.
-#
 # 0. Document ScribeNick command, to indicate the scribe nickname.  See
 # http://lists.w3.org/Archives/Team/w3t-arch/2004MarApr/att-0117/minutes.html
 # where Scribe was Yves but nick was ScrYves.
@@ -2094,12 +2089,51 @@ return 0;
 }
 
 #################################################################
+#################### IsIgnorableOtherBotLine ###############################
+#################################################################
+# Given a single line, returns 1 if it is some other bot command or line
+# that should be ignored.
+sub IsIgnorableOtherBotLine
+{
+@_ == 1 || die;
+my ($line) = @_;
+die if $line =~ m/\n/; # Should be given only one line (with no \n).
+# Join/leave lines:
+return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
+return 1 if $line =~ m/\A\s*\<(scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
+# Topic change lines:
+# <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
+return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
+return 1 if $line =~ m/\A\s*\<scribe\>\s*($namePattern)\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
+# If we get here, it isn't a bot line.
+# warn "KEPT: $line\n";
+return 0;
+}
+
+#################################################################
+#################### IsIgnorableRRSAgentLine ###############################
+#################################################################
+# Given a single line, returns 1 if it is a RRSAgent command
+# or response that should be ignored.
+sub IsIgnorableRRSAgentLine
+{
+@_ == 1 || die;
+my ($line) = @_;
+die if $line =~ m/\n/; # Should be given only one line (with no \n).
+# RRSAgent lines
+return 1 if $line =~ m/\A\<RRSAgent\>/i;
+return 1 if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
+# If we get here, it isn't a bot line.
+# warn "KEPT: $line\n";
+return 0;
+}
+
+#################################################################
 #################### IsIgnorableZakimLine ###############################
 #################################################################
 # Given a single line, returns 1 if it is a Zakim command
 # or response that should be ignored.
-# *** stopped here ***
-sub IgnorableZakimLine
+sub IsIgnorableZakimLine
 {
 @_ == 1 || die;
 my ($line) = @_;
@@ -2117,7 +2151,7 @@ return 1 if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*queue\s*[\+\-\=\?]/i;
 return 1 if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
-# If we get here, it isn't a Zakim line.
+# If we get here, it isn't a Zakim line or Zakim command.
 # warn "KEPT: $line\n";
 return 0;
 }
@@ -2133,20 +2167,16 @@ my ($line) = @_;
 die if $line =~ m/\n/; # Should be given only one line (with no \n).
 # Ignore empty lines.
 return 1 if &Trim($line) eq "";
-### No longer ignore lines starting with "*".  Non-logged lines should
-### be stripped out by the Mirc_Text_Format normalizer function.
-if (0)
-	{
-	# Ignore /me lines.  Up to 3 leading spaces before "*".
-	return 1 if $line =~ m/\A(\s?)(\s?)(\s?)\*/;
-	return 1 if $line =~ m/\A\<$namePattern\>(\s?)(\s?)(\s?)\*/i;
-	}
+# Ignore /me lines.  Up to 3 leading spaces before "*". (No <speaker>)
+return 1 if $line =~ m/\A(\s?)(\s?)(\s?)\*/;
 # Select only <speaker> lines
 return 1 if $line !~ m/\A\<$namePattern\>/i;
 # Ignore empty lines
 return 1 if $line =~ m/\A\<$namePattern\>\s*\Z/i;
 # Ignore bot lines
-return 1 if &IsBotLine($line);
+return 1 if &IsIgnorableZakimLine($line);
+return 1 if &IsIgnorableRRSAgentLine($line);
+return 1 if &IsIgnorableOtherBotLine($line);
 # Remove off the record comments:
 return 1 if $line =~ m/\A\<$namePattern\>\s*\[\s*off\s*\]/i;
 # Select only <scribe> lines?
