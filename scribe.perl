@@ -55,6 +55,9 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #				W3C MIT style.
 #				(Search for "sub PublicTemplate" below.)
 #
+#	-trustRRSAgent		Don't try to be smart about action items.
+#				Just trust what RRSAgent says
+#
 # The best way to use this program is:
 #	1. Make a backup of your IRC log.
 #	2. Modify the IRC log to conform to the scribe conventions that this
@@ -147,6 +150,7 @@ my $all = "";			# Input
 my $canonicalizeNames = 0;	# Convert all names to their canonical form?
 my $useTeamSynonyms = 0; 	# Accept any short synonyms for team members?
 my $scribeOnly = 0;		# Only select scribe lines
+my $trustRRSAgent = 0;		# Trust RRSAgent?
 
 @ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
 my @args = ();
@@ -165,6 +169,8 @@ while (@ARGV)
 		{ $scribeOnly = 1; }
 	elsif ($a eq "-canon") 
 		{ $canonicalizeNames = 1; }
+	elsif ($a eq "-trustRRSAgent") 
+		{ $trustRRSAgent = 1; }
 	elsif ($a eq "-teamSynonyms") 
 		{ $useTeamSynonyms = 1; }
 	elsif ($a eq "-mit") 
@@ -435,12 +441,33 @@ $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
+my %doneActions = ();
+my %pendingActions = ();
+my %actions = ();
+if ($trustRRSAgent) {
+    my @lines = split(/\n/, $all);
+    for (my $i = 0; $i <= $#lines; $i++) {
+	$_ = $lines[$i];
+	next unless (m/^<RRSAgent>/);
+	if (m/^<RRSAgent> I see \d+ open action items:$/) {
+	    # RRSAgent is giving us a new list of action items
+	    # Forget the list that we had until now
+	    %actions = ();
+	    next;
+	}
+	next unless (m/<RRSAgent> ACTION: (.*)$/);
+	my $action = "$1";
+	$action =~ s/\s+\Z//;
+	$action =~ s/\s*\[\d+\]\Z//;
+	next if exists($actions{$action});
+	$actions{$action} = $action;
+    }
+} else {
 # Totally kludgy, but look for DONE action items in order to subtract them
 # from new/pending action items.
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4] -- DONE
 # <dbooth> DONE: ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
 my $t = $all;
-my %doneActions = ();
 while ($t =~ s/\n\<[^\>]+\>\s*DONE\s*(\:|\ |(\-+))\s*ACTION\s*\:\s*(.*)/\n/)
 	{
 	my $action = "$3";
@@ -465,7 +492,6 @@ while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[\-\ ]+DONE\s*\n/\n\n/)
 # from new action items.
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4] -- PENDING
 # <dbooth> PENDING: ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
-my %pendingActions = ();
 while ($t =~ s/\n\<[^\>]+\>\s*PENDING\s*(\:|\ |(\-+))\ *ACTION\s*\:\s*(.*)/\n/)
 	{
 	my $action = "$3";
@@ -489,7 +515,6 @@ while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)[\-\ ]+PENDING\s*\n/\n\n/)
 # Grab ACTION items:
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg.
 # <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
-my %actions = ();
 while ($t =~ s/\n\<[^\>]+\>\s*ACTION\s*\:\s*(.*)/\n/)
 	{
 	my $action = "$1";
@@ -509,6 +534,7 @@ foreach my $action (keys %pendingActions)
 	{
 	delete($actions{$action});	# delete from actions list (if there)
 	}
+}
 
 # Format the resulting action items:
 # warn "ACTIONS:\n";
@@ -518,6 +544,9 @@ foreach my $a (sort keys %actions)
 	# warn "	$a\n";
 	$formattedActions .= "<strong>ACTION:</strong> " . $a . " <br />\n";
 	}
+if ($formattedActions eq '') {
+    warn "No action items found\n";
+}
 
 # Format the resulting done action items:
 # warn "DONE ACTIONS 2:\n";
