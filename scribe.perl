@@ -196,7 +196,7 @@ my $inputFormat = "";		# Input format, e.g., Plain_Text_Format
 my $minScribeLines = 40;	# Min lines to be guessed as scribe.
 my $dashTopics = 0;		# Treat "---" as starting a new topic
 my $runTidy = 0;		# Pipe the output through "tidy -c"
-my $preferredContinuation = " "; # Either "... " or " ".
+my $preferredContinuation = "..."; # Either "... " or " ".
 my $embeddedScribeOptions = "";	# Any "ScribeOptions: ..." from input
 
 # Loop to get options and input.  The reason this is a loop is that there
@@ -518,6 +518,26 @@ else { die "Internal logic error "; }
 if ($dashTopics)
 	{
 	$all = $allDashTopics;
+	}
+
+# Remove duplicate Topic lines
+if (1)
+	{
+	my @lines = split(/\n/, $all);
+	my @nonredundantlines = ();
+	my $previousTopic = "";
+	foreach my $line (@lines)
+		{
+		my $ignore = 0;
+		my ($writer, $type, $value, $rest, undef) = &ParseLine($line);
+		if ($type eq "COMMAND" && &LC($value) eq "topic")
+			{
+			$ignore = 1 if (&LC($rest) eq &LC($previousTopic));
+			$previousTopic = $rest;
+			}
+		push(@nonredundantLines, $line) if !$ignore;
+		}
+	$all = "\n" . join("\n", @nonredundantLines) . "\n";
 	}
 
 if ($normalizeOnly)
@@ -1190,8 +1210,9 @@ for (my $i=0; $i<@lines; $i++)
 	elsif ($type eq "PLAIN") 
 		{ 
 		warn "type is PLAIN\n" if $debugCurrentSpeaker;
+		$lines[$i] = "$rest"; # Eliminate <scribe>
 		$pleaseContinue = 0; 
-		$prevSpeaker = "UNKNOWN_SPEAKER";
+		$prevSpeaker = "scribe";
 		}
 	elsif ($type eq "SPEAKER")
 		{
@@ -1235,7 +1256,7 @@ for (my $i=0; $i<@lines; $i++)
 $all = "\n" . join("\n", @lines) . "\n";
 }
 
-# Experimentive code (untested) commented out:
+# Experimental code (untested) commented out:
 if (0) 
 {
 # warn "all: $all\n";
