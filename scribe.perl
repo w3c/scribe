@@ -55,8 +55,10 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #				W3C MIT style.
 #				(Search for "sub PublicTemplate" below.)
 #
-#	-trustRRSAgent		Don't try to be smart about action items.
-#				Just trust what RRSAgent says
+#	-trustRRSAgent		Take the action items from what RRSAgent says,
+#				("<RRSAgent> I see 9 open action items...")
+#				rather than directly from what an individual
+#				wrote ("<dbooth> ACTION: ...").
 #
 #
 # The best way to use this program is:
@@ -85,12 +87,20 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 #	<dbooth> Topic: Review of Action Items
 # Record an action item:
 #	<dbooth> ACTION: dbooth to send a message to himself about action items
-# Record an incomplete action item (either syntax):
-#	<Philippe> PENDING ACTION: Barbara to bake 3 pies 
-#	<Philippe> ACTION: Barbara to bake 3 pies  -- PENDING
-# Record a completed action item (either syntax):
-#	<Philippe> DONE ACTION: Barbara to bake 3 pies 
+# Record action item status (preferred format):
+#	<Philippe> ACTION: Barbara to bake 3 pies [DONE]
+#	<Philippe> ACTION: Barbara to bake 3 pies [PENDING]
+#	<Philippe> ACTION: Barbara to bake 3 pies [DROPPED]
+#	<Philippe> ACTION: Barbara to bake 3 pies [UNKNOWN]
+#	<Philippe> ACTION: Barbara to bake 3 pies [IN_PROGRESS]
+# Other formats also recognized:
+#	<Philippe> ACTION: Barbara to bake 3 pies [IN PROGRESS]
+#	<Philippe> ACTION: Barbara to bake 3 pies [IN-PROGRESS]
 #	<Philippe> ACTION: Barbara to bake 3 pies  -- DONE
+#	<Philippe> ACTION: Barbara to bake 3 pies  *DONE*
+#	<Philippe> ACTION: Barbara to bake 3 pies  (DONE)
+#	<Philippe> DONE: ACTION: Barbara to bake 3 pies
+#	<Philippe> DONE ACTION: Barbara to bake 3 pies
 # Scribe someone's statements:
 #	<dbooth> Joseph: I think that we should all eat cake
 #	<dbooth> ... with ice creme.
@@ -282,12 +292,15 @@ while($all =~ m/\n\<[^\>]+\>\s*s\/([^\/]+)\/([^\/]*?)((\/(g))|\/?)(\s*)\n/i)
 	warn "WARNING: Multiline substitution!!! (Is this correct?)\n" if $tnew ne $new || $told ne $old;
 	}
 
-# Strip -home from names.  (Convert alan-home to alan, for example.)
-$all =~ s/(\w+)\-home\b/$1/ig;
-# Strip -lap from names.  (Convert alan-lap to alan, for example.)
-$all =~ s/(\w+)\-lap\b/$1/ig;
-# Strip -iMac from names.  (Convert alan-iMac to alan, for example.)
-$all =~ s/(\w+)\-iMac\b/$1/ig;
+if ($canonicalizeNames) 
+	{
+	# Strip -home from names.  (Convert alan-home to alan, for example.)
+	$all =~ s/(\w+)\-home\b/$1/ig;
+	# Strip -lap from names.  (Convert alan-lap to alan, for example.)
+	$all =~ s/(\w+)\-lap\b/$1/ig;
+	# Strip -iMac from names.  (Convert alan-iMac to alan, for example.)
+	$all =~ s/(\w+)\-iMac\b/$1/ig;
+	}
 
 # Determine scribe name if possible:
 $scribeName = $3 if $all =~ s/\s+scribe\s+((today\s+)?)is\s+([\w\-]+)//i;
@@ -299,7 +312,7 @@ $scribeName = $1 if $all =~ s/\<([^\>\ ]+)\>\s*I\s+will\s+scribe\s+.*//i;
 $scribeName = $1 if $all =~ s/\<([^\>\ ]+)\>\s*I\s+am\s+scribing.*//i;
 warn "Scribe: $scribeName\n";
 
-# Get attendee list, and normalize names within the document:
+# Get attendee list, and canonicalize names within the document:
 my $namePattern = '([\\w]([\\w\\d\\-]*))';
 # warn "namePattern: $namePattern\n";
 my @uniqNames = ();
@@ -317,7 +330,7 @@ my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # Escape &
 $all =~ s/\&/\&amp\;/g;
 
-# Normalize Scribe continuation lines so that the speaker's name is on every line:
+# Canonicalize Scribe continuation lines so that the speaker's name is on every line:
 #	<Scribe> SusanW: We had a mtg on July 16.
 #	<DanC_> pointer to minutes?
 #	<Scribe> SusanW: I'm looking.
@@ -443,57 +456,171 @@ $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $namePattern, $logURL);
 
-# Grab all ACTION items (whether new, done, pending, or dropped):
-# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg.
-# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. [4]
-# <dbooth> DONE ACTION: MSM to report back on XMLP IPR policy after W3M mtg.
-# <dbooth> PENDING ACTION: MSM to report back on XMLP IPR policy after W3M mtg.
-# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. -- DONE
-# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. -- PENDING
-# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. * DONE *
-# <dbooth> ACTION: MSM to report back on XMLP IPR policy after W3M mtg. * PENDINGa *
-my %actions = ();	# Key: action Value: (NEW|DONE|PENDING|DROPPED)
-# warn "ALL ACTIONs:\n";
-$t = "\n" . $all;
-# $t .= "<dbooth> [PENDING] ACTION: My fake action text1\n";	# Test
-# $t .= "<dbooth> *PENDING* ACTION: My fake action text2\n";	# Test
-# $t .= "<dbooth> PENDING ACTION: My fake action text3\n";	# Test
-# $t .= "<dbooth> ACTION: My fake action text4 (PENDING)\n";	# Test
-# $t .= "<dbooth> ACTION: My fake action text5 PENDING\n";	# Test
-# $t .= "<dbooth> ACTION: My fake action text6 *PENDING*\n";	# Test
-if ($trustRRSAgent) {
-    my @lines = split(/\n/, $all);
-    for (my $i = 0; $i <= $#lines; $i++) {
-	$_ = $lines[$i];
-	next unless (m/^<RRSAgent>/);
-	if (m/^<RRSAgent> I see \d+ open action items:$/) {
-	    # RRSAgent is giving us a new list of action items
-	    # Forget the list that we had until now
-	    %actions = ();
+######### ACTION Item Processing
+# These are the reconized action statuses.  Each status should be a
+# single word, so use underscores if you have a multi-word status.
+my @actionStatuses = qw(NEW PENDING IN_PROGRESS DONE DROPPED UNKNOWN);
+my %statusPatterns = ();	# Maps from a status to its regex.
+foreach my $s (@actionStatuses)
+	{
+	die if $s !~ m/[a-zA-Z\_]/; # Canonical status, only letters/underscore
+	my $p = quotemeta($s);
+	# Allow the user to write space or dash instead of underscore.
+	# Accept as equivalent: IN_PROGRESS, IN PROGRESS, IN-PROGRESS 
+	$p =~ s/\_/\[\\-\\_\\s\]\+/g; # Make _ into a pattern: [\_\-\s]+
+	# warn "s: $s p: $p\n";
+	$statusPatterns{$s} = $p;
+	}
+
+# Put all action items into a common format, to make them easier to process.
+foreach my $s (@actionStatuses)
+	{
+	# First move the status out from in front of ACTION,
+	# so that ACTION is always at the beginning.
+	# Convert lines like: 
+	#	[PENDING] ACTION: whatever
+	# into lines like:
+	#	ACTION: PENDING: whatever
+	my $p = $statusPatterns{$s};
+	while ($all =~ s/\n(\<[^\>]+\>)\s*\W*($p)\W+ACTION\s*\:\s*/\n$1 ACTION\: \[$s\] /i)
+		{
+		# warn "CONVERTED: $&\n";
+		}
+	# Now look for status on lines following ACTION lines.
+	# This only works if we are NOT using RRSAgent's recorded actions.
+	# Join line pairs like this:
+	#	<dbooth> ACTION: whatever
+	#	<dbooth> *DONE*
+	# to lines like this:
+	#	<dbooth> ACTION: whatever [DONE]
+	while ($all =~ s/\n((\<[^\>]+\>)\s*ACTION\s*\:\s*(.*?))\n\<[^\>]+\>\W*($p)\W*\n/\n$1 \[$s\]\n/i)
+		{
+		# warn "STATUS JOINED: $&\n";
+		}
+	# Now grab the URL where the action was recorded.
+	# Join line pairs like this:
+	# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1]
+	# 	<RRSAgent>   recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24
+	# to lines like this:
+	# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1] [recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24]
+	while ($all =~ s/\n((\<RRSAgent\>)\s*ACTION\s*\:\s*(.*?))\n\<RRSAgent\>\s*(recorded in http\:\S+)\s*\n/\n$1 \[$4\]\n/i)
+		{
+		# warn "URL JOINED: $&\n";
+		}
+	}
+
+# Now it's time to collect the action items.
+# Grab the action items both ways (from RRSAgent, and not from RRSAgent),
+# so that we can generate a warning if we find them one way but not the other.
+# We are initially sloppy about the action text we collect, because we
+# will later clean it up and parse out the status and URL.
+#
+# First grab RRSAgent actions.
+my %rrsagentActions = ();	# Actions according to RRSAgent
+my @rrsagentLines = grep {m/^\<RRSAgent\>/} split(/\s*\n/, $all);
+for (my $i = 0; $i <= $#rrsagentLines; $i++) {
+	$_ = $rrsagentLines[$i];
+	# <RRSAgent> I see 3 open action items:
+	if (m/^\<RRSAgent\> I see \d+ open action items\:$/) {
+	    # Start again
+	    %rrsagentActions = ();
 	    next;
 	}
-	next unless (m/<RRSAgent> ACTION: (.*)$/);
+	# <RRSAgent> ACTION: Simon develop ssh2 migration plan [1]
+	next unless (m/\<RRSAgent\> ACTION\: (.*)$/);
 	my $action = "$1";
-	$action =~ s/\s+\Z//;
-	$action =~ s/\s*\[\d+\]\Z//;
-	next if exists($actions{$action});
-	$actions{$action} = "UNKNOWN";
-    }
-} else {
-while ($t =~ s/(.|\n)*?\n\<[^\>]+\>\s*[\[\(\-\*\s]*(((NEW)}(DONE)|(PENDING)|(DROPPED))[\]\)\-\*\s]*\s+)?ACTION\s*\:\s*(.*?)\s*\n/\n/)
-	{
-	my $action = $8;
-	my $status = $3 ? $3 : "NEW";
-	# warn "action: $action status: $status\n";
-	$action =~ s/\A\s+//;
-	$action =~ s/\s+\Z//;
-	$action =~ s/\s*\[\d+\]\Z//;	# Remove action numbers: [4]
-	$status = $1 if $action =~ s/[\[\(\-\*\s]+((NEW)|(DONE)|(PENDING)|(DROPPED))[\]\)\-\*\s]*\Z//i;
-	next if exists($actions{$action});
-	$actions{$action} = $status;
-	# warn "ACTION: '$action' STATUS: '$status'\n";
-	}
+	$rrsagentActions{$action} = "";	# Unknown status (will default to NEW)
+	# warn "RRSAgent ACTION: $action\n";
 }
+
+# Now grab actions the old way (not the RRSAgent lines).
+my %otherActions = ();		# Actions found in text (not according to RRSAgent)
+foreach my $line (split(/\n/,  $all))
+	{
+	next if $line =~ m/^\<RRSAgent\>/;
+	next if $line !~ m/\A\<[^\>]+\>\s*ACTION\s*\:\s*(.*?)\s*\Z/i;
+	my $action = $1;
+	# warn "OTHER ACTION: $action\n";
+	$otherActions{$action} = "";
+	}
+
+# Which set of actions should we keep?
+my %rawActions = ();	# Maps action to status (NEW|DONE|PENDING...)
+if ($trustRRSAgent) {
+	if (((keys %rrsagentActions) == 0) && ((keys %otherActions) > 0)) 
+		{ warn "WARNING: No RRSAgent-recorded actions found, but 'ACTION:'s appear in the text.\nSUGGESTED REMEDY: Try running WITHOUT the -trustRRSAgent option\n\n"; }
+	%rawActions = %rrsagentActions;
+} else {
+	%rawActions = %otherActions;
+}
+
+# Now clean up each action item and parse out its status and URL.
+my %actions = ();
+foreach my $action ((keys %rawActions))
+	{
+	my $a = $action;
+	next if !$a;
+	my $status = "";
+	my $url = "";
+	my $olda = "";
+	# Grab stuff off the ends as long as there is stuff to grab.
+	# We do this in a loop to allow them to appear in any order.
+	# However, we process them in a particular order within this
+	# loop to give precedence to the status that the scribe wrote last,
+	# but precedence to the URL that was recorded first.
+	CHANGE: while ($a ne $olda)
+		{
+		# warn "OLD a: $olda\n";
+		# warn "NEW a: $a\n\n";
+		$olda = $a;
+		next CHANGE if $a =~ s/\A\s+//;
+		next CHANGE if $a =~ s/\s+\Z//;
+		next CHANGE if $a =~ s/\s*\[\d+\]?\s*\Z//;	# Delete action numbers: [4] [4
+		next CHANGE if $a =~ s/\AACTION\s*\:\s*//;	# Delete extra ACTION:
+		# Grab URL from end of action.   
+		# Innermost URL takes precedence if specified more than once.
+		# This is not precisely the official URI pattern.
+		my $urlp = "http\:[\#\%\&\*\+\,\-\.\/0-9\:\;\=\?\@-Z_a-z]+";
+		if ($a =~ s/\s*\[\s*recorded in ($urlp)\s*(\]?\s*)\Z//i)
+			{
+			$url = $1;
+			next CHANGE;
+			}
+		foreach my $s (@actionStatuses)
+			{
+			my $p = $statusPatterns{$s};
+			# Grab status from end of action.
+			# Outermost status takes precedence if 
+			# status appears more than once.
+			# Note that this may whack off the right bracket
+			# From the action number:
+			# 	OLD a: Hugo inprog3 action [4] -- IN PROGRESS
+			# 	NEW a: Hugo inprog3 action [4
+			if ($a =~ s/[\*\(\[\-\=\s\:\;]+($p)[\*\)\]\-\=\s]*\Z//i)
+				{
+				$status = $s if !$status;
+				# warn "status: $status\n";
+				next CHANGE;
+				}
+			}
+		foreach my $s (@actionStatuses)
+			{
+			my $p = $statusPatterns{$s};
+			# Grab status from beginning of action.
+			if ($a =~ s/\A[\*\(\[\-\=\s]*($p)[\*\)\]\-\=\s\:\;]+//i)
+				{
+				$status = $s if !$status;
+				# warn "status: $status\n";
+				next CHANGE;
+				}
+			}
+		}
+	# Put the URL back on the end
+	$a .= " [recorded in $url]" if $url;
+	$status = "NEW" if !$status;
+	# warn "FINAL: [$status] $a\n\n";
+	$actions{$a} = $status;
+	}
 
 # Get a list of people who have action items:
 my %actionPeople = ();
@@ -528,18 +655,14 @@ warn "People with action items: ",join(" ", keys %actionPeople), "\n";
 # my $actionTemplate = "<strong>ACTION:</strong> \$action <strong>[\$status]</strong> <br />\n";
 my $actionTemplate = "<strong>[\$status]</strong> <strong>ACTION:</strong> \$action <br />\n";
 my $formattedActions = "";
-foreach my $status (qw(UNKNOWN PENDING NEW DROPPED DONE))
+foreach my $status (@actionStatuses)
 	{
 	foreach my $action (keys %actions)
 		{
 		next if $actions{$action} ne $status;
 		my $s = $actionTemplate;
 		$s =~ s/\$action/$action/;
-		if ($status ne 'UNKNOWN') {
-		    $s =~ s/\$status/$status/;
-		} else {
-		    $s =~ s/^.+? //;
-		}
+		$s =~ s/\$status/$status/;
 		$formattedActions .= $s;
 		delete($actions{$action});
 		}
@@ -554,7 +677,7 @@ foreach my $status (qw(DONE DROPPED))
 		delete($actions{$action});
 		}
 	}
-# There shouldn't be any more kinds of actions, but if there are, format them
+# There shouldn't be any more kinds of actions, but if there are, format them.
 # $actions{'FAKE ACTION TEXT'} = 'OTHER_STATUS';	# Test
 foreach my $status (sort values %actions)
 	{
@@ -569,6 +692,8 @@ foreach my $status (sort values %actions)
 		}
 	$formattedActions .= "<br />\n\n";
 	}
+# Make links:
+$formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/g;
 
 # Ignore off-record lines and other lines that should not be minuted.
 my @lines = split(/\n/, $all);
@@ -614,7 +739,7 @@ warn "Minuted lines found: $nScribeLines\n";
 
 # Verify that we axed all join/leave lines:
 {
-my $all = join("\n", @lines);
+my $all = "\n" . join("\n", @lines) . "\n";
 my @matches = ($all =~ m/.*has joined.*\n/g);
 warn "WARNING: Possible join/leave lines remaining: \n\t" . join("\t", @matches)
  	if @matches;
@@ -663,7 +788,7 @@ foreach my $line (@lines)
 		my $dashes = '=' x 30;
 		$line = $dashes;
 		}
-	elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)\s*/ ... /i )
+	elsif ($line =~ s/\A\<Scribe\>\s*($prevPattern)\s*/ ... /i) 
 		{
 		}
 	elsif ($line =~ s/\A\<Scribe\>\s*($speakerPattern\:)\s*/$1 /i )
@@ -671,6 +796,9 @@ foreach my $line (@lines)
 		# New speaker
 		$prevSpeaker = "$1";
 		$prevPattern = quotemeta($prevSpeaker);
+		}
+	elsif ($line =~ m/\A$prevPattern\s*.*\bACTION\:/i)
+		{
 		}
 	elsif ($line =~ s/\A$prevPattern\s*/ ... /i)
 		{
@@ -838,7 +966,7 @@ foreach my $line (@lines)
 	$n++ if $line =~ s/\A$timePattern\s+(\<$namePattern\>\s)/$5/;
 	# warn "LINE: $line\n";
 	}
-$all = join("\n", @lines);
+$all = "\n" . join("\n", @lines) . "\n";
 # warn "NormalizerRRSAgentText n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
@@ -862,7 +990,7 @@ foreach my $line (@lines)
 	$n++ if $line =~ s/\A\<dt\s+id\=\"($namePattern)\"\>$timePattern\s+\[($namePattern)\]\<\/dt\>\s*\<dd\>(.*)\<\/dd\>\s*\Z/\<$8\> $11/;
 	# warn "LINE: $line\n";
 	}
-$all = join("\n", @lines);
+$all = "\n" . join("\n", @lines) . "\n";
 # warn "NormalizerRRSAgentHtml n matches: $n\n";
 my $score = $n / @lines;
 # Unescape &entity;
@@ -929,7 +1057,7 @@ foreach my $line (@lines)
 	$n++ if $line =~ s/\A($namePattern)\:\s/\<$1\> /;
 	# warn "LINE: $line\n";
 	}
-$all = join("\n", @lines);
+$all = "\n" . join("\n", @lines) . "\n";
 # warn "NormalizerYahoo n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
@@ -969,7 +1097,7 @@ for (my $i=0; $i<@lines; $i++)
 	{
 	$lines[$i] = "<scribe> " . $lines[$i];
 	}
-$all = join("\n", @lines);
+$all = "\n" . join("\n", @lines) . "\n";
 # warn "NormalizerPlainText n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
@@ -1079,7 +1207,7 @@ my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
 	Scribe 00AM 00PM P IRC Topics Keio DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
-	AGREED Date speaker queue no one in XachBot got it WARNING);
+	AGREED Date queue no one in XachBot got it WARNING);
 @stopList = (@stopList, @rooms);
 @stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
 my %stopList = map {($_,$_)} @stopList;
@@ -1206,8 +1334,13 @@ while ($t =~ s/\n\s*((\<Zakim\>)|(\*\s*Zakim\s)).*\b(agenda|agendum)\b.*\n/\n/)
 #	<Zakim> MIT308 has Martin, Ted, Ralph, Alan, EricP, Vivien
 #	<Zakim> +Carine, Yves, Hugo; got it
 #
-# The stopList will later eliminate "no one" or "on the speaker queue",
-# so we don't need to worry about them here.
+# Delete "on the speaker queue" from the ends of the lines,
+# to prevent those words being mistaken for names.
+while($t =~ s/(\n\<Zakim\>\s+.*)on\s+the\s+speaker\s+queue\s*\n/$1\n/)
+        {
+        warn "Deleted 'on the speaker queue'\n";
+        }
+# Collect names
 while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the phone I see\s+)|(On IRC I see\s+)|(\.\.\.\s+)|(\+))(.*)\n/\n/)
 	{
 	my $list = $9;
@@ -1276,7 +1409,7 @@ foreach my $n (%names, %synonyms)
 # warn "allNames: @allNames\n";
 my @allNameRefs = map { \$_ } @allNames;
 
-# Canonicalize (normalize) the names in the IRC:
+# Canonicalize the names in the IRC:
 my $expandedIRC = $all;
 my $nExpanded = 0;
 foreach my $n (keys %synonyms)
