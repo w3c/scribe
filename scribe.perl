@@ -4340,33 +4340,50 @@ my @lcMonths = @months;  # Lower case, length 3
 my %monthNumbers = map {($lcMonths[$_], $_+1)} (0 .. 11);
 # warn "GetDate monthNumbers: ",join(" ",%monthNumbers),"\n";
 my @date = ();
-# Look for Date: 12 Sep 2002
-if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
+  # Look for Date: 12 Sep 2002
+  {
+    if ($all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i)
 	{
 	# Parse date from input.
 	# I should have used a library function for this, but I wrote
 	# this without net access, so I couldn't get one.
 	my $d = &Trim($2);
 	my @words = split(/[^0-9a-zA-Z]+/, $d);
-	&Die("ERROR: Date not understood: $d\n") if @words != 3;
+	if (@words != 3) {
+	    &Warn("WARNING: Date not understood: $d\n");
+	    next;
+	}
 	my $correctFormat = "Date command/format should be like \"Date: 31 Jan 2004\"";
 	my ($mday, $TMon, $year) = @words;
 	my $tmon = $TMon;	# Lower case, truncated version
 	$tmon =~ tr/A-Z/a-z/;
 	$tmon =~ s/\A(...).*\Z/$1/; # Truncate to length 3
-	exists($monthNumbers{$tmon}) || &Die("ERROR: Could not parse date.  Unknown month name \"$TMon\": $d\nFormat should be like \"Date: 31 Jan 2004\"\n");
+	unless (exists($monthNumbers{$tmon})) {
+	    &Warn("WARNING: Could not parse date.  Unknown month name \"$TMon\": $d\nFormat should be like \"Date: 31 Jan 2004\"\n");
+	    next;
+	}
 	my $mon = $monthNumbers{$tmon};
 	($mon > 0 && $mon < 13) || die; # Internal error.
-	($mday > 0 && $mday < 32) || &Die("ERROR: Bad day of month \"$mday\" (should be >0 && <32): $d\n$correctFormat\n");
-	($year > 2000 && $year < 2100) || &Die("ERROR: Bad year \"$year\" (should be >2000 && <2100): $d\n$correctFormat\n");
+	unless (($mday > 0 && $mday < 32)) {
+	    &Warn("WARNING: Bad day of month \"$mday\" (should be >0 && <32): $d\n$correctFormat\n");
+	    next;
+	}
+	unless (($year > 2000 && $year < 2100)) {
+	    &Warn("WARNING: Bad year \"$year\" (should be >2000 && <2100): $d\n$correctFormat\n");
+	    next;
+	}
 	my $day0 = sprintf("%0d", $mday);
 	my $mon0 = sprintf("%0d", $mon);
 	my $alphaMonth = $months[$mon-1];
 	&Warn("Found Date: $day0 $alphaMonth $year\n");
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	}
-# Figure out date from IRC log name:
-elsif ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/i)
+    }
+
+  # Figure out date from IRC log name:
+  {
+    next if @date;
+    if ($logURL =~ m/\Ahttp\:\/\/(www\.)?w3\.org\/(\d+)\/(\d+)\/(\d+).+\-irc/i)
 	{
 	my $year = $2;
 	my $mon = $3;
@@ -4396,6 +4413,7 @@ else
 	my $mon0 = sprintf("%0d", $mon);
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	}
+    }
 # warn "GetDate Returning date info: @date\n";
 return @date;
 }
