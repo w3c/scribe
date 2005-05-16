@@ -2,6 +2,7 @@
 
 use strict;  	
 
+$ $Id$
 # Generate minutes in HTML from a text IRC/chat Log.   
 #
 # Author: David Booth <dbooth@w3.org> 
