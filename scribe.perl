@@ -246,7 +246,7 @@ my $commandsPattern = &MakePattern(keys %commands);
 my @ucActionStatusListReferences = 
 	(
         [qw( NEW )],
-        [qw( PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING ON_GOING CONTINUED CONT)],
+        [qw( PENDING IN_PROGRESS IN_PROCESS NO_PROGRESS NEEDS_ACTION ONGOING ON_GOING CONTINUED CONTINUES CONT)],
         [qw( POSTPONED )],
         [qw( UNKNOWN )],
         [qw( DONE COMPLETED FINISHED CLOSED )],
