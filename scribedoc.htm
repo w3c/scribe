@@ -28,35 +28,35 @@ td.help {
 	<div id="header">
 		<span class="logo"><a href="/"><img src="/Icons/WWW/w3c_home_nb" alt="W3C" height="48" width="72" border="0"/></a>
 		<div class="breadcrumb">
-			<a href="/Member/">Member</a> &raquo; <a href="/Guide/">The Art of Consensus</a> &raquo; <h1>Generate Meeting Minutes from an IRC Log</h1>
+			<a href="/Member/">Member</a> &raquo; <a href="/Guide/">The Art of Consensus</a> &raquo; <h1>Generate Meeting Minutes from an IRC Log</h1>
 		</div>
 		<p class="baseline">This <strong>Guidebook</strong> is the collected wisdom of the W3C Group Chairs and other collaborators.</p>
 	</div>
 
 	<div class="toc">
-		<h4>Also On This Page &raquo; </h4>
+		<h4>Also On This Page &raquo; </h4>
 		<ul>
-			<li><a href="#Quick_Start_Guide" style="font-weight: bold;">Quick Start Guide</a> &middot; </li>
-			<li><a href="#Pros_and_Cons_of_Using_Scribe.perl">Pros and Cons</a> &middot; </li>
-			<li><a href="#running">Running it</a> &middot; </li>
-			<li><a href="#options">Options</a> &middot; </li>
-			<li><a href="#one_time_commands">Commands</a> &middot; </li>
-			<li><a href="#editing_the_log">Editing the Log</a> &middot; </li>
-			<li><a href="#input_formats">Input Formats</a> &middot; </li>
+			<li><a href="#Quick_Start_Guide" style="font-weight: bold;">Quick Start Guide</a> &middot; </li>
+			<li><a href="#Pros_and_Cons_of_Using_Scribe.perl">Pros and Cons</a> &middot; </li>
+			<li><a href="#running">Running it</a> &middot; </li>
+			<li><a href="#options">Options</a> &middot; </li>
+			<li><a href="#one_time_commands">Commands</a> &middot; </li>
+			<li><a href="#editing_the_log">Editing the Log</a> &middot; </li>
+			<li><a href="#input_formats">Input Formats</a> &middot; </li>
 			<li><a href="#Environment_Variables">Environment Variables</a></li>
 		</ul>
 	</div>
 	
-<p><em>Please feel free to make improvements to this document and the source code and check them into CVS.  Thanks!</em>  -- David Booth</p>
+<p><em>Please feel free to make improvements to this document and the source code and check them into CVS.  Thanks!</em>  -- David Booth</p>
 
 <h2 id="intro">Introduction</h2>
 	
-<p><a href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">Scribe.perl</a> is a perl script for generating meeting minutes from an IRC, IM or other log file that follows some simple minuting conventions.  It is easy to use and requires no installation.  It was primarily designed for use in and around W3C, but can also be used in other environments.  (For use in other environments, see the <a href="#input_formats">Input Formats</a> section and the <a href="#templateOption">-template</a> and <a href="#plainOption">-plain</a> options.)</p>
+<p><a href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/">Scribe.perl</a> is a perl script for generating meeting minutes from an IRC, IM or other log file that follows some simple minuting conventions.  It is easy to use and requires no installation.  It was primarily designed for use in and around W3C, but can also be used in other environments.  (For use in other environments, see the <a href="#input_formats">Input Formats</a> section and the <a href="#templateOption">-template</a> and <a href="#plainOption">-plain</a> options.)</p>
 
 
 <h2 id="Quick_Start_Guide">Quick Start Guide</h2>
 
-<h3 id="invite">Step 1:  Invite <a href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a> and  <a href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a></h3>
+<h3 id="invite">Step 1:  Invite <a href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a> and  <a href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a></h3>
 
 
 <p>Skip this step if you're not using W3C's IRC</p>
@@ -68,7 +68,7 @@ td.help {
 	<th>Explanation</th>
 </tr>
 <tr>
-	<td class="command">/invite rrsagent #ws-arch</td>
+	<td class="command">/invite rrsagent #ws-arch</td>
 	<td class="help"><samp>#ws-arch</samp> should be your IRC channel</td>
 </tr>
 <tr>
@@ -91,11 +91,11 @@ td.help {
 </tr>
 <tr>
 	<td class="command">Scribe: David Booth</td>
-	<td class="help">(Optional) David Booth is the name of the scribe as it should appear in the generated minutes.  The ScribeNick will be used instead if Scribe is not specified.  If there are multiple scribes: Issue this command and the ScribeNick: command whenever the scribe name changes.</td>
+	<td class="help">(Optional) David Booth is the name of the scribe as it should appear in the generated minutes.  The ScribeNick will be used instead if Scribe is not specified.  If there are multiple scribes: Issue this command and the ScribeNick: command whenever the scribe name changes.</td>
 </tr>
 <tr>
 	<td class="command">ScribeNick: dbooth</td>
-	<td class="help">dbooth is the IRC nickname of the scribe.  The ScribeNick will be guessed if neither Scribe nor ScribeNick are specified.  HINT: Do <span style="text-decoration: underline;">not change your IRC nickname to "scribe".  If there are multiple scribes: Issue this command and the Scribe: command whenever the scribe nickname changes.</td>
+	<td class="help">dbooth is the IRC nickname of the scribe.  The ScribeNick will be guessed if neither Scribe nor ScribeNick are specified.  HINT: Do <span style="text-decoration: underline;">not change your IRC nickname to "scribe".  If there are multiple scribes: Issue this command and the Scribe: command whenever the scribe nickname changes.</td>
 </tr>
 <tr>
 	<td class="command">Meeting: WS Arch Teleconference</td>
@@ -120,15 +120,15 @@ td.help {
 <tr>
 	<td class="command">Topic: Debate on Feature X</td>
 	<td class="help">Use "Topic: . . ." at the
-start of each agenda topic.  Alternatively, you can use <a href="http://www.w3.org/2001/12/zakim-irc-bot.html#agenda">Zakim bot's agenda control</a>, which is recognized by default.  (See the -useZakimTopics option below.)</td>
+start of each agenda topic.  Alternatively, you can use <a href="http://www.w3.org/2001/12/zakim-irc-bot.html#agenda">Zakim bot's agenda control</a>, which is recognized by default.  (See the -useZakimTopics option below.)</td>
 </tr>
 <tr>
 	<td class="command">Mike: Feature X is great</td>
-	<td class="help">Record what Mike said.  NOTE: Speaker's name must not contain spaces!</td>
+	<td class="help">Record what Mike said.  NOTE: Speaker's name must not contain spaces!</td>
 </tr>
 <tr>
 	<td class="command">... and easy to implement.</td>
-	<td class="help">Mike's statement continues.  (NOTE: Do not use blank space indentation alone to indicate continuation lines.  That syntax was previously permitted, but was found to be too error prone -- particularly when text was pasted -- so it is no longer supported.)</td>
+	<td class="help">Mike's statement continues.  (NOTE: Do not use blank space indentation alone to indicate continuation lines.  That syntax was previously permitted, but was found to be too error prone -- particularly when text was pasted -- so it is no longer supported.)</td>
 </tr>
 <tr>
 	<td class="command">ACTION: Frank toorder lunch</td>
@@ -149,7 +149,7 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 </tr>
 <tr>
 	<td class="command">s/Mary/Marie/</td>
-	<td class="help">Change most recent occurrence of "Mary" to "Marie".  The old string is currently treated as a literal string -- not a regex.  Alternate syntax: s|Mary|Marie|</td>
+	<td class="help">Change most recent occurrence of "Mary" to "Marie".  The old string is currently treated as a literal string -- not a regex.  Alternate syntax: s|Mary|Marie|</td>
 </tr>
 <tr>
 	<td class="command">s/Mary/Marie/g</td>
@@ -161,7 +161,7 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 </tr>
 <tr>
 	<td class="command">i/Time to vote/Topic: Vote on Feature Y</td>
-	<td class="help">Insert a "Topic: Vote on Feature Y" line before the line containing the literal string "Time to vote" (not a regex).  Alternate syntax: i|Time to vote|Topic: Vote on Feature Y</td>
+	<td class="help">Insert a "Topic: Vote on Feature Y" line before the line containing the literal string "Time to vote" (not a regex).  Alternate syntax: i|Time to vote|Topic: Vote on Feature Y</td>
 </tr>
 </tbody>
 </table>
@@ -176,11 +176,11 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 </tr>
 <tr>
 	<td class="command">zakim, bye</td>
-	<td class="help">Dismiss zakim bot, which will generate a list of attendees.  Use "Present: ..." (described below) instead if you aren't using zakim bot.</td>
+	<td class="help">Dismiss zakim bot, which will generate a list of attendees.  Use "Present: ..." (described below) instead if you aren't using zakim bot.</td>
 </tr>
 <tr>
 	<td class="command">rrsagent, draft minutes</td>
-	<td class="help">Tell <a href="http://www.w3.org/2002/03/RRSAgent#minutes">RRSAgent</a> <a href="http://www.w3.org/2002/03/RRSAgent#minutes">to generate minutes</a> from the log as written so far.  Note the location of the generated minutes.  Skip this step if you are not using RRSAgent.<br style="font-style: italic;" /></td>
+	<td class="help">Tell <a href="http://www.w3.org/2002/03/RRSAgent#minutes">RRSAgent</a> <a href="http://www.w3.org/2002/03/RRSAgent#minutes">to generate minutes</a> from the log as written so far.  Note the location of the generated minutes.  Skip this step if you are not using RRSAgent.<br style="font-style: italic;" /></td>
 </tr>
 <tr>
 	<td class="command">rrsagent, bye</td>
@@ -188,7 +188,7 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 </tr>
 <tr>
 	<td class="command">(Download and edit the generated minutes)</td>
-	<td class="help">If you're using RRSAgent, then just edit the generated minutes and you are done. </td>
+	<td class="help">If you're using RRSAgent, then just edit the generated minutes and you are done. </td>
 </tr>
 </tbody>
 </table>
@@ -218,7 +218,7 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 </tr>
 <tr>
 	<td class="command">(Review and make adjustments.)</td>
-	<td class="help">If the result isn't good enough, either: 1. edit your copy of the log file and regenerate the HTML; or 2. manually edit the resulting HTML.  Option 1 is best if you forgot to indicate who is scribe ("Scribe: ..."), or if you forgot to mark a topic start ("Topic: ...").</td>
+	<td class="help">If the result isn't good enough, either: 1. edit your copy of the log file and regenerate the HTML; or 2. manually edit the resulting HTML.  Option 1 is best if you forgot to indicate who is scribe ("Scribe: ..."), or if you forgot to mark a topic start ("Topic: ...").</td>
 </tr>
 </tbody>
 </table>
@@ -229,8 +229,8 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 
 <ul>
 	<li>It's free, it's open source, and it usually works.</li>
-	<li>It runs anywhere that perl is installed.  (I hope!  Please let me know if it doesn't.)</li>
-	<li>Easy to use.  It uses conventions that are used in many W3C working groups.</li>
+	<li>It runs anywhere that perl is installed.  (I hope!  Please let me know if it doesn't.)</li>
+	<li>Easy to use.  It uses conventions that are used in many W3C working groups.</li>
 	<li>It recognizes several input and log formats.</li>
 	<li>If you don't like the format it generates, you can supply your own template using the -template option.</li>
 </ul>
@@ -239,8 +239,8 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 
 <ul>
 	<li>You still need to do some manual clean-up.</li>
-	<li>It doesn't recognize all minuting conventions.  (Suggestion: Learn its conventions, they're simple.)</li>
-	<li>The code is a mess.  (Sorry!)</li>
+	<li>It doesn't recognize all minuting conventions.  (Suggestion: Learn its conventions, they're simple.)</li>
+	<li>The code is a mess.  (Sorry!)</li>
 </ul>
 
 
