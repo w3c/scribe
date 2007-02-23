@@ -1852,6 +1852,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 			my $task = $';
 			$task =~ s/\Ato //;	# Prevent duplicate "to"
 			# warn "Found new action syntax: actionee: $actionee task: $task\n";
+#@@			$task = &EscapeHTML($task);
 			$lines[$i] = "<$writer> ACTION: $actionee to $task";
 			# warn "Normalized: $lines[$i]\n";
 			}
@@ -2243,7 +2244,8 @@ foreach my $status (@actionStatuses)
 		die if !defined($status);
 		next if &LC($actions{$action}) ne &LC($status);
 		my $s = $actionTemplate;
-		$s =~ s/\$action/$action/;
+		my $escapedAction = EscapeHTML($action);
+		$s =~ s/\$action/$escapedAction/;
 		$s =~ s/\$status/$ucStatus/;
 		push(@formattedActionLines, $s);
 		$n++;
@@ -2265,7 +2267,8 @@ foreach my $status (sort values %actions)
 		die if !defined($status);
 		next if &LC($actions{$action}) ne &LC($status);
 		my $s = $actionTemplate;
-		$s =~ s/\$action/$action/;
+		my $escapedAction = EscapeHTML($action);
+		$s =~ s/\$action/$escapedAction/;
 		$s =~ s/\$status/$ucStatus/;
 		push(@formattedActionLines, $s);
 		$n++;
