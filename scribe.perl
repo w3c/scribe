@@ -430,14 +430,15 @@ while($restartForEmbeddedOptions)
 		elsif ($a eq "-template") 
 			{ 
 			my $templateFile = shift @ARGV; 
-			&Die("ERROR: Template file not found: $templateFile\n")
-				if !-e $templateFile;
-			my $t = &GetTemplate($templateFile);
-			if (!$t)
-				{
-				&Die("ERROR: Empty template: $templateFile\n");
-				}
-			$template = $t;
+			if (-e $templateFile)
+			    {
+			    if (my $t = &GetTemplate($templateFile)) {
+				$template = $t; }
+			    else {
+				&Warn("ERROR: Empty template: $templateFile\n"); }
+			    }
+			else {
+			    &Warn("ERROR: Template file not found: $templateFile\n") }
 			}
 		elsif ($a eq "-debug") 
 			{ $debug = 1; }
