@@ -4377,8 +4377,8 @@ my @date = ();
 	    &Warn("WARNING: Bad year \"$year\" (should be >2000 && <2100): $d\n$correctFormat\n");
 	    next;
 	}
-	my $day0 = sprintf("%0d", $mday);
-	my $mon0 = sprintf("%0d", $mon);
+	my $day0 = sprintf("%02d", $mday);
+	my $mon0 = sprintf("%02d", $mon);
 	my $alphaMonth = $months[$mon-1];
 	&Warn("Found Date: $day0 $alphaMonth $year\n");
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
@@ -4396,8 +4396,8 @@ my @date = ();
 	($mon > 0 && $mon < 13) || die;
 	($year > 2000 && $year < 2100) || die;
 	($mday > 0 && $mday < 32) || die;
-	my $day0 = sprintf("%0d", $mday);
-	my $mon0 = sprintf("%0d", $mon);
+	my $day0 = sprintf("%02d", $mday);
+	my $mon0 = sprintf("%02d", $mon);
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	&Warn("Got date from IRC log name: $day0 " . $months[$mon-1] . " $year\n");
 	}
@@ -4414,8 +4414,8 @@ else
 	$year += 1900;
 	($year > 2000 && $year < 2100) || die;
 	($mday > 0 && $mday < 32) || die;
-	my $day0 = sprintf("%0d", $mday);
-	my $mon0 = sprintf("%0d", $mon);
+	my $day0 = sprintf("%02d", $mday);
+	my $mon0 = sprintf("%02d", $mon);
 	@date = ($day0, $mon0, $year, $months[$mon-1]);
 	}
     }
