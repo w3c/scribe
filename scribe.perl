@@ -3127,7 +3127,7 @@ foreach my $line (@zakimLines)
 	if ($line =~ m/Attendees\s+((were)|(have\s+been))\s+/i)
 		{
 		my $raw = $';
-		my @people = map {$_ = &Trim($_); s/\s+/_/g; $_} split(/\,/, $raw);
+		my @people = map {$_ = &EscapeHTML(&Trim($_)); s/\s+/_/g; $_} split(/\,/, $raw);
 		next if !@people;
 		if (@present)
 			{
