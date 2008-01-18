@@ -746,7 +746,7 @@ You should specify the meeting title like this:
 # Grab agenda URL:
 my $agendaLocation;
 if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http:\/\/\S+)\n/\n/i)
-	{ $agendaLocation = $2;
+	{ $agendaLocation = &EscapeHTML($2);
 	  &Warn("Agenda: $agendaLocation\n");
       }
 else 	{ 
