@@ -1,6 +1,6 @@
 # $Id$
 
-GREP=/usr/bin/grep
+GREP=/bin/grep
 PERL=/usr/bin/perl
 ECHO=/bin/echo
 
