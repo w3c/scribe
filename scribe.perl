@@ -736,7 +736,7 @@ my @regrets = ();	# People who sent regrets
 # Grab meeting name:
 my $title = "";
 if ($all =~ s/\n\<$namePattern\>\s*(Meeting)\s*\:\s*(.*)\n/\n/i)
-	{ $title = $2; }
+	{ $title = &EscapeHTML($2); }
 else 	{ 
 	&Warn("\nWARNING: No meeting title found!
 You should specify the meeting title like this:
@@ -761,12 +761,12 @@ If you wish, you may specify the agenda like this:
 # Grab Previous meeting URL:
 my $previousURL = "SV_PREVIOUS_MEETING_URL";
 if ($all =~ s/\n\<$namePattern\>\s*(Previous[ _\-]*Meeting)\s*\:\s*(.*)\n/\n/i)
-	{ $previousURL = $2; }
+	{ $previousURL = &EscapeHTML($2); }
 
 # Grab Chair:
 my $chair = "SV_MEETING_CHAIR";
 if ($all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i)
-	{ $chair = $3; }
+	{ $chair = &EscapeHTML($3); }
 else 	{ 
 	&Warn("\nWARNING: No meeting chair found!
 You should specify the meeting chair like this:
@@ -783,6 +783,7 @@ $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(recorded|logged)\s+in\s+(htt
 $logURL = $3 if $all =~ m/\n\<(RRSAgent|Zakim)\>\s*(see|recorded\s+in)\s+(http\:([^\s\#]+))/i;
 # <RRSAgent> RRSAgent is logging to http://www.w3.org/2005/01/05-arch-irc
 $logURL = $4 if $all =~ m/\n\<(RRSAgent|Zakim)\>.*((\s+is)?\s+logging\s+to)\s+(http\:([^\s\#]+))/i;
+$logURL = &EscapeHTML($logURL) if $logURL;
 
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $logURL);
@@ -1558,7 +1559,7 @@ sub CommandMeeting
 my ($writer, $line, $all) = @_;
 ($line =~ m/\A\s{0,4}Meeting\s{0,2}:\s*(.*)\s*\Z/i)
 	|| return("", $line, $all);
-my $t = &Trim($1);
+my $t = &EscapeHTML(&Trim($1));
 if ($t eq "") { &Warn("WARNING: Empty \"Meeting: title\" command with empty title\n"); }
 # else { $globalMeetingTitle = $t; }
 else { $title = $t; }
@@ -2580,7 +2581,7 @@ COUNT_SCRIBE_COMMANDS: for (my $i=0; $i<@lines; $i++)
 	if ($type eq "COMMAND" && $value eq "scribe")
 		{
 		# Scribe command.  Changing scribe name.
-		my $newScribeName = &Trim($rest);
+		my $newScribeName = &EscapeHTML(&Trim($rest));
 		push(@scribeCommands, $newScribeName);
 		# warn "Found Scribe command: $newScribeName\n";
 		}
@@ -2589,7 +2590,7 @@ COUNT_SCRIBE_COMMANDS: for (my $i=0; $i<@lines; $i++)
 	# would be the lower case of the preferred spelling?
 	elsif ($type eq "COMMAND" && $value eq "scribenick")
 		{
-		my $newScribeNick = &Trim($rest);
+		my $newScribeNick = &EscapeHTML(&Trim($rest));
 		push(@scribeNickCommands, $newScribeNick);
 		# warn "Found ScribeNick command: $newScribeNick\n";
 		}
@@ -2657,7 +2658,7 @@ LINE: for (my $i=0; $i<@lines; $i++)
 	if ($type eq "COMMAND" && $value eq "scribe")
 		{
 		# Scribe command.  Changing scribe name.
-		my $newScribeName = &Trim($rest);
+		my $newScribeName = &EscapeHTML(&Trim($rest));
 		push(@scribeNames, $newScribeName);
 		&Warn("Found Scribe: $newScribeName\n");
 		# Look ahead (until the next Scribe: or ScribeNick: command)
@@ -2725,7 +2726,7 @@ LINE: for (my $i=0; $i<@lines; $i++)
 	# would be the lower case of the preferred spelling?
 	elsif ($type eq "COMMAND" && $value eq "scribenick")
 		{
-		my $newScribeNick = &Trim($rest);
+		my $newScribeNick = &EscapeHTML(&Trim($rest));
 		push(@scribeNicks, $newScribeNick);
 		if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0
 			&& $newScribeNick !~ m/\A$currentScribeNickPattern\Z/i)
@@ -3182,7 +3183,7 @@ foreach my $line (@allLines)
 		next;
 		}
 	my $plus = $1;
-	my $present = $4;
+	my $present = &EscapeHTML($4);
 	my @p = ();
 	if ($present =~ m/\,/)
 		{
