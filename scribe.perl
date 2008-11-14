@@ -252,8 +252,9 @@ my @ucActionStatusListReferences =
         [qw( DONE COMPLETED FINISHED CLOSED )],
         [qw( DROPPED RETIRED CANCELLED CANCELED WITHDRAWN )],
 	);
+# next line edited by ht@w3.org 2008-11-14 to work with perl 5.10 and 'use strict', I hope correctly
 my %actionStatusSynonymRefs =
-	map { (${@{$_}}[0], $_) } @ucActionStatusListReferences;
+	map { (@{$_}[0], $_) } @ucActionStatusListReferences;
 my %closedActionStatuses = map {($_,$_)} 
 	(@{$actionStatusSynonymRefs{"DONE"}}, @{$actionStatusSynonymRefs{"DROPPED"}});
 my %lcClosedActionStatuses = map {&LC($_)} %closedActionStatuses;
