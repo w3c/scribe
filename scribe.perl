@@ -290,9 +290,9 @@ my $actionStatusesPattern = &MakePattern(keys %actionStatuses);
 my @rooms = qw(MIT308 SophiaSofa DISA Fujitsu);
 
 # stopList are non-people.
-my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
-	RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING WITHDRAWN
-	Scribe 00AM 00PM P IRC Topics DROPPED ger-logger
+my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http
+	https the RRSAgent Loggy Zakim2 ACTION Chair Meeting DONE PENDING
+	WITHDRAWN Scribe 00AM 00PM P IRC Topics DROPPED ger-logger
 	yes no abstain Consensus Participants Question RESOLVED strategy
 	AGREED Date queue no one in XachBot got it WARNING upcoming);
 # @stopList = (@stopList, @rooms);
