@@ -2466,9 +2466,13 @@ while ($all =~ m/\A((.|\n)*?)($urlPattern)(.*?)\n/)
 		# <RalphS> -> http://whatever "Skiing pictures", DanC 2005-01-07
 		if ($text =~ m/\A\"([^\"]+)\"/ && &Trim($1))
 			{
-			$post = $' . $post;
+			$post = $' . $post;  #'
 			$text = $1;
 			# warn "MATCH QUOTED link text: $text\n";
+			}
+		if ($text eq "")
+			{
+			$text=$url;
 			}
 		my $link = "<a href=\"$url\">$text</a>";
 		# warn "MATCH RALPH text: $text\n";
