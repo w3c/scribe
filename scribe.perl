@@ -4680,9 +4680,9 @@ my $template = <<'PlainTemplate-EOF'
 <html lang='en'>
 <head>
   <title>SV_MEETING_TITLE &mdash; SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/public.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/public.css">
+  <link type="text/css" rel="STYLESHEET" href="/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -4756,9 +4756,9 @@ my $template = <<'PublicTemplate-EOF'
 <html lang='en'>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/public.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/public.css">
+  <link type="text/css" rel="STYLESHEET" href="/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -4837,10 +4837,10 @@ my $template = <<'MemberTemplate-EOF'
 <html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/member-minutes.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/member.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/member-minutes.css">
+  <link type="text/css" rel="STYLESHEET" href="/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -4918,10 +4918,10 @@ my $template = <<'TeamTemplate-EOF'
 <html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/StyleSheets/team-minutes.css">
-  <link type="text/css" rel="STYLESHEET" href="http://www.w3.org/2004/02/minutes-style.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/team.css">
+  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/team-minutes.css">
+  <link type="text/css" rel="STYLESHEET" href="/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -5003,13 +5003,13 @@ my $template = <<'MITTemplate-EOF'
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA
 SV_MEETING_YEAR</title>
   <link type="text/css" rel="STYLESHEET"
- href="http://www.w3.org/StyleSheets/base.css">
+ href="/StyleSheets/base.css">
   <link type="text/css" rel="STYLESHEET"
- href="http://www.w3.org/StyleSheets/team.css">
+ href="/StyleSheets/team.css">
   <link type="text/css" rel="STYLESHEET"
- href="http://www.w3.org/StyleSheets/team-minutes.css">
+ href="/StyleSheets/team-minutes.css">
   <link type="text/css" rel="STYLESHEET"
- href="http://www.w3.org/2004/02/minutes-style.css">
+ href="/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">
   <meta content="text/html; charset=iso-8859-1"
  http-equiv="Content-Type">
