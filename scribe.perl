@@ -4764,7 +4764,7 @@ my $template = <<'PublicTemplate-EOF'
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 
 </p>
@@ -4846,7 +4846,7 @@ my $template = <<'MemberTemplate-EOF'
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 </p>
 
@@ -4927,7 +4927,7 @@ my $template = <<'TeamTemplate-EOF'
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 
 </p>
@@ -5016,10 +5016,10 @@ SV_MEETING_YEAR</title>
 </head>
 <body>
 <p><a href="http://www.w3.org/"><img
- src="http://www.w3.org/Icons/w3c_home" alt="W3C" border="0" height="48"
+ src="/Icons/w3c_home" alt="W3C" border="0" height="48"
  width="72"></a> <a href="http://www.w3.org/Team"><img width="48"
  height="48" alt="W3C Team home" border="0"
- src="http://www.w3.org/Icons/WWW/team"></a> | <a
+ src="/Icons/WWW/team"></a> | <a
  href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> | <a
  href="http://lists.w3.org/Archives/Team/w3t-mit/SV_MEETING_YEARSV_MEETING_MONTH_ALPHA/">w3t-mit
 archives
