@@ -215,7 +215,7 @@ my $namePattern = '[a-zA-Z_][a-zA-Z0-9_\\-]*';
 # HTML special chars & has already been escaped when MakeLinks is called.
 # This is a result of the brain-dead way we are currently converting text
 # to HTML.
-my $urlPattern = '(http(s?)://([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)(#([0-9a-zA-Z;/?:@=+$\\.\\-_!~*\'\(\)%]|\&amp\;)+)?';
+my $urlPattern = '(http(s?)://([0-9a-zA-Z;/?:@=+,$\\.\-_!~*\'()[\]%]|\&amp\;)+)(#([0-9a-zA-Z;/?:@=+,$\\.\-_!~*\'()[\]%]|\&amp\;)+)?';
 
 # These are the recognized commands.  Each command should be a
 # single word, so use underscores if you have a multi-word command.
@@ -2427,7 +2427,7 @@ my ($all) = @_;
 # $anyUriPattern is too general for our use.   We want to recognize 
 # only http:// or https:// absolute URLs.
 # 3 parens:
-my $urlPattern = '(http(s?)://[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*\'\(\)%]+)?';
+# my $urlPattern = '(http(s?)://[0-9a-zA-Z;/?:@=+$.\-_^!~*\'\(\)\[\]%]+)(#[0-9a-zA-Z;/?:@&=+$.\-_^!~*\'\(\)\[\]%]+)?';
 # Make links:
 #### Old:
 # $all =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
@@ -2439,7 +2439,7 @@ while ($all =~ m/\A((.|\n)*?)($urlPattern)(.*?)\n/)
 	my $pre = $1;
 	my $url = $3;
 	# $urlPattern has 5 parens:
-	my $line = $7; # To end of line
+	my $line = $9; # To end of line
 	die if !defined($line);
 	my $post = "\n" . $';
 	my $newpre = $pre;
