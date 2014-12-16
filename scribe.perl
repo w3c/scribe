@@ -172,7 +172,7 @@ my $prePhoneParagraphHTML = "<p class='phone'>";
 my $postPhoneParagraphHTML = "</p>";
 my $preIRCParagraphHTML = "<p class='irc'>";
 my $postIRCParagraphHTML = "</p>";
-my $preResolutionHTML = "<strong class='resolution'>";
+my $preResolutionHTML = "<strong class='resolution'";
 my $postResolutionHTML = "</strong>";
 
 my $preTopicHTML = "<h3";
@@ -788,6 +788,7 @@ $logURL = &EscapeHTML($logURL) if $logURL;
 
 # Grab and remove date from $all
 my ($day0, $mon0, $year, $monthAlpha) = &GetDate($all, $logURL);
+$all =~ s/\n\<$namePattern\>\s*(Date)\s*\:\s*(.*)\n/\n/i;
 
 # Guess the $minutesURL?
 if (!$minutesURL)
@@ -1100,7 +1101,22 @@ if ($oldProcessingModel)
 	}
 
 # Highlight resolutions
-$all =~ s/\n\s*(RESOLUTION|RESOLVED): (.*)/\n${preResolutionHTML}RESOLUTION: $2$postResolutionHTML/g;
+# ALH: adding named anchors to resolutions following the "old processing model"
+my %resolutions = ();
+my $resolNum = "resolution01";
+while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?(RESOLUTION|RESOLVED)\:\s*(.*)\n/\n$preResolutionHTML id\=\"$resolNum\"\>RESOLUTION: $3$postResolutionHTML\n/i)
+	{
+	$resolutions{$resolNum} = $3;
+	$resolNum++;
+	}
+
+# prepare resolution summary
+my $formattedResolutions = "<ol>";
+foreach my $resol (sort keys %resolutions)
+  {
+    $formattedResolutions .= '<li><a href="#' . $resol . '">' . $resolutions{$resol} . "</a></li>\n";
+  }
+$formattedResolutions .= "</ol>\n";
 
 # Bold or <strong> speaker name:
 # Change "<speaker> ..." to "<b><speaker><b> ..."
@@ -1176,6 +1192,7 @@ if ($result !~ s/SV_ACTION_ITEMS/$formattedActions/)
 	}
 $result =~ s/SV_AGENDA_BODIES/$all/;
 $result =~ s/SV_MEETING_TITLE/$title/g if $title;
+$result =~ s/SV_RESOLUTIONS/$formattedResolutions/g;
 
 # Version
 $result =~ s/SCRIBEPERL_VERSION/$CVS_VERSION/;
@@ -4719,6 +4736,7 @@ SV_FORMATTED_IRC_URL
 	</ol>
   </li>
   <li><a href="#ActionSummary">Summary of Action Items</a></li>
+  <li><a href="#ResolutionSummary">Summary of Resolutions</a></li>
 </ul>
 <hr>
 <div class="meeting">
@@ -4727,6 +4745,9 @@ SV_AGENDA_BODIES
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- Action Items -->
 SV_ACTION_ITEMS
+<h2><a name="ResolutionSummary">Summary of Resolutions</a></h2>
+<!-- Resolutions -->
+SV_RESOLUTIONS
 
 [End of minutes] <br>
 <hr>
@@ -4800,6 +4821,7 @@ SV_FORMATTED_IRC_URL
 	</ol>
   </li>
   <li><a href="#ActionSummary">Summary of Action Items</a></li>
+  <li><a href="#ResolutionSummary">Summary of Resolutions</a></li>
 </ul>
 <hr>
 <div class="meeting">
@@ -4808,6 +4830,9 @@ SV_AGENDA_BODIES
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- Action Items -->
 SV_ACTION_ITEMS
+<h2><a name="ResolutionSummary">Summary of Resolutions</a></h2>
+<!-- Resolutions -->
+SV_RESOLUTIONS
 
 [End of minutes] <br>
 <hr>
@@ -4881,6 +4906,7 @@ SV_FORMATTED_IRC_URL
 	</ol>
   </li>
   <li><a href="#ActionSummary">Summary of Action Items</a></li>
+  <li><a href="#ResolutionSummary">Summary of Resolutions</a></li>
 </ul>
 <hr>
 <div class="meeting">
@@ -4889,6 +4915,9 @@ SV_AGENDA_BODIES
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- New Action Items -->
 SV_ACTION_ITEMS
+<h2><a name="ResolutionSummary">Summary of Resolutions</a></h2>
+<!-- Resolutions -->
+SV_RESOLUTIONS
 
 [End of minutes] <br>
 <hr>
@@ -4963,6 +4992,7 @@ SV_FORMATTED_IRC_URL
 	</ol>
   </li>
   <li><a href="#ActionSummary">Summary of Action Items</a></li>
+  <li><a href="#ResolutionSummary">Summary of Resolutions</a></li>
 </ul>
 <hr>
 
@@ -4972,6 +5002,9 @@ SV_AGENDA_BODIES
 <h2><a name="ActionSummary">Summary of Action Items</a></h2>
 <!-- New Action Items -->
 SV_ACTION_ITEMS
+<h2><a name="ResolutionSummary">Summary of Resolutions</a></h2>
+<!-- Resolutions -->
+SV_RESOLUTIONS
 
 [End of minutes] <br>
 <hr>
@@ -5113,6 +5146,10 @@ SV_AGENDA_BODIES
 <!-- Begin Action Items -->
 SV_ACTION_ITEMS
 <!-- End Action Items -->
+<h2><a name="ResolutionSummary">Summary of Resolutions</a></h2>
+<!-- Begin Resolutions -->
+SV_RESOLUTIONS
+<!-- End Resolutions -->
 <h2><a name="twoMinutes">Two minutes around the table</a></h2>
 <p><em>Note to scribe: you can get a start at this section using <a
  href="http://cgi.w3.org/team-bin/mit-2mins">a CGI script</a> that
