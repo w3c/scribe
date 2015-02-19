@@ -514,6 +514,7 @@ while($restartForEmbeddedOptions)
  		"Irssi_ISO8601_Log_Text_Format", \&Irssi_ISO8601_Log_Text_Format,
 		"Yahoo_IM_Format", \&Yahoo_IM_Format,
 		"Plain_Text_Format", \&Plain_Text_Format,
+		"Bert_IRSSI_Format", \&Bert_IRSSI_Format,
 		"Normalized_Format", \&Normalized_Format,
 		);
 	my @inputFormats = keys %inputFormats;
@@ -4142,6 +4143,40 @@ my $score = $n / @lines;
 # like Yahoo_IM_Format will win if they both match:
 $score = $score * 0.95;
 return($score, $all);
+}
+
+##################################################################
+########################## Bert_IRSSI_Format ###########################
+##################################################################
+sub Bert_IRSSI_Format($)
+{
+  my ($all) = @_;
+  my ($n, @lines, @linesout, $score, $line);
+
+  @lines = grep {/\S/} split(/\n/, $all); # Split, keep only non-empty lines
+  foreach (@lines) {
+    if (/^---/) {		# IRSSI comment about logging start/stop
+      $n++;			# Skip it, but count it as recognized
+    } elsif (/^[0-9:]+\s*[<>-]+ \| (\S+).*( has (?:joined|left).*)/) {
+      push(@linesout, "<$1> $1$2");
+      $n++;			# Count it as recognized
+    } elsif (/^[0-9:]+\s*«Quit» \| (\S+).* has signed off/) {
+      push(@linesout, "<$1> has quit");
+      $n++;			# Count it as recognized
+    } elsif (/^[0-9:]+\s*«[^»]+» \|/) {
+      $n++;			# IRSSI comment about users, topic, nick, etc.
+    } elsif (/^[0-9:]+\s*\* \|/) {
+      $n++;			# Skip a /me command, but count as recognized
+    } elsif (/^[0-9:]+\s*(\S+) \|(.*)/) {
+      push(@linesout, "<$1> $2");
+      $n++;			# A normal line
+    } else {
+      warn "LINE: $_\n";
+    }
+    # Any other pattern is an error. Skip and don't count.
+  }
+  $score = $n/@lines;
+  return($score, join("\n", @linesout));
 }
 
 ##################################################################
