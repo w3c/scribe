@@ -4157,18 +4157,18 @@ sub Bert_IRSSI_Format($)
   foreach (@lines) {
     if (/^---/) {		# IRSSI comment about logging start/stop
       $n++;			# Skip it, but count it as recognized
-    } elsif (/^[0-9:]+\s*[<>-]+ \| (\S+).*( has (?:joined|left).*)/) {
+    } elsif (/^[][0-9:]+\s*[<>-]+ \| (\S+).*( has (?:joined|left).*)/) {
       push(@linesout, "<$1> $1$2");
       $n++;			# Count it as recognized
-    } elsif (/^[0-9:]+\s*«Quit» \| (\S+).* has signed off/) {
+    } elsif (/^[][0-9:]+\s*«Quit» \| (\S+).* has signed off/) {
       push(@linesout, "<$1> has quit");
       $n++;			# Count it as recognized
-    } elsif (/^[0-9:]+\s*«[^»]+» \|/) {
+    } elsif (/^[][0-9:]+\s*«[^»]+» \|/) {
       $n++;			# IRSSI comment about users, topic, nick, etc.
-    } elsif (/^[0-9:]+\s*\* \|/) {
+    } elsif (/^[][0-9:]+\s*\* \|/) {
       $n++;			# Skip a /me command, but count as recognized
-    } elsif (/^[0-9:]+\s*(\S+) \|(.*)/) {
-      push(@linesout, "<$1> $2");
+    } elsif (/^[][0-9:]+[\s@+%]*(\S+) \|(.*)/) {
+      push(@linesout, "<$1>$2");
       $n++;			# A normal line
     } else {
       warn "LINE: $_\n";
