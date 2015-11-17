@@ -3066,6 +3066,7 @@ elsif ($line =~ m/\A(\s?)(\s?)([_\w\-\.]+)(\s?)\:\s*/)
 # Continuation line?
 # if ((!$type) && $line =~ m/\A((\s)|(\s?(\s?)\.\.+(\s?)(\s?)))/)
 if (((!$type) && $line =~ m/\A(\s?(\s?)\.\.+(\s?)(\s?))/)
+	|| ((!$type) && $line =~ m/\A(\s?(\s?)(\xE2\x80\xA6)(\s?)(\s?))/)
 	|| ($allowSpaceContinuation && (!$type) && $line =~ m/\A(\s)/))
 	{
 	$type = "CONTINUATION";
