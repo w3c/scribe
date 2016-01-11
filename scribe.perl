@@ -4733,9 +4733,9 @@ my $template = <<'PlainTemplate-EOF'
 <html lang='en'>
 <head>
   <title>SV_MEETING_TITLE &mdash; SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/public.css">
-  <link type="text/css" rel="STYLESHEET" href="/2004/02/minutes-style.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/public.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
@@ -4813,15 +4813,15 @@ my $template = <<'PublicTemplate-EOF'
 <html lang='en'>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/public.css">
-  <link type="text/css" rel="STYLESHEET" href="/2004/02/minutes-style.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/public.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="/Icons/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="https://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 
 </p>
@@ -4898,16 +4898,16 @@ my $template = <<'MemberTemplate-EOF'
 <html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/member.css">
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/member-minutes.css">
-  <link type="text/css" rel="STYLESHEET" href="/2004/02/minutes-style.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/member.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/member-minutes.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="/Icons/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="https://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 </p>
 
@@ -4983,16 +4983,16 @@ my $template = <<'TeamTemplate-EOF'
 <html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/base.css">
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/team.css">
-  <link type="text/css" rel="STYLESHEET" href="/StyleSheets/team-minutes.css">
-  <link type="text/css" rel="STYLESHEET" href="/2004/02/minutes-style.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/team.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/team-minutes.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
   <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </head>
 
 <body>
-<p><a href="http://www.w3.org/"><img src="/Icons/w3c_home" alt="W3C" border="0"
+<p><a href="http://www.w3.org/"><img src="https://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
 
 </p>
@@ -5072,25 +5072,25 @@ my $template = <<'MITTemplate-EOF'
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA
 SV_MEETING_YEAR</title>
   <link type="text/css" rel="STYLESHEET"
- href="/StyleSheets/base.css">
+ href="https://www.w3.org/StyleSheets/base.css">
   <link type="text/css" rel="STYLESHEET"
- href="/StyleSheets/team.css">
+ href="https://www.w3.org/StyleSheets/team.css">
   <link type="text/css" rel="STYLESHEET"
- href="/StyleSheets/team-minutes.css">
+ href="https://www.w3.org/StyleSheets/team-minutes.css">
   <link type="text/css" rel="STYLESHEET"
- href="/2004/02/minutes-style.css">
+ href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">
   <meta content="text/html; charset=iso-8859-1"
  http-equiv="Content-Type">
 </head>
 <body>
 <p><a href="http://www.w3.org/"><img
- src="/Icons/w3c_home" alt="W3C" border="0" height="48"
+ src="https://www.w3.org/Icons/w3c_home" alt="W3C" border="0" height="48"
  width="72"></a> <a href="http://www.w3.org/Team"><img width="48"
  height="48" alt="W3C Team home" border="0"
- src="/Icons/WWW/team"></a> | <a
- href="http://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> | <a
- href="http://lists.w3.org/Archives/Team/w3t-mit/SV_MEETING_YEARSV_MEETING_MONTH_ALPHA/">w3t-mit
+ src="https://www.w3.org/Icons/WWW/team"></a> | <a
+ href="https://www.w3.org/Team/Meeting/MIT-scribes">MIT Meetings</a> | <a
+ href="https://lists.w3.org/Archives/Team/w3t-mit/SV_MEETING_YEARSV_MEETING_MONTH_ALPHA/">w3t-mit
 archives
 </a></p>
 SV_DRAFT_WARNING<br style="font-style: italic;">
