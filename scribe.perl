@@ -3956,9 +3956,8 @@ my $idPattern ='[0-9a-zA-Z;/?\\:@&=+\\$\\.\\-_!~*\\\'()%]+';	# 0 parens
 my $timePattern = '((\s|\d)\d\:(\s|\d)\d\:(\s|\d)\d)';		# 4 parens
 my @boilerplateLines = split(/\s*\n\s*/,
 	'<?xml version="1.0" encoding="UTF-8"?>
-	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-	    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-	<html xmlns="http://www.w3.org/1999/xhtml">
+	<!DOCTYPE html>
+	<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 	<head>
 	 <title>IRC log of arch on 2005-02-22</title>
 	<meta name="generator" content="&#36;Id: logger,v 1.75.1.56 2005/02/14 18:10:52 swick Exp &#36;" />
@@ -4729,7 +4728,7 @@ else	{
 sub PlainTemplate
 {
 my $template = <<'PlainTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html lang='en'>
 <head>
   <title>SV_MEETING_TITLE &mdash; SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -4737,7 +4736,7 @@ my $template = <<'PlainTemplate-EOF'
   <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/public.css">
   <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
-  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+  <meta charset="utf-8">
 </head>
 
 <body>
@@ -4809,7 +4808,7 @@ return $template;
 sub PublicTemplate
 {
 my $template = <<'PublicTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html lang='en'>
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -4817,7 +4816,7 @@ my $template = <<'PublicTemplate-EOF'
   <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/public.css">
   <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
-  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+  <meta charset="utf-8">
 </head>
 
 <body>
@@ -4894,7 +4893,7 @@ return $template;
 sub MemberTemplate
 {
 my $template = <<'MemberTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -4903,7 +4902,7 @@ my $template = <<'MemberTemplate-EOF'
   <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/member-minutes.css">
   <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
-  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+  <meta charset="utf-8">
 </head>
 
 <body>
@@ -4979,7 +4978,7 @@ return $template;
 sub TeamTemplate
 {
 my $template = <<'TeamTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA SV_MEETING_YEAR</title>
@@ -4988,7 +4987,7 @@ my $template = <<'TeamTemplate-EOF'
   <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/team-minutes.css">
   <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">  
-  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+  <meta charset="utf-8">
 </head>
 
 <body>
@@ -5066,7 +5065,7 @@ return $template;
 sub MITTemplate
 {
 my $template = <<'MITTemplate-EOF'
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <title>SV_MEETING_TITLE -- SV_MEETING_DAY SV_MEETING_MONTH_ALPHA
