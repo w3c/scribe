@@ -222,11 +222,7 @@ my $urlPattern = '(http(s?)://([0-9a-zA-Z;/?:@=+,$\\.\-_!~*\'()[\]%]|\&amp\;)+)(
 #### TODO: I don't think we need both "IRC Log" and "IRCLog",
 #### because &WordVariations will generate the spelling variations.
 #### Ditto for Previous_Meeting and PreviousMeeting.
-my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair 
-	Present Regrets Agenda 
-	IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION
-	NamedAnchorHere
-	);
+my @ucCommands = qw(Meeting Scribe ScribeNick Topic Chair Present Regrets Agenda IRC Log IRC_Log IRCLog Previous_Meeting PreviousMeeting ACTION NamedAnchorHere);
 # Make lower case and generate spelling variations
 my @commands = &Uniq(&WordVariations(map {&LC($_)} @ucCommands));
 # Map to preferred spelling:
