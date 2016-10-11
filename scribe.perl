@@ -3186,6 +3186,7 @@ my @allLines = split(/\n/, $all);
 # <dbooth> Present+: Justin
 # <dbooth> Present+ Silas
 # <dbooth> Present-: Amy
+# <Amy> Present+
 my @possiblyPresent = @uniqNames;	# People present at the meeting
 my @newAllLines = ();	# Collect remaining lines
 # push(@allLines, "<dbooth> Present: David Booth, Frank G, Joe Camel, Carole King"); # test
@@ -3197,13 +3198,16 @@ my $isAlreadyDefined = 0;
 foreach my $line (@allLines)
 	{
 	$line =~ s/\s+\Z//; # Remove trailing spaces.
-	if ($line !~ m/\A\<[^\>]+\>\s*$keyword\s*(\:|((\+|\-)\s*\:?))\s*(.*)\Z/i)
+	if ($line !~ m/\A\<([^\>]+)\>\s*$keyword\s*(\:|((\+|\-)\s*\:?))\s*(.*)\Z/i)
 		{
 		push(@newAllLines, $line);
 		next;
 		}
-	my $plus = $1;
-	my $present = &EscapeHTML($4);
+	my $plus = $2;
+	my $present = &EscapeHTML($5);
+	# If there is no ":" and no name after the keyword, it means
+	# the name to add is the speaker himself, e.g.: <Joe> Present+
+	$present = &EscapeHTML($1) if ($plus !~ /:/ && $present eq '');
 	my @p = ();
 	if ($present =~ m/\,/)
 		{
@@ -3253,7 +3257,8 @@ if (@present == 0)
 		&Warn("Possibly Present: @possiblyPresent\n") if $keyword eq "Present"; 
 		&Warn("You can indicate people for the $keyword list like this:
 	<dbooth> $keyword\: dbooth jonathan mary
-	<dbooth> $keyword\+ amy\n\n");
+	<dbooth> $keyword\+ amy\n
+	<amy> $keyword+\n\n");
 		}
 	}
 else	{
