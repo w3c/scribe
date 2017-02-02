@@ -564,7 +564,7 @@ while($restartForEmbeddedOptions)
 
 	# Look for embedded options, and restart if we find some.
 	# (Except we do NOT re-read the input.  We keep $all as is.)
-	while ($all =~ s/\n\<[^\<\>]+\>\s*ScribeOption(s?)\s*\:(.*)\n/\n/i)
+	while ($all =~ s/\<[^\<\>]+\>\s*ScribeOption(s?)\s*\:(.*)\n//mi)
 		{
 		my $newOptions = &Trim($2);
 		$embeddedScribeOptions .= " $newOptions";
@@ -613,7 +613,7 @@ if ($useZakimTopics)
 	# as equivalent to:
 	#	<inserted> Topic: UTF16 PR issue
 	$all = "\n$all\n";
-	while ($all =~ s/\n\<Zakim\>\s*agendum\s*\d+\.\s*\"(.+)\"\s*taken up\s*((\[from (.*?)\])?)\s*\n/\n\<inserted\> Topic\: $1\n/i)
+	while ($all =~ s/^\<Zakim\>\s*agendum\s*\d+\.\s*\"(.+)\"\s*taken up\s*((\[from (.*?)\])?)\s*$/\<inserted\> Topic\: $1/mi)
 		{
 		# warn "Zakim Topic: $1\n";
 		}
@@ -691,7 +691,7 @@ if (1)
 			}
 		push(@nonredundantLines, $line) if !$ignore;
 		}
-	$all = "\n" . join("\n", @nonredundantLines) . "\n";
+	$all = join("\n", @nonredundantLines) . "\n";
 	}
 
 if ($normalizeOnly)
@@ -733,7 +733,7 @@ my @regrets = ();	# People who sent regrets
 
 # Grab meeting name:
 my $title = "";
-if ($all =~ s/\n\<$namePattern\>\s*(Meeting)\s*\:\s*(.*)\n/\n/i)
+if ($all =~ s/^\<$namePattern\>\s*Meeting\s*\:\s*(.*)\n//mi)
 	{ $title = &EscapeHTML($2); }
 else 	{ 
 	&Warn("\nWARNING: No meeting title found!
@@ -743,7 +743,7 @@ You should specify the meeting title like this:
 
 # Grab agenda URL:
 my $agendaLocation;
-if ($all =~ s/\n\<$namePattern\>\s*(Agenda)\s*\:\s*(http(s)?:\/\/\S+)\n/\n/i)
+if ($all =~ s/\<$namePattern\>\s*(Agenda)\s*\:\s*(http(s)?:\/\/\S+)\n//mi)
 	{ $agendaLocation = &EscapeHTML($2);
 	  &Warn("Agenda: $agendaLocation\n");
       }
@@ -916,7 +916,7 @@ for (my $i=0; $i<@lines; $i++)
 		&Warn("\nINTERNAL ERROR: Unknown line type: ($type) returned by ParseLine(...)\n\n");
 		}
 	}
-$all = "\n" . join("\n", @lines) . "\n";
+$all = join("\n", @lines) . "\n";
 
 
 #### Experimental code (untested) commented out:
@@ -971,7 +971,7 @@ if ($oldProcessingModel) #
 		$actionIDs{$actionID} = $actionID;
 		$allLines[$i] = '<a name="' . $actionID . '"></a>';
 		}
-	$all = "\n" . join("\n", @allLines) . "\n";
+	$all = join("\n", @allLines) . "\n";
 	}
 else	{ # new processing model
 	# Working:
@@ -1002,7 +1002,7 @@ if ($oldProcessingModel)
 		next if $allLines[$i] =~ m/\&gt\;\s*Topic\s*\:/i;
 		$allLines[$i] =~ s/\bACTION\s*\:(.*)/\<strong\>ACTION\:\<\/strong\>$1/i;
 		}
-	$all = "\n" . join("\n", @allLines) . "\n";
+	$all = join("\n", @allLines) . "\n";
 	# Highlight in-line ACTION status:
 	foreach my $status (@actionStatuses)
 		{
@@ -1021,7 +1021,7 @@ if (1)
 	{ # Old processing model
 	my %agenda = ();
 	my $itemNum = "item01";
-	while ($all =~ s/\n(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)\n/\n$preTopicHTML id\=\"$itemNum\"\>$2$postTopicHTML\n/i)
+	while ($all =~ s/^(\&lt\;$namePattern\&gt\;\s+)?Topic\:\s*(.*)$/$preTopicHTML id\=\"$itemNum\"\>$2$postTopicHTML\n/mi)
 		{
 		$agenda{$itemNum} = $2;
 		$itemNum++;
@@ -1061,7 +1061,7 @@ if (0)
 # my $scribeParagraphHTMLTemplate = "$prePhoneParagraphHTML\n\$speakerHTML\$statementHTML\n$postPhoneParagraphHTML\n\n";
 if ($oldProcessingModel)
 	{
-	$all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\n$1\n$postPhoneParagraphHTML\n/g;
+	$all =~ s/^(([^\ \.\<\&\n].*)(\n\ *\.\.+.*)*)/$prePhoneParagraphHTML\n$1\n$postPhoneParagraphHTML\n/mg;
 	}
 if (0)
 	{
@@ -1093,7 +1093,7 @@ if (0)
 if ($oldProcessingModel)
 	{
 	# $all =~ s/\n(([^\ \.\<\&].*)(\n\ *\.\.+.*)*)/\n$prePhoneParagraphHTML\nFOO $1 FUM\n$postPhoneParagraphHTML\n/g;
-	$all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\n$1\n$postIRCParagraphHTML\n/g;
+	$all =~ s/^((&.*)(\n\ *\.\.+.*)*)/$preIRCParagraphHTML\n$1\n$postIRCParagraphHTML\n/mg;
 	# $all =~ s/\n((&.*)(\n\ *\.\.+.*)*)/\n$preIRCParagraphHTML\nBAR $1 BAH\n$postIRCParagraphHTML\n/g;
 	}
 
@@ -2017,7 +2017,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 			}
 		}
 	}
-$all = "\n" . join("\n", grep {$_} @lines) . "\n";
+$all = join("\n", grep {$_} @lines) . "\n";
 
 # Add a link from each action item to the place in the minutes (or log)
 # where it was recorded, so that it is each to find the context of
@@ -2055,7 +2055,7 @@ if (1)
 		$a = $lines[$i];
 		# warn "ADDED NamedAnchorHere: $a\n";
 		}
-	$all = "\n" . join("\n", @lines) . "\n";
+	$all = join("\n", @lines) . "\n";
 	}
 
 # Now it's time to collect the action items.
@@ -2764,7 +2764,7 @@ if ($currentScribeNickPattern && $nLinesCurrentScribeNick == 0)
 	{
 	&Warn("WARNING: No scribe lines found matching ScribeNick pattern: <$currentScribeNickPattern> ...\n");
 	}
-$all = "\n" . join("\n", @lines) . "\n";
+$all = join("\n", @lines) . "\n";
 @scribeNames = &CaseInsensitiveUniq(@scribeNames);
 @scribeNicks = &CaseInsensitiveUniq(@scribeNicks);
 
@@ -2842,7 +2842,7 @@ for(my $i=0; $i<@lines-1; $i++)
 		last INNER;
 		}
 	}
-$all = "\n" . join("\n", @lines) . "\n";
+$all = join("\n", @lines) . "\n";
 return($all, $nFound);
 }
 
@@ -3248,7 +3248,7 @@ foreach my $line (@allLines)
 		}
 	}
 @allLines = @newAllLines;
-$all = "\n" . join("\n", @allLines) . "\n";
+$all = join("\n", @allLines) . "\n";
 if (@present == 0)	
 	{
 	if ($keyword ne "Regrets" || $warnIfNoRegrets)
@@ -3329,7 +3329,7 @@ for (my $i=0; $i<@allLines; $i++)
 	else	{
 		}
 	}
-$all = "\n" . join("\n", @allLines) . "\n";
+$all = join("\n", @allLines) . "\n";
 # die "all:\n$all\n" . ('=' x 70) . "\n\n";
 return $all;
 }
@@ -3380,7 +3380,7 @@ sub IgnoreGarbage
 @_ == 1 || die;
 my ($all) = @_;
 my @lines = split(/\n/, $all);
-my $nLines = scalar(@lines);
+# my $nLines = scalar(@lines);
 # warn "Lines found: $nLines\n";
 my @scribeLines = ();
 foreach my $line (@lines)
@@ -3389,50 +3389,16 @@ foreach my $line (@lines)
 	# warn "KEPT: $line\n";
 	push(@scribeLines, $line);
 	}
-my $nScribeLines = scalar(@scribeLines);
+# my $nScribeLines = scalar(@scribeLines);
 # &Warn("Minuted lines found: $nScribeLines\n");
-$all = "\n" . join("\n", @scribeLines) . "\n";
+# $all = "\n" . join("\n", @scribeLines) . "\n";
+$all = join("\n", @scribeLines);
 
 # Verify that we axed all join/leave lines:
 my @matches = ($all =~ m/.*has joined.*\n/g);
 &Warn("\nWARNING: Possible internal error: join/leave lines remaining: \n\t" . join("\t", @matches) . "\n\n")
  	if @matches;
 return $all;
-}
-
-#################################################################
-#################### IsBotLine ###############################
-#################################################################
-# Given a single line, returns 1 if it is an IRC, Zakim or RRSAgent command
-# or response.
-sub IsBotLine
-{
-@_ == 1 || die;
-my ($line) = @_;
-die if $line =~ m/\n/; # Should be given only one line (with no \n).
-# Join/leave lines:
-return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
-return 1 if $line =~ m/\A\s*\<(scribe)\>\s*$namePattern\s+has\s+(joined|left|departed|quit)\s*((\S+)?)\s*\Z/i;
-# Topic change lines:
-# <geoff_a> geoff_a has changed the topic to: Trout Mask Replica
-return 1 if $line =~ m/\A\s*\<($namePattern)\>\s*\1\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
-return 1 if $line =~ m/\A\s*\<scribe\>\s*($namePattern)\s+(has\s+changed\s+the\s+topic\s+to\s*\:.*)\Z/i;
-# Zakim lines
-return 1 if $line =~ m/\A\<Zakim\>/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*zakim\s*\,/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*agenda\s*\d*\s*[\+\-\=\?]/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*close\s+agend(a|(um))\s+\d+\Z/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*open\s+agend(a|(um))\s+\d+\Z/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*take\s+up\s+agend(a|(um))\s+\d+\Z/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*q\s*[\+\-\=\?]/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*queue\s*[\+\-\=\?]/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*ack\s+$namePattern\s*\Z/i;
-# RRSAgent lines
-return 1 if $line =~ m/\A\<RRSAgent\>/i;
-return 1 if $line =~ m/\A\<$namePattern\>\s*RRSAgent\s*\,/i;
-# If we get here, it isn't a bot line.
-# warn "KEPT: $line\n";
-return 0;
 }
 
 #################################################################
@@ -3826,7 +3792,7 @@ while (@lines)
 		}
 	# warn "LINE: $line\n";
 	}
-$all = "\n" . join("\n", @linesOut) . "\n";
+$all = join("\n", @linesOut) . "\n";
 # warn "Irssi_ISO8601_Log_Text_Format n matches: $n\n";
 my $score = $n / $nLines;
 return($score, $all);
@@ -3909,7 +3875,7 @@ while (@lines)
 		}
 	# warn "LINE: $line\n";
 	}
-$all = "\n" . join("\n", @linesOut) . "\n";
+$all = join("\n", @linesOut) . "\n";
 # warn "Irssi_ISO8601_Log_Text_Format n matches: $n nLines: $nLines\n";
 my $score = $n / $nLines;
 return($score, $all);
@@ -3936,7 +3902,7 @@ foreach my $line (@lines)
 	$n++ if $line =~ s/\A$timePattern\s+(\<$namePattern\>\s)/$5/i;
 	# warn "LINE: $line\n";
 	}
-$all = "\n" . join("\n", @lines) . "\n";
+$all = join("\n", @lines) . "\n";
 # warn "RRSAgent_Text_Format n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
@@ -4005,7 +3971,7 @@ foreach my $line (@lines)
 		}
 	$result .= $line;
 	}
-$all = "\n" . join("\n", @lines) . "\n";
+$all = join("\n", @lines) . "\n";
 # warn "RRSAgent_HTML_Format n matches: $n\n";
 my $score = $n / @lines;
 # Unescape &entity;
@@ -4091,7 +4057,7 @@ foreach my $line (@lines)
 	$n++ if $line =~ s/\A($namePattern)\:\s/\<$1\> /i;
 	# warn "LINE: $line\n";
 	}
-$all = "\n" . join("\n", @lines) . "\n";
+$all = join("\n", @lines) . "\n";
 # warn "Yahoo_IM_Format n matches: $n\n";
 my $score = $n / @lines;
 return($score, $all);
@@ -4137,7 +4103,7 @@ for (my $i=0; $i<@lines; $i++)
 	{
 	$lines[$i] = "<scribe> " . $lines[$i];
 	}
-$all = "\n" . join("\n", @lines) . "\n";
+$all = join("\n", @lines) . "\n";
 # warn "Plain_Text_Format n matches: $n\n";
 my $score = $n / @lines;
 # Artificially downgrade the score, so that more specific formats
@@ -4152,7 +4118,7 @@ return($score, $all);
 sub Bert_IRSSI_Format($)
 {
   my ($all) = @_;
-  my ($n, @lines, @linesout, $score, $line);
+  my ($n, @lines, @linesout, $score) = (0, (), ());
 
   @lines = grep {/\S/} split(/\n/, $all); # Split, keep only non-empty lines
   foreach (@lines) {
@@ -4367,7 +4333,7 @@ for (my $i=0; $i<@lines; $i++)
 		$lines[$i] = "<scribe>  $rest";
 		}
 	}
-$all = "\n" . join("\n", @lines) . "\n";
+$all = join("\n", @lines) . "\n";
 return($all);
 }
 
@@ -4823,7 +4789,6 @@ my $template = <<'PublicTemplate-EOF'
 <body>
 <p><a href="http://www.w3.org/"><img src="https://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
-
 </p>
 
 SV_DRAFT_WARNING
@@ -4994,7 +4959,6 @@ my $template = <<'TeamTemplate-EOF'
 <body>
 <p><a href="http://www.w3.org/"><img src="https://www.w3.org/Icons/w3c_home" alt="W3C" border="0"
 height="48" width="72"></a> 
-
 </p>
 
 SV_DRAFT_WARNING
