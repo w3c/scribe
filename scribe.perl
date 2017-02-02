@@ -1721,7 +1721,16 @@ while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
 	$rest =~ s/\s+\Z//;	# Trim trailing spaces
 	# s/old/new/ command?
 	# warn "DEBUG ProcessEdits: match: $match who: $who cmd: $cmd delimiter: $delimiter delimP: $delimP rest: $rest\n";
-	if ($cmd eq "s" && $rest =~ m/\A(($notDelimP)+)$delimP(($notDelimP)*)($delimP([gG]?))?\Z/)
+	#
+	# Unlike Perl, we allow delimiters in the substitution,
+	# because people very often write s/@@/http://www.w3.org/foo
+	# instead of s|@@|http://example.org/foo That is ambiguous for
+	# the final slash: s/@@/http://examples.org/ But it's probably
+	# better to treat that as s/@@/http://example.org rather than
+	# ignore it completely, because we have no way to inform the
+	# user of any errors until the minutes are generated.
+	#
+	if ($cmd eq "s" && $rest =~ m/\A(($notDelimP)+)$delimP(.*)($delimP([gG]?))?\Z/)
 		{
 		my $old = $1;
 		my $new = $3;
