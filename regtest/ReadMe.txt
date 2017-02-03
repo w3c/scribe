@@ -1,7 +1,7 @@
 This directory contains regression test cases (test-cases/*) for
-scribe.perl. Each test case is an executable with the extension.test.
-It must return exit code 0 for success, 2 for a test that is not
-applicable, and any other code for a test that failed.
+scribe.perl. Each test case is an executable with the extension
+".test". It must return exit code 0 for success, 2 for a test that is
+not applicable, and any other code for a test that failed.
 
 The other files are auxiliary files (mostly test input and reference
 output).
