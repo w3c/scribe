@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# This test runs scribe.perl on a number of files (called *-in.txt)
+# and compares the expected output. Removes version numbers and dates
+# before comparing the files. If a mismatch is found, the generated
+# file with the mismatch is printed to stdout.
+
+export LANGUAGE=C LC_ALL=C
+
+trap 'rm -f $TMP1 $TMP2' 0
+TMP1=`mktemp /tmp/out-XXXXXX` || exit 1
+TMP2=`mktemp /tmp/err-XXXXXX` || exit 1
+
+for f in \
+  regtest/test-cases/20-ws-desc-irc \
+  regtest/test-cases/22-tagmem-irc \
+  regtest/test-cases/actionIDs \
+  regtest/test-cases/actionProcessing \
+  regtest/test-cases/bad-date-day1 \
+  regtest/test-cases/bad-date-day2
+do
+  perl scribe.perl -embedDiagnostics ${f}-in.txt \ >$TMP1 2>$TMP2
+
+  if ! cmp \
+       <(grep -v 'scribe.perl' ${f}-out.htm | grep -v '$Date: ') \
+       <(grep -v 'scribe.perl' $TMP1 | grep -v '$Date: '); then
+    echo $f
+    echo "========="
+    cat $TMP1
+    exit 1
+  fi
+
+  if ! cmp \
+       <(grep -v 'scribe.perl ' ${f}-stderr.txt) \
+       <(grep -v 'scribe.perl ' $TMP2); then
+    echo $f
+    echo "========="
+    cat $TMP2
+    exit 1
+  fi
+done

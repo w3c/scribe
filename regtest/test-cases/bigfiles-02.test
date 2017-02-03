@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# This test runs scribe.perl on a number of files (called *-in.txt)
+# and compares the expected output. Removes version numbers and dates
+# before comparing the files. If a mismatch is found, the generated
+# file with the mismatch is printed to stdout.
+
+# TODO: As of 3 Feb 2017, this test will fail, because the expected
+# output for the files listed below is still the output of 2005...
+
+exit 2				# This test doesn't work yet...
+
+
+export LANGUAGE=C LC_ALL=C
+
+trap 'rm -f $TMP1 $TMP2' 0
+TMP1=`mktemp /tmp/out-XXXXXX` || exit 1
+TMP2=`mktemp /tmp/err-XXXXXX` || exit 1
+
+for f in \
+  regtest/test-cases/bad-date-month \
+  regtest/test-cases/bad-date-year1 \
+  regtest/test-cases/bad-date-year2 \
+  regtest/test-cases/calconnect \
+  regtest/test-cases/good-alt-action-syntax \
+  regtest/test-cases/good-date \
+  regtest/test-cases/good-plain-text \
+  regtest/test-cases/good-small \
+  regtest/test-cases/insertion2 \
+  regtest/test-cases/insertion3 \
+  regtest/test-cases/insertion \
+  regtest/test-cases/invalidHTML-2 \
+  regtest/test-cases/irssi3 \
+  regtest/test-cases/irssi4 \
+  regtest/test-cases/irssi \
+  regtest/test-cases/irssi-nick-space \
+  regtest/test-cases/jabber-saved \
+  regtest/test-cases/minimal-mit \
+  regtest/test-cases/minutesURL \
+  regtest/test-cases/named-anchor \
+  regtest/test-cases/noLogNoMinutesURL \
+  regtest/test-cases/tagf2f-aug-10-am \
+  regtest/test-cases/validHTML \
+  regtest/test-cases/XChat_Log_Format
+do
+  perl scribe.perl -embedDiagnostics ${f}-in.txt \ >$TMP1 2>$TMP2
+
+  if ! cmp \
+       <(grep -v 'scribe.perl' ${f}-out.htm | grep -v '$Date: ') \
+       <(grep -v 'scribe.perl' $TMP1 | grep -v '$Date: '); then
+    echo $f
+    echo "========="
+    cat $TMP1
+    exit 1
+  fi
+
+  if ! cmp \
+       <(grep -v 'scribe.perl ' ${f}-stderr.txt) \
+       <(grep -v 'scribe.perl ' $TMP2); then
+    echo $f
+    echo "========="
+    cat $TMP2
+    exit 1
+  fi
+done

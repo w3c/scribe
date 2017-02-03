@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# Test if the right style sheet links are generated.
+
+export LANGUAGE=C LC_ALL=C
+
+trap 'rm -f $TMP1 $TMP2' 0
+TMP1=`mktemp /tmp/err-XXXXXX` || exit 1
+TMP2=`mktemp /tmp/err-XXXXXX` || exit 1
+
+cat >$TMP2 <<EOF
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/base.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/team.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/StyleSheets/team-minutes.css">
+  <link type="text/css" rel="STYLESHEET" href="https://www.w3.org/2004/02/minutes-style.css">
+EOF
+
+echo "00:00:00 <foo> This is a test." | \
+  perl scribe.perl -team 2>/dev/null | \
+  grep 'rel="STYLESHEET"' >$TMP1
+
+if ! cmp $TMP1 $TMP2; then
+  cat $TMP2
+  exit 1
+fi

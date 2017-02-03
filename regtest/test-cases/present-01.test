@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# Test if present+ lines are recognized.
+
+export LANGUAGE=C LC_ALL=C
+
+trap 'rm -f $TMP2 $TMP3' 0
+TMP2=`mktemp /tmp/err-XXXXXX` || exit 1
+TMP3=`mktemp /tmp/err-XXXXXX` || exit 1
+
+cat >$TMP3 <<EOF
+Present: Abel Berny Me Charlotte Wim Dora (myself)
+EOF
+
+perl scribe.perl  2>$TMP2 <<EOF
+00:00 <Abel> present+
+00:10 <Berny> present+ Berny Me
+00:20 <Charlotte> present+ Charlotte, Wim
+00:30 <Dora> present+ Dora (myself)
+EOF
+
+if ! cmp $TMP3 <(grep ^Present: $TMP2); then
+  cat $TMP2
+  exit 1
+fi

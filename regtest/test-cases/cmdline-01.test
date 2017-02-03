@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# Test the "-help" option.
+
+trap 'rm -f $TMP1 $TMP2 $TMP3 $TMP4' 0
+TMP1=`mktemp /tmp/out-XXXXXX` || exit 1
+TMP2=`mktemp /tmp/err-XXXXXX` || exit 1
+TMP3=`mktemp /tmp/err-XXXXXX` || exit 1
+TMP4=`mktemp /tmp/err-XXXXXX` || exit 1
+
+cat >$TMP3 <<EOF
+<html><head><title>Scribe.perl: Fatal error</title></head>
+<body><h1>Scribe.perl: Fatal error</h1>
+<pre>
+This is scribe.perl Revision: 1.150  of Date: 2017/02/02 17:33:24  
+Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
+
+For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm
+
+</pre>
+</body>
+</html>
+EOF
+
+cat >$TMP4 <<EOF
+This is scribe.perl Revision: 1.150  of Date: 2017/02/02 17:33:24  
+Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
+
+For help, see http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm
+EOF
+
+perl scribe.perl -help >$TMP1 2>$TMP2
+
+cmp \
+  <(grep -v 'scribe.perl Revision: ' $TMP1) \
+  <(grep -v 'scribe.perl Revision: ' $TMP3) || exit 1
+
+cmp \
+  <(grep -v 'scribe.perl Revision: ' $TMP2) \
+  <(grep -v 'scribe.perl Revision: ' $TMP4) || exit 1
