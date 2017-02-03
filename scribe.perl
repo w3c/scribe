@@ -513,7 +513,6 @@ while($restartForEmbeddedOptions)
 		"Bert_IRSSI_Format", \&Bert_IRSSI_Format,
 		"Normalized_Format", \&Normalized_Format,
 		);
-	my @inputFormats = keys %inputFormats;
 
 	if ($inputFormat && !exists($inputFormats{$inputFormat}))
 		{
@@ -525,7 +524,7 @@ while($restartForEmbeddedOptions)
 	my $bestScore = 0;
 	my $bestAll = "";
 	$bestName = "";  	# Global var because we access it later
-	foreach my $f (@inputFormats)
+	foreach my $f (sort keys %inputFormats)
 		{
 		my $fAddress = $inputFormats{$f};
 		my ($score, $newAll) = &$fAddress($all);
@@ -588,6 +587,32 @@ if ($canonicalizeNames)
 	# Strip -iMac from names.  (Convert alan-iMac to alan, for example.)
 	$all =~ s/(\w+)\-iMac\b/$1/ig;
 	}
+
+# Get attendee list, and canonicalize names within the document:
+my @uniqNames = ();
+my $allNameRefsRef;
+($all, $allNameRefsRef, @uniqNames) = &GetNames($all);
+my @allNames = map { ${$_} } @{$allNameRefsRef};
+
+push(@allNames,"scribe");
+my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
+# my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
+# my $speakerPattern = join("|", @allSpeakerPatterns);
+my $speakerPattern = $namePattern; # Not sure what else to use here
+# warn "speakerPattern: $speakerPattern\n";
+
+# Get the list of people present.
+# First look for zakim output, as the default:
+my @present = &GetPresentFromZakim($all); 
+&Warn("Default Present: " . join(", ", @present) . "\n") if @present;
+# Now look for explicit "Present: ... " commands:
+die if !defined($all);
+($all, @present) = &GetPresentOrRegrets("Present", 3, $all, @present); 
+die if !defined($all);
+
+# Get the list of regrets:
+my @regrets = ();	# People who sent regrets
+($all, @regrets) = &GetPresentOrRegrets("Regrets", 0, $all, ()); 
 
 # Determine scribe name and scribeNick.
 # This needs to be done BEFORE handling $dashTopics and $useZakimTopics
@@ -705,36 +730,10 @@ if ($normalizeOnly)
 	exit 0;
 	}
 
-# Get attendee list, and canonicalize names within the document:
-my @uniqNames = ();
-my $allNameRefsRef;
-($all, $allNameRefsRef, @uniqNames) = &GetNames($all);
-my @allNames = map { ${$_} } @{$allNameRefsRef};
-
-push(@allNames,"scribe");
-my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
-# my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
-# my $speakerPattern = join("|", @allSpeakerPatterns);
-my $speakerPattern = $namePattern; # Not sure what else to use here
-# warn "speakerPattern: $speakerPattern\n";
-
-# Get the list of people present.
-# First look for zakim output, as the default:
-my @present = &GetPresentFromZakim($all); 
-&Warn("Default Present: " . join(", ", @present) . "\n") if @present;
-# Now look for explicit "Present: ... " commands:
-die if !defined($all);
-($all, @present) = &GetPresentOrRegrets("Present", 3, $all, @present); 
-die if !defined($all);
-
-# Get the list of regrets:
-my @regrets = ();	# People who sent regrets
-($all, @regrets) = &GetPresentOrRegrets("Regrets", 0, $all, ()); 
-
 # Grab meeting name:
 my $title = "";
 if ($all =~ s/^\<$namePattern\>\s*Meeting\s*\:\s*(.*)\n//mi)
-	{ $title = &EscapeHTML($2); }
+	{ $title = &EscapeHTML($1); }
 else 	{ 
 	&Warn("\nWARNING: No meeting title found!
 You should specify the meeting title like this:
@@ -743,8 +742,8 @@ You should specify the meeting title like this:
 
 # Grab agenda URL:
 my $agendaLocation;
-if ($all =~ s/\<$namePattern\>\s*(Agenda)\s*\:\s*(http(s)?:\/\/\S+)\n//mi)
-	{ $agendaLocation = &EscapeHTML($2);
+if ($all =~ s/\<$namePattern\>\s*Agenda\s*\:\s*(http(s)?:\/\/\S+)\n//mi)
+	{ $agendaLocation = &EscapeHTML($1);
 	  &Warn("Agenda: $agendaLocation\n");
       }
 else 	{ 
@@ -758,13 +757,13 @@ If you wish, you may specify the agenda like this:
 
 # Grab Previous meeting URL:
 my $previousURL = "SV_PREVIOUS_MEETING_URL";
-if ($all =~ s/\n\<$namePattern\>\s*(Previous[ _\-]*Meeting)\s*\:\s*(.*)\n/\n/i)
-	{ $previousURL = &EscapeHTML($2); }
+if ($all =~ s/\n\<$namePattern\>\s*Previous[ _\-]*Meeting\s*\:\s*(.*)\n/\n/i)
+	{ $previousURL = &EscapeHTML($1); }
 
 # Grab Chair:
 my $chair = "SV_MEETING_CHAIR";
-if ($all =~ s/\n\<$namePattern\>\s*(Chair(s?))\s*\:\s*(.*)\n/\n/i)
-	{ $chair = &EscapeHTML($3); }
+if ($all =~ s/\n\<$namePattern\>\s*Chair(s?)\s*\:\s*(.*)\n/\n/i)
+	{ $chair = &EscapeHTML($2); }
 else 	{ 
 	&Warn("\nWARNING: No meeting chair found!
 You should specify the meeting chair like this:
@@ -1444,29 +1443,6 @@ return("\n$done\n");
 }
 
 ##############################################################
-####################### ProcessRalphURL ##############
-##############################################################
-# Hide URLs when there is link text supplied in one of these formats:
-# <RalphS> -> http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
-# <RalphS> [-> http://lists.w3.org/Archives/Team/w3t-mit/2005Mar/0113.html Ted's two minutes]
-# (Per Ralph Swick's convention)
-sub ProcessRalphURL
-{
-@_ >= 3 || die;
-my ($writer, $line, $all) = @_;
-# This also permits () {} around the line, in addition to [] or nothing.
-($line =~ m/\A\s*([\[\{\(]?)\s*\-\>\s*($urlPattern)\s+(.*?)\s*([\]\}\)]?)\s*\Z/) || return("", $line, $all);
-my $openBracket = $1;
-my $url = $2;
-my $title = $3;
-my $closeBracket = $4;
-my $lineHTML = &EscapeHTML($openBracket) . "<a href=\"$url\">" . &EscapeHTML($title) . "</a>" . &EscapeHTML($closeBracket);
-my $deltaDone = &FormatParagraph($writer, $lineHTML);
-# *** stopped here ***
-return($deltaDone, "", $all);
-}
-
-##############################################################
 ####################### ProcessIRCStatement ##############
 ##############################################################
 # This must be called last!  It is the default.
@@ -1730,12 +1706,12 @@ while($all =~ m/\A((.|\n)*?)(\n(\<[^\>]+\>)\s*(s|i)(\/|\|)(.*))\n/)
 	# ignore it completely, because we have no way to inform the
 	# user of any errors until the minutes are generated.
 	#
-	if ($cmd eq "s" && $rest =~ m/\A(($notDelimP)+)$delimP(.*)($delimP([gG]?))?\Z/)
+	if ($cmd eq "s" && $rest =~ m/\A(($notDelimP)+)$delimP(.*?)($delimP([gG]?))?\Z/)
 		{
 		my $old = $1;
 		my $new = $3;
 		# &Warn("DEBUG NEW: $new\n");
-		my $global = $6;
+		my $global = $5;
 		$global = "" if !defined($global);
 		my $oldp = quotemeta($old);
 		# warn "Found match: $match\n";
@@ -2009,7 +1985,7 @@ for (my $i=0; $i<(@lines-1); $i++)
 		# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1]
 		# 	<RRSAgent>   recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24
 		# to lines like this:
-		# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1] [recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24]
+		# 	<RRSAgent> ACTION: Simon develop ssh2 migration plan [1] [recorded in http://www.w3.org/2003/09/02-mit-irc#T14-10-24 ]
 		die if !defined($lines[$i]);
 		my ($writer, $type, $value, $rest, undef) = &ParseLine($lines[$i]);
 		die if !defined($lines[$i+1]);
@@ -2017,11 +1993,11 @@ for (my $i=0; $i<(@lines-1); $i++)
 		if ($type eq "COMMAND" && $value eq "action"
 			&& &LC($writer) eq "rrsagent" && 
 			&LC($writer2) eq &LC($writer)
-			&& $rest2 =~ m/\A\W*(recorded in http\:[^\s\[\]]+)(\s*\W*)\Z/i)
+			&& $rest2 =~ m/\A\W*(recorded in https?\:[^\s\[\]]+)(\s*\W*)\Z/i)
 			{
 			my $recorded = $1;
 			$lines[$i] = "";
-			$lines[$i+1] = "<$writer\> ACTION: $rest \[$recorded\]";
+			$lines[$i+1] = "<$writer\> ACTION: $rest \[$recorded \]";
 			warn "JOINED RECORDED: " . $lines[$i+1] . "\n" if $debugActions;
 			}
 		}
@@ -2052,9 +2028,9 @@ if (1)
 		# Default to no URL at all:
 		my $post = "";
 		# Or use the $logURL (with no frag ID) if there is one:
-		$post = " [recorded in $logURL]" if $logURL;
+		$post = " [recorded in $logURL ]" if $logURL;
 		# But preferably Use $minutesURL with frag ID if we have one:
-		$post = " [recorded in $minutesURL" . "#" . $actionID . "]"
+		$post = " [recorded in $minutesURL" . "#" . $actionID . " ]"
 			if $minutesURL;
 		# Only add " [recorded in ...]" if the action does NOT 
 		# already have it:
@@ -2190,7 +2166,7 @@ foreach my $action ((keys %rawActions))
 			}
 		}
 	# Put the URL back on the end
-	$a .= " [recorded in $url]" if $url;
+	$a .= " [recorded in $url ]" if $url;
 	$status = "NEW" if !$status;
 	# Canonicalize action statuses:
 	die if !exists($actionStatuses{&LC($status)});
@@ -2316,7 +2292,7 @@ warn "Breaking lines over 67 chars....\n" if $debugActions;
 my $formattedActions = join("", @formattedActionLines);
 # Make links from URLs in actions:
 warn "Making links in actions....\n" if $debugActions;
-$formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))/<a href=\"$1\">$1<\/a>/ig;
+$formattedActions =~ s/(http\:([^\)\]\}\<\>\s\"\']+))\s*/<a href=\"$1\">$1<\/a>/ig;
 
 return( $all, $formattedActions );
 } # End of GetActions
@@ -2478,7 +2454,7 @@ while ($all =~ m/\A((.|\n)*?)($urlPattern)(.*?)\n/)
 	# would have already been escaped to:
 	# &lt;RalphS&gt; -&gt; http://lists.w3.org/Archives/Team/w3t-mit/2005Jan/0052.html Philippe's two minutes
 	if ($ralphLinks
-		&& $newpre =~ s/\&gt\;\s*\-\&gt\;\s*\Z/&gt; /	# > -> 
+		&& $newpre =~ s/([^-])\-\&gt\;\s*\Z/$1/		# -> 
 		&& $line !~ m/$urlPattern/	# no URL
 		&& $line !~ m/\&gt\;/		# no >
 		&& $line !~ m/\&lt\;/		# no <
@@ -2505,6 +2481,9 @@ while ($all =~ m/\A((.|\n)*?)($urlPattern)(.*?)\n/)
 	else	{
 		# Any other URL
 		my $link = "<a href=\"$url\">$url</a>";
+		# If there is whitespace after the URL that is only
+		# there to delimit the URL, then remove it.
+		$line =~ s/^\s+([,.;:'"!?\]\)\}])/$1/;
 		$done .= $pre . $link;
 		$all = $line . $post;
 		}
@@ -3196,7 +3175,6 @@ my @allLines = split(/\n/, $all);
 # <dbooth> Present+ Silas
 # <dbooth> Present-: Amy
 # <Amy> Present+
-my @possiblyPresent = @uniqNames;	# People present at the meeting
 my @newAllLines = ();	# Collect remaining lines
 # push(@allLines, "<dbooth> Present: David Booth, Frank G, Joe Camel, Carole King"); # test
 # push(@allLines, "<dbooth> Present: Amy Frank Joe Carole"); # test
@@ -3231,18 +3209,18 @@ foreach my $line (@allLines)
 		}
 	if ($plus =~ m/\+/)
 		{
-		my %seen = map {($_,$_)} @present;
-		my @newp = grep {!exists($seen{$_})} @p;
+		my %seen = map {(lc $_,$_)} @present;
+		my @newp = grep {!exists($seen{lc $_})} @p;
 		push(@present, @newp);
 		}
 	elsif ($plus =~ m/\-/)
 		{
-		my %seen = map {($_,$_)} @present;
+		my %seen = map {(lc $_,$_)} @present;
 		foreach my $p (@p)
 			{
-			delete $seen{$p} if exists($seen{$p});
+			delete $seen{lc $p} if exists($seen{lc $p});
 			}
-		@present = sort keys %seen;
+		@present = sort values %seen;
 		}
 	else	{
 		# Skip warning if new list is superset of old list
@@ -3263,10 +3241,9 @@ if (@present == 0)
 	if ($keyword ne "Regrets" || $warnIfNoRegrets)
 		{
 		&Warn("\nWARNING: No \"$keyword\: ... \" found!\n");
-		&Warn("Possibly Present: @possiblyPresent\n") if $keyword eq "Present"; 
 		&Warn("You can indicate people for the $keyword list like this:
 	<dbooth> $keyword\: dbooth jonathan mary
-	<dbooth> $keyword\+ amy\n
+	<dbooth> $keyword\+ amy
 	<amy> $keyword+\n\n");
 		}
 	}
@@ -3368,7 +3345,7 @@ foreach my $line (@lines)
 		$mixedCaseNames{$who} = $mix; # liam -> Liam
 		}
 	}
-my @descending = sort { $nameCounts{$b} <=> $nameCounts{$a} } keys %nameCounts;
+my @descending = sort { $nameCounts{$b} <=> $nameCounts{$a} } sort keys %nameCounts;
 # warn "Names in descending order:\n";
 foreach my $n (@descending)
 	{
@@ -4147,7 +4124,7 @@ sub Bert_IRSSI_Format($)
       push(@linesout, "<$1>$2");
       $n++;			# A normal line
     } else {
-      warn "LINE: $_\n";
+      # warn "LINE: $_\n";
     }
     # Any other pattern is an error. Skip and don't count.
   }
@@ -4477,8 +4454,7 @@ my @stopList = qw(a q on Re items Zakim Topic muted and agenda Regrets http the
 	yes no abstain Consensus Participants Question RESOLVED strategy
 	AGREED Date queue no one in XachBot got it WARNING Present Agenda RESOLUTION);
 @stopList = (@stopList, @rooms);
-@stopList = map {tr/A-Z/a-z/; $_} @stopList;	# Make stopList lower case
-my %stopList = map {($_,$_)} @stopList;
+my %stopList = map {(lc $_, $_)} @stopList;
 
 # Easier pattern matching:
 $all = "\n" . $all . "\n";
@@ -4494,7 +4470,7 @@ $t = $all;
 while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /i)
 	{
 	my $n = $1;
-	$names{$n} = $n;
+	$names{lc $n} = $n;
 	}
 
 #	<dbooth> MC: I have integrated most of the coments i received 
@@ -4504,7 +4480,7 @@ while($t =~ s/\n\<((\w|\-)+)\>(\ +)((\w|\-)+)\:/\n/i)
 	my $n = $4;
 	next if exists($names{$n});
 	# warn "Matched #	<dbooth> $n" . ": ...\n";
-	$names{$n} = $n;
+	$names{lc $n} = $n;
 	}
 # warn "names: ",join(" ",keys %names),"\n";
 
@@ -4513,9 +4489,9 @@ $t = $all;
 while($t =~ s/\n\<((\w|\-)+)\>/\n/i)
 	{
 	my $n = $1;
-	next if exists($names{$n});
+	next if exists($names{lc $n});
 	# warn "Matched #	<$n>\n";
-	$names{$n} = $n;
+	$names{lc $n} = $n;
 	# warn "Found name: $n\n";
 	}
 
@@ -4554,13 +4530,11 @@ while($t =~ s/\n\<Zakim\>\s+((([\w\d\_][\w\d\_\-]+) has\s+)|(I see\s+)|(On the p
 	# warn "Matched #       <Zakim> I see: @names\n";
 	foreach my $n (@names)
 		{
-		next if exists($names{$n});
-		$names{$n} = $n;
+		next if exists($names{lc $n});
+		$names{lc $n} = $n;
 		}
 	}
 
-# Make the keys all lower case, so that they'll match:
-%names = map {my $oldn = $_; tr/A-Z/a-z/; ($_, $names{$oldn})} keys %names;
 # warn "Lower case name keys:\n";
 foreach my $n (sort keys %names)
 	{
@@ -4578,28 +4552,20 @@ foreach my $n (keys %names)
 	elsif ($names{$n} !~ m/\A[a-zA-Z]/i) { delete $names{$n}; }
 	}
 
-# Make a list of unique names for the attendee list:
-my %uniqNames = ();
-foreach my $n (values %names)
-	{
-	$uniqNames{$n} = $n;
-	}
-
 # Make a list of all names seen (all variations) in lower case:
 my %allNames = ();
 foreach my $n (%names)
 	{
-	my $name = $n;
-	$name =~ tr/A-Z/a-z/;
+	my $name = lc $n;
 	$allNames{$name} = $name;
 	}
-@allNames = sort keys %allNames;
+my @allNames = sort keys %allNames;
 # warn "allNames: @allNames\n";
 my @allNameRefs = map { \$_ } @allNames;
 
 # Canonicalize the names in the IRC:
 
-my @sortedUniqNames = sort values %uniqNames;
+my @sortedUniqNames = sort values %names;
 # warn "EMPTY synonyms\n" if !%synonyms;
 return($all, \@allNameRefs, @sortedUniqNames);
 }
