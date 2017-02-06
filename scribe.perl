@@ -5019,8 +5019,7 @@ SV_MEETING_YEAR</title>
   <link type="text/css" rel="STYLESHEET"
  href="https://www.w3.org/2004/02/minutes-style.css">
   <meta content="SV_MEETING_TITLE" name="Title">
-  <meta content="text/html; charset=iso-8859-1"
- http-equiv="Content-Type">
+  <meta charset="utf-8">
 </head>
 <body>
 <p><a href="http://www.w3.org/"><img
