@@ -4730,7 +4730,7 @@ SV_RESOLUTIONS
 <hr>
 
 <address>
-  Minutes formatted by David Booth's 
+  Minutes manually created (not a transcript), formatted by David Booth's 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
