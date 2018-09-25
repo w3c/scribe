@@ -4814,7 +4814,7 @@ SV_RESOLUTIONS
 <hr>
 
 <address>
-  Minutes formatted by David Booth's 
+  Minutes manually created (not a transcript), formatted by David Booth's 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
@@ -4899,7 +4899,7 @@ SV_RESOLUTIONS
 <hr>
 
 <address>
-  Minutes formatted by David Booth's 
+  Minutes manually created (not a transcript), formatted by David Booth's 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
@@ -4985,7 +4985,7 @@ SV_RESOLUTIONS
 <hr>
 
 <address>
-  Minutes formatted by David Booth's 
+  Minutes manually created (not a transcript), formatted by David Booth's 
   <a href="http://dev.w3.org/cvsweb/~checkout~/2002/scribe/scribedoc.htm">scribe.perl</a> version SCRIBEPERL_VERSION (<a href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
   $Date$ 
 </address>
@@ -5134,7 +5134,7 @@ w3t-mit archive</a> for
 here @@ <br>
 [End of minutes] <br>
 <hr>
-<address> Minutes formatted by David Booth's <a
+<address> Minutes manually created (not a transcript), formatted by David Booth's <a
  href="http://dev.w3.org/cvsweb/%7Echeckout%7E/2002/scribe/scribedoc.htm">scribe.perl</a>
 version SCRIBEPERL_VERSION (<a
  href="http://dev.w3.org/cvsweb/2002/scribe/">CVS log</a>)<br>
