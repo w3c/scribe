@@ -21,21 +21,17 @@ for f in \
 do
   perl scribe.perl -embedDiagnostics ${f}-in.txt \ >$TMP1 2>$TMP2
 
-  if ! cmp \
+  echo "=========" $f "========="
+  if ! diff -u \
        <(grep -v 'scribe.perl' ${f}-out.htm | grep -v '$Date: ') \
        <(grep -v 'scribe.perl' $TMP1 | grep -v '$Date: '); then
-    echo $f
-    echo "========="
-    cat $TMP1
     exit 1
   fi
 
-  if ! cmp \
+  echo "=========" $f "========="
+  if ! diff -u \
        <(grep -v 'scribe.perl ' ${f}-stderr.txt) \
        <(grep -v 'scribe.perl ' $TMP2); then
-    echo $f
-    echo "========="
-    cat $TMP2
     exit 1
   fi
 done
