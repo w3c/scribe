@@ -598,7 +598,7 @@ push(@allNames,"scribe");
 my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
 # my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # my $speakerPattern = join("|", @allSpeakerPatterns);
-my $speakerPattern = '[^\s:]+';
+my $speakerPattern = '[^\s/:]+';
 # warn "speakerPattern: $speakerPattern\n";
 
 # Get the list of people present.
