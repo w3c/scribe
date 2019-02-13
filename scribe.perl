@@ -598,7 +598,7 @@ push(@allNames,"scribe");
 my @allSpeakerPatterns = map {quotemeta($_)} @allNames;
 # my $speakerPattern = "((" . join(")|(", @allSpeakerPatterns) . "))";
 # my $speakerPattern = join("|", @allSpeakerPatterns);
-my $speakerPattern = $namePattern; # Not sure what else to use here
+my $speakerPattern = '[^\s:]+';
 # warn "speakerPattern: $speakerPattern\n";
 
 # Get the list of people present.
@@ -3036,7 +3036,7 @@ elsif ($line =~ m/\A(\s?(\s?))($commandsPattern)(\s?)\:\s*/i)
 	}
 # Speaker statement?
 # This pattern allows up to two *extra* leading spaces for speaker statements
-elsif ($line =~ m/\A(\s?)(\s?)([_\w\-\.]+)(\s?)\:\s*/)
+elsif ($line =~ m/\A(\s?)(\s?)($speakerPattern)(\s?)\:\s*/)
 	{
 	$value = $3;
 	$rest = $';
@@ -4202,7 +4202,7 @@ my @t = @lines;
 my $nTotal = scalar(@t);
  # 	<dbooth> Amy: Now is the time (EXPLICIT SPEAKER)
  # @t = grep {!m/\A\<[a-zA-Z0-9\-_\.]+\>(\s?\s?)[a-zA-Z0-9\-_\.]+\s*\:/i} @t;
- @t = grep {!m/\A\<scribe\>(\s?\s?)[a-zA-Z0-9\-_\.]+\s*\:/i} @t;
+ @t = grep {!m/\A\<scribe\>(\s?\s?)[^\s:]+\s*\:/i} @t;
 my $nSpeaker = $nTotal - scalar(@t);
  # 	<dbooth>  for all good men and women  (EXPLICIT CONTINUATION)
  # @t = grep {!m/\A\<[a-zA-Z0-9\-_\.]+\>(\s\s\s*)/} @t;
@@ -4292,7 +4292,7 @@ for (my $i=0; $i<@lines; $i++)
 		}
 	# 	<scribe> Amy: Now is the time
 	# 	<scribe> ACTION: ...
-	if ($rest =~ m/\A([a-zA-Z0-9\-_\.]+)( ?):/i)
+	if ($rest =~ m/\A($speakerPattern)( ?):/i)
 		{
 		# Not a continuation line.  Either new speaker or stop word.
 		my $speaker = $1;
@@ -4467,7 +4467,7 @@ my $t; # Temp
 $t = $all;
 # my $namePattern = '([\\w\\-]([\\w\\d\\-]*))';
 # warn "namePattern: $namePattern\n";
-while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /i)
+while($t =~ s/\b(\w[\w\d_.-]*)\'s\s+(2|two)\s+ minutes/ /i)
 	{
 	my $n = $1;
 	$names{lc $n} = $n;
@@ -4475,7 +4475,7 @@ while($t =~ s/\b($namePattern)\'s\s+(2|two)\s+ minutes/ /i)
 
 #	<dbooth> MC: I have integrated most of the coments i received 
 $t = $all;
-while($t =~ s/\n\<((\w|\-)+)\>(\ +)((\w|\-)+)\:/\n/i)
+while($t =~ s/\n\<((\w|\-)+)\>(\ +)(([^\s:])+)\:/\n/i)
 	{
 	my $n = $4;
 	next if exists($names{$n});
