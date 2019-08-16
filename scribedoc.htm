@@ -6,8 +6,8 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 
 	<title>Scribe.perl -- Generate meeting minutes from an IRC log</title>
-  <link rel="stylesheet" type="text/css" href="http://www.w3.org/Guide/guide2006.css" />
-  <link rel="shortcut icon" href="http://www.w3.org/Icons/WWW/Literature.gif" />
+  <link rel="stylesheet" type="text/css" href="https://www.w3.org/Guide/guide2006.css" />
+  <link rel="shortcut icon" href="https://www.w3.org/Icons/WWW/Literature.gif" />
 <style type="text/css" media="screen">
 th, td {
 	border-bottom: 1px solid #999;}
@@ -26,9 +26,9 @@ td.help {
 
 <body>
 	<div id="header">
-		<span class="logo"><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home_nb" alt="W3C" height="48" width="72"/></a></span>
+		<span class="logo"><a href="https://www.w3.org/"><img src="https://www.w3.org/Icons/WWW/w3c_home_nb" alt="W3C" height="48" width="72"/></a></span>
 		<div class="breadcrumb">
-			<a href="http://www.w3.org/Member/">Member</a> &#x2192; <a href="http://www.w3.org/Guide/">The Art of Consensus</a> &#x2192; <h1>Generate Meeting Minutes from an IRC Log</h1>
+			<a href="https://www.w3.org/Member/">Member</a> &#x2192; <a href="https://www.w3.org/Guide/">The Art of Consensus</a> &#x2192; <h1>Generate Meeting Minutes from an IRC Log</h1>
 		</div>
 		<p class="baseline">This <strong>Guidebook</strong> is the collected wisdom of the W3C Group Chairs and other collaborators.</p>
 	</div>
@@ -56,7 +56,7 @@ td.help {
 
 <h2 id="Quick_Start_Guide">Quick Start Guide</h2>
 
-<h3 id="invite">Step 1:  Invite <a href="http://www.w3.org/2002/03/RRSAgent">RRSAgent</a> and  <a href="http://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a></h3>
+<h3 id="invite">Step 1:  Invite <a href="https://www.w3.org/2002/03/RRSAgent">RRSAgent</a> and  <a href="https://www.w3.org/2001/12/zakim-irc-bot.html">Zakim bot</a></h3>
 
 
 <p>Skip this step if you're not using W3C's IRC</p>
@@ -77,7 +77,7 @@ td.help {
 </tr>
 <tr>
 	<td class="command">zakim, this will be ws_arch</td>
-	<td class="help">ws_arch should be your meeting name as shown in the <a href="http://www.w3.org/Guide/1998/08/teleconference-calendar">W3C teleconference calendar</a></td>
+	<td class="help">ws_arch should be your meeting name as shown in the <a href="https://www.w3.org/Guide/1998/08/teleconference-calendar">W3C teleconference calendar</a></td>
 </tr>
 </tbody></table>
 
@@ -120,7 +120,7 @@ td.help {
 <tr>
 	<td class="command">Topic: Debate on Feature X</td>
 	<td class="help">Use "Topic: . . ." at the
-start of each agenda topic.  Alternatively, you can use <a href="http://www.w3.org/2001/12/zakim-irc-bot.html#agenda">Zakim bot's agenda control</a>, which is recognized by default.  (See the -useZakimTopics option below.)</td>
+start of each agenda topic.  Alternatively, you can use <a href="https://www.w3.org/2001/12/zakim-irc-bot.html#agenda">Zakim bot's agenda control</a>, which is recognized by default.  (See the -useZakimTopics option below.)</td>
 </tr>
 <tr>
 	<td class="command">Mike: Feature X is great</td>
@@ -184,7 +184,7 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 </tr>
 <tr>
 	<td class="command">rrsagent, draft minutes</td>
-	<td class="help">Tell <a href="http://www.w3.org/2002/03/RRSAgent#minutes">RRSAgent</a> <a href="http://www.w3.org/2002/03/RRSAgent#minutes">to generate minutes</a> from the log as written so far, inheriting access permissions from the log permissions.  Note the location of the generated minutes.  Skip this step if you are not using RRSAgent.</td>
+	<td class="help">Tell <a href="https://www.w3.org/2002/03/RRSAgent#minutes">RRSAgent</a> <a href="https://www.w3.org/2002/03/RRSAgent#minutes">to generate minutes</a> from the log as written so far, inheriting access permissions from the log permissions.  Note the location of the generated minutes.  Skip this step if you are not using RRSAgent.</td>
 </tr>
 <tr>
 	<td class="command">rrsagent, bye</td>
@@ -254,7 +254,7 @@ DONE, PENDING, or DROPPED The action status may also be on a line by itself imme
 
 <pre class="command">perl scribe.perl [options] &lt; log.txt &gt; minutes.html</pre>
 
-<p>It can also be <a href="http://www.w3.org/2002/03/RRSAgent#minutes">invoked by RRSAgent</a> from IRC (provided you're using RRSAgent):</p>
+<p>It can also be <a href="https://www.w3.org/2002/03/RRSAgent#minutes">invoked by RRSAgent</a> from IRC (provided you're using RRSAgent):</p>
 
 <pre class="command">rrsagent, draft minutes</pre>
 
@@ -596,7 +596,7 @@ i|locationString|lineToInsert|
 
 	<h3 id="RRSAgent_Text_Format">RRSAgent_Text_Format (RECOMMENDED)</h3>
 	
-	<p>The plain text format (*.txt) produced by RRSAgent.  Hint: add ".txt" to the RRSAgent log URL to get the text version, such as: http://www.w3.org/2002/11/07-ws-arch-irc.txt .  The timestamps are ignored (except in guessing the input format), so you can safely edit the log and add lines without having to fake timestamps.  <a href="http://www.w3.org/2003/03/03-ws-desc-irc.txt">Example:</a></p>
+	<p>The plain text format (*.txt) produced by RRSAgent.  Hint: add ".txt" to the RRSAgent log URL to get the text version, such as: http://www.w3.org/2002/11/07-ws-arch-irc.txt .  The timestamps are ignored (except in guessing the input format), so you can safely edit the log and add lines without having to fake timestamps.  <a href="https://www.w3.org/2003/03/03-ws-desc-irc.txt">Example:</a></p>
 
 <pre class="command">20:41:27 &lt;dbooth&gt; Mike: Feature X would benefit users.
 20:41:37 &lt;dbooth&gt; ... and implementation would be easy.
@@ -605,7 +605,7 @@ i|locationString|lineToInsert|
 
 <h3 id="RRSAgent_HTML_Format">RRSAgent_HTML_Format</h3>
 
-<p>The HTML format (*.html) produced by RRSAgent.  This is the raw HTML code.  <a href="http://www.w3.org/2003/03/03-ws-desc-irc.html">Example:</a>
+<p>The HTML format (*.html) produced by RRSAgent.  This is the raw HTML code.  <a href="https://www.w3.org/2003/03/03-ws-desc-irc.html">Example:</a>
 </p>
 
 <pre class="command">
@@ -680,7 +680,7 @@ Feb 14 11:02:26 *    Yves This is an off-the-record comment
 
 	<h3 id="Irssi_ISO8601_Log_Text_Format">Irssi_ISO8601_Log_Text_Format</h3>
 	
-	<p>The format produced by Irssi logging with <a href="http://www.w3.org/TR/NOTE-datetime">ISO8601 timestamp</a> prefixes.  Example:</p>
+	<p>The format produced by Irssi logging with <a href="https://www.w3.org/TR/NOTE-datetime">ISO8601 timestamp</a> prefixes.  Example:</p>
 
 <pre class="command">2003-12-18T15:27:21-0500 &lt;dbooth&gt; Mike: Feature X would benefit users.
 2003-12-18T15:27:36-0500 &lt;dbooth&gt; ... and implementation would be easy.
@@ -720,13 +720,13 @@ Eric agrees.
 	should work here as well. Here is an example:</p>
 
 	<pre class="command">--- Log opened Thu Mar 19 12:57:23 2015
-12:57       «Users» | 23 nicks (0 ops, 0 halfops, 0 voices, 23 normal
-12:57        «Mode» | Channel &amp;global was created on Fri Apr 11 21:35:25 2014
+12:57       Â«UsersÂ» | 23 nicks (0 ops, 0 halfops, 0 voices, 23 normal
+12:57        Â«ModeÂ» | Channel &amp;global was created on Fri Apr 11 21:35:25 2014
 13:08             * | koalie veronica :D
 13:08           --&gt; | naomi_ (naomi@team.cloak) has joined &amp;global
 13:10         Zakim | +Plh
 13:11        scribe | Angel: Short meeting.
-13:13        «Quit» | naomi (naomi@team.cloak) has signed off (Ping timeout: 180 seconds)
+13:13        Â«QuitÂ» | naomi (naomi@team.cloak) has signed off (Ping timeout: 180 seconds)
 13:14      veronica | q?
 13:15             * | Zakim sees no one on the speaker queue
 13:15        scribe | Veronica: Please everyone update the FTMS records.</pre>
@@ -743,7 +743,7 @@ export SCRIBEOPTIONS="-trustRRSAgent"
 
 	<address>
 		Author: <a href="mailto:dbooth@w3.org">David Booth</a>
-		This software is available for use under the <a href="http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231">W3C Software License</a>.
+		This software is available for use under the <a href="https://www.w3.org/Consortium/Legal/2002/copyright-software-20021231">W3C Software License</a>.
 		$Date$
 	</address>
 </body>
