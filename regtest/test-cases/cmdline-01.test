@@ -31,10 +31,10 @@ EOF
 
 perl scribe.perl -help >$TMP1 2>$TMP2
 
-cmp \
-  <(grep -v 'scribe.perl Revision: ' $TMP1) \
-  <(grep -v 'scribe.perl Revision: ' $TMP3) || exit 1
+diff -u \
+  <(grep -v 'scribe.perl Revision' $TMP1) \
+  <(grep -v 'scribe.perl Revision' $TMP3) || exit 1
 
-cmp \
-  <(grep -v 'scribe.perl Revision: ' $TMP2) \
-  <(grep -v 'scribe.perl Revision: ' $TMP4) || exit 1
+diff -u \
+  <(grep -v 'scribe.perl Revision' $TMP2) \
+  <(grep -v 'scribe.perl Revision' $TMP4) || exit 1
