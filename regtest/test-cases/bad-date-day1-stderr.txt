@@ -3,7 +3,7 @@ Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 
 Guessing input format: Irssi_ISO8601_Log_Text_Format (score 1.00)
 
-Present: RF PC DC SW TBL NW(Chair)
+Present: RF, PC, DC, SW, TBL, NW(Chair)
 Found Scribe: timbl
 Inferring ScribeNick: timbl
 
