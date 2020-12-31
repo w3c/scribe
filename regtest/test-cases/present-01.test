@@ -9,7 +9,7 @@ TMP2=`mktemp /tmp/err-XXXXXX` || exit 1
 TMP3=`mktemp /tmp/err-XXXXXX` || exit 1
 
 cat >$TMP3 <<EOF
-Present: Abel Berny Me Charlotte Wim Dora (myself)
+Present: Abel, Berny Me, Charlotte, Wim, Dora (myself)
 EOF
 
 perl scribe.perl  2>$TMP2 <<EOF
