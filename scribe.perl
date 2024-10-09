@@ -155,13 +155,13 @@ use strict;
 #### $diagnostics MUST be initialized early, before anything might call &Warn().
 my $diagnostics = "";		# Accumulated diagnostic output.
 
-my ($CVS_VERSION) = q$Revision$ =~ /(\d+[\d\.]*\.\d+)/;
-my $versionMessage = 'This is scribe.perl $Revision$ of $Date$ 
+my $VERSION = '1.3';
+my $DATE = '2024-10-09';
+my $versionMessage = "This is scribe.perl $VERSION of $DATE
 Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 
-';
+";
 $versionMessage =~ s/\$//g; # Prevent CVS from remunging the version in minutes
-&Warn($versionMessage);
 
 ##### Formatting:
 my $preSpeakerHTML = "<cite>";
@@ -479,6 +479,8 @@ while($restartForEmbeddedOptions)
 		}
 	@ARGV = @args;
 	@ARGV = map {glob} @ARGV;	# Expand wildcards in arguments
+
+	&Warn($versionMessage);
 
 	# Get input:
 	$all =  join("",<>) if !$all;
@@ -1191,7 +1193,7 @@ $result =~ s/SV_MEETING_TITLE/$title/g if $title;
 $result =~ s/SV_RESOLUTIONS/$formattedResolutions/g;
 
 # Version
-$result =~ s/SCRIBEPERL_VERSION/$CVS_VERSION/;
+$result =~ s/SCRIBEPERL_VERSION/$VERSION/;
 
 my $formattedLogURL = '<p>See also: <a href="SV_MEETING_IRC_URL">IRC log</a></p>';
 if (!$logURL)
@@ -2502,7 +2504,7 @@ return($all);
 sub Warn
 {
 my $m = "" . join("", @_);
-warn $m;
+warn $m if !$embedDiagnostics;
 $diagnostics .= $m;
 }
 
@@ -2512,7 +2514,8 @@ $diagnostics .= $m;
 # Output any diagnostics and die.
 sub Die
 {
-&Warn(@_);
+my $m = join("", @_);
+$diagnostics .= $m;
 my $diagnosticsHTML = "<html><head><title>Scribe.perl: Fatal error</title></head>
 <body><h1>Scribe.perl: Fatal error</h1>
 <pre>
@@ -2522,9 +2525,7 @@ my $diagnosticsHTML = "<html><head><title>Scribe.perl: Fatal error</title></head
 </html>
 ";
 print STDOUT $diagnosticsHTML;
-close(STDOUT);
-close(STDERR);
-exit 1;
+die $m;
 }
 
 #################################################################
