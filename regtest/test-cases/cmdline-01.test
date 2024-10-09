@@ -26,16 +26,7 @@ EOF
 perl scribe.perl -help >$TMP1 2>$TMP2
 
 diff -u \
-<<<<<<< Updated upstream
-  <(grep -v 'scribe.perl Revision' $TMP1) \
-  <(grep -v 'scribe.perl Revision' $TMP3) || exit 1
-
-diff -u \
-  <(grep -v 'scribe.perl Revision' $TMP2) \
-  <(grep -v 'scribe.perl Revision' $TMP4) || exit 1
-=======
   <(grep -v 'This is scribe.perl ' $TMP1) \
   <(grep -v 'This is scribe.perl ' $TMP3) || exit 1
 
 diff -u $TMP2 $TMP4 || exit 1
->>>>>>> Stashed changes
