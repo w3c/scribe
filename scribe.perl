@@ -155,7 +155,7 @@ use strict;
 #### $diagnostics MUST be initialized early, before anything might call &Warn().
 my $diagnostics = "";		# Accumulated diagnostic output.
 
-my $VERSION = '1.3';
+my $VERSION = '1.201';
 my $DATE = '2024-10-09';
 my $versionMessage = "This is scribe.perl $VERSION of $DATE
 Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
@@ -640,7 +640,8 @@ if ($useZakimTopics)
 	# as equivalent to:
 	#	<inserted> Topic: UTF16 PR issue
 	$all = "\n$all\n";
-	while ($all =~ s/^\<Zakim\>\s*agendum\s*\d+\.\s*\"(.+)\"\s*taken up\s*((\[from (.*?)\])?)\s*$/\<inserted\> Topic\: $1/mi)
+	while ($all =~ s/^\<Zakim\>\s*agendum\s*\d+\.\s*\"(.+)\"\s*taken up\s*((\[from (.*?)\])?)\s*$/\<inserted\> Topic\: $1/mi ||
+	       $all =~ s/^\<Zakim\>\s*agendum\s*\d+ -- (.+) -- taken up\s*((\[from (.*?)\])?)\s*$/\<inserted\> Topic\: $1/mi)
 		{
 		# warn "Zakim Topic: $1\n";
 		}
@@ -3136,7 +3137,7 @@ foreach my $line (@zakimLines)
 	if ($line =~ m/Attendees\s+((were)|(have\s+been))\s+/i)
 		{
 		my $raw = $';
-		my @people = map {$_ = &EscapeHTML(&Trim($_)); s/\s+/_/g; $_} split(/\,/, $raw);
+		my @people = map {$_ = &EscapeHTML(&Trim($_)); s/\s+/ /g; $_} split(/\,/, $raw);
 		next if !@people;
 		if (@present)
 			{
@@ -3144,7 +3145,7 @@ foreach my $line (@zakimLines)
 			my @tOldPlusNew = &Uniq(sort (@present, @people));
 			my @tNew = &Uniq(sort @people);
 
-			&Warn("\nWARNING: Replacing list of attendees.\nOld list: @present\nNew list: @people\n\n")
+			&Warn("\nWARNING: Replacing list of attendees.\nOld list: ", join(", ", @present), "\nNew list: ", join(", ", @people), "\n\n")
 				if (!&Equal(\@tOldPlusNew, \@tNew));
 			}
 		@present = @people;
@@ -3196,18 +3197,9 @@ foreach my $line (@allLines)
 	# If there is no ":" and no name after the keyword, it means
 	# the name to add is the speaker himself, e.g.: <Joe> Present+
 	$present = &EscapeHTML($1) if ($plus !~ /:/ && $present eq '');
-	my @p = ();
-	if ($present =~ m/\,/)
-		{
-		# Comma-separated list
-		@p = grep {$_ && $_ ne "and"} 
-				map {$_ = &Trim($_); s/\s+/_/g; $_} 
+	my @p = grep {$_ && $_ ne "and"} 
+				map {$_ = &Trim($_); s/\s+/ /g; $_} 
 				split(/\,/,$present);
-		}
-	else	{
-		# Space-separated list
-		@p = grep {$_} split(/\s+/,$present);
-		}
 	if ($plus =~ m/\+/)
 		{
 		my %seen = map {(lc $_,$_)} @present;
@@ -3249,7 +3241,7 @@ if (@present == 0)
 		}
 	}
 else	{
-	&Warn("$keyword\: @present\n"); 
+	&Warn("$keyword\: ", join(", ", @present), "\n"); 
 	&Warn("\nWARNING: Fewer than $minPeople people found for $keyword list!\n\n") if @present < $minPeople;
 	}
 return ($all, @present);

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 This is scribe.perl Revision: 1.122  of Date: 2005/03/31 04:43:41  
 Check for newer version at http://dev.w3.org/cvsweb/~checkout~/2002/scribe/
 
@@ -5,11 +6,13 @@ Guessing input format: Irssi_ISO8601_Log_Text_Format (score 1.00)
 
 Succeeded: s/in Cambridge/in Boston/
 Default Present: Vincent, Ht, Norm, Roy, DanC, Chris, ed, DOrchard, PaulC
-Present: Vincent Ht Norm Roy DanC Chris ed DOrchard PaulC
-Regrets: TimBL Noah
+Present: Vincent, Ht, Norm, Roy, DanC, Chris, ed, DOrchard, PaulC
+Regrets: TimBL, Noah
 Found Scribe: DanC
 Inferring ScribeNick: DanC
 Agenda: http://www.w3.org/2001/tag/2005/02/22-agenda.html
 Got date from IRC log name: 22 Feb 2005
 Guessing minutes URL: http://www.w3.org/2005/02/22-tagmem-minutes
 People with action items: ht ndw roy vq
+=======
+>>>>>>> Stashed changes
